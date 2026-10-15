@@ -300,10 +300,10 @@
         "name": "Peak-shaving budget"
       },
       "raw_surplus_budget": {
-        "name": "PV budget for surplus"
+        "name": "Actual PV surplus after house load"
       },
       "surplus_budget": {
-        "name": "Approved surplus budget"
+        "name": "Observed hybrid power budget"
       },
       "available_budget": {
         "name": "Available load budget"
@@ -368,7 +368,7 @@
         "name": "Grid limit unachievable"
       },
       "battery_soc_blocking_surplus": {
-        "name": "Battery reserve blocking surplus"
+        "name": "Battery assistance blocked by SOC reserve"
       }
     },
     "select": {
