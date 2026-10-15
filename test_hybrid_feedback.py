@@ -200,7 +200,15 @@ def test_small_configured_pmax_wins_even_if_battery_present():
 
 def test_technical_minimum_prevents_unsafe_partial_probe():
     r0 = run_controller(
-        plant(now=0), [load(actual=0, requested=30, min_kw=6)]
+        plant(now=0, grid=-5, step=0.5),
+        [load(actual=0, requested=30, min_kw=6)],
     )
-    # With enough pure PV export the load starts without probing.
-    assert r0.targets_kw["Last"] >= 6
+    assert r0.targets_kw["Last"] == 0
+    r1 = run_controller(
+        plant(now=1, grid=-5, step=0.5),
+        [load(actual=0, requested=30, min_kw=6)],
+        state=r0.state,
+    )
+    # A 0.5 kW probe cannot start a 6 kW minimum load with 5 kW PV.
+    assert r1.targets_kw["Last"] == 0
+    assert r1.state.hybrid_probe_until_s is None
