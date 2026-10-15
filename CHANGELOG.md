@@ -1,5 +1,18 @@
 # Changelog
 
+## 3.2.0 (ungetestete Hybrid-Funktion vor Live-Abnahme)
+
+- Eigenen PV-Überschuss aus Netz-, Batterie- und Verbraucher-Istleistungen statt pauschal aus PV-Erzeugung berechnen.
+- SOC-Reserve sperrt nur Batterieunterstützung, nicht den PV-Überschussmodus.
+- Beobachtete Batterieentladung berücksichtigen; unbekannte maximal mögliche Entladeleistung nicht voraussetzen.
+- Laufende Batterieladung nicht ungeprüft als sofort für flexible Lasten verfügbar betrachten.
+- Optional schrittweise Erhöhung mit Messwertbestätigung, Rücknahme bei Netzbezug und konfigurierbarer Wartezeit; aktive Tests standardmäßig AUS.
+- Konservative PMAX-Projektion für den unerwarteten Wegfall der Batterieentladung.
+- Frischeprüfung für konfigurierte Batterie-, SOC- und PV-Messwerte im Überschussmodus.
+- NORMAL und Prioritätsverteilung bleiben unangetastet.
+- Reine Controller-Regressionstests für wechselnde Leistungsbilanzen und konfigurierbare Grenzwerte.
+
+
 ## 3.0.0
 
 - vollständige Home-Assistant-Regelstrecke vom Entity-Eingang bis zum optionalen Live-Ausgang
