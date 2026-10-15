@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from math import isfinite
 from typing import Any
 
 import probatio
@@ -69,6 +70,14 @@ from .const import (
     CONF_STOP_MARGIN_KW,
     CONF_SURPLUS_ENABLED,
     CONF_SURPLUS_MIN_BATTERY_SOC,
+    CONF_HYBRID_PROBE_STEP_KW,
+    CONF_HYBRID_PROBE_SETTLE_S,
+    CONF_HYBRID_PROBE_RETRY_S,
+    CONF_HYBRID_GRID_TOLERANCE_KW,
+    DEFAULT_HYBRID_PROBE_STEP_KW,
+    DEFAULT_HYBRID_PROBE_SETTLE_S,
+    DEFAULT_HYBRID_PROBE_RETRY_S,
+    DEFAULT_HYBRID_GRID_TOLERANCE_KW,
     DEFAULT_ACTUAL_SENSOR_TIMEOUT_S,
     DEFAULT_BATTERY_SOC_SCALE,
     DEFAULT_DEFAULT_REQUEST_KW,
@@ -248,6 +257,19 @@ def _build_global_schema(values: dict[str, Any] | None = None) -> probatio.Schem
                     mode=NumberSelectorMode.BOX,
                 )
             ),
+            _required_marker(
+                CONF_HYBRID_PROBE_STEP_KW, values, DEFAULT_HYBRID_PROBE_STEP_KW,
+            ): _power_number_selector(),
+            _required_marker(
+                CONF_HYBRID_PROBE_SETTLE_S, values, DEFAULT_HYBRID_PROBE_SETTLE_S,
+            ): _seconds_selector(),
+            _required_marker(
+                CONF_HYBRID_PROBE_RETRY_S, values, DEFAULT_HYBRID_PROBE_RETRY_S,
+            ): _seconds_selector(),
+            _required_marker(
+                CONF_HYBRID_GRID_TOLERANCE_KW, values,
+                DEFAULT_HYBRID_GRID_TOLERANCE_KW,
+            ): _power_number_selector(),
         }
     )
 
@@ -286,6 +308,20 @@ def _validate_global_configuration(user_input: dict[str, Any]) -> dict[str, str]
 
     if grid_sensor_timeout_s <= 0.0:
         errors[CONF_GRID_SENSOR_TIMEOUT_S] = "grid_timeout_must_be_positive"
+
+    hybrid_parameters = (
+        (CONF_HYBRID_PROBE_STEP_KW, DEFAULT_HYBRID_PROBE_STEP_KW, False),
+        (CONF_HYBRID_PROBE_SETTLE_S, DEFAULT_HYBRID_PROBE_SETTLE_S, True),
+        (CONF_HYBRID_PROBE_RETRY_S, DEFAULT_HYBRID_PROBE_RETRY_S, False),
+        (CONF_HYBRID_GRID_TOLERANCE_KW, DEFAULT_HYBRID_GRID_TOLERANCE_KW, False),
+    )
+    for key, default, positive_required in hybrid_parameters:
+        try:
+            value = float(user_input.get(key, default))
+            if not isfinite(value) or value < 0 or (positive_required and value == 0):
+                errors[key] = "invalid_number"
+        except (ValueError, TypeError):
+            errors[key] = "invalid_number"
 
     battery_soc_entity = user_input.get(CONF_BATTERY_SOC_ENTITY)
     surplus_min_soc = user_input.get(CONF_SURPLUS_MIN_BATTERY_SOC)
