@@ -219,6 +219,10 @@ def _validate_configuration(
         "now_s": (
             inputs.now_s
         ),
+        "hybrid_probe_step_kw": inputs.hybrid_probe_step_kw,
+        "hybrid_probe_settle_s": inputs.hybrid_probe_settle_s,
+        "hybrid_probe_retry_s": inputs.hybrid_probe_retry_s,
+        "hybrid_grid_tolerance_kw": inputs.hybrid_grid_tolerance_kw,
     }
 
     for (
@@ -298,6 +302,14 @@ def _validate_configuration(
             "grid_reserve_kw muss kleiner als "
             "grid_limit_kw sein."
         )
+
+    if (
+        inputs.hybrid_probe_step_kw < 0.0
+        or inputs.hybrid_probe_settle_s <= 0.0
+        or inputs.hybrid_probe_retry_s < 0.0
+        or inputs.hybrid_grid_tolerance_kw < 0.0
+    ):
+        raise ValueError("Hybride Regelparameter sind ungueltig.")
 
     if inputs.now_s < 0.0:
 
@@ -660,42 +672,17 @@ def run_controller(
     # 3. Basislast
     # ------------------------------------------------------
 
-    if (
-        inputs.mode
-        == OperatingMode.SURPLUS
-    ):
-        # Im Überschussbetrieb wird die aktuelle
-        # Batterieleistung aus der Basislast herausgerechnet.
-        #
-        # battery_kw:
-        #   positiv = Entladen
-        #   negativ = Laden
-        #
-        # Dadurch wird eine laufende Batterieladung NICHT als
-        # feste Last konserviert. Ebenso wird Batterieentladung
-        # für die PMAX-Projektion konservativ nicht vorausgesetzt.
-        #
-        # Ergebnis:
-        #   Basislast = Netz - geregelte Last + Batterie
-        #
-        # Beispiel:
-        #   Netz = 0 kW
-        #   geregelte Last = 4.5 kW
-        #   Batterie lädt mit -10 kW
-        #
-        #   Basislast = 0 - 4.5 - 10 = -14.5 kW
-        #
-        # Neue PV-Verbraucher können diese 14.5 kW aufnehmen,
-        # ohne dass die bisherige Batterieladung künstlich
-        # reserviert wird.
+    if inputs.mode == OperatingMode.SURPLUS:
+        # Konservative PMAX-Projektion: aktuelle Entladung kann
+        # jederzeit wegfallen; laufende Ladung wird NICHT
+        # als sofort abschaltbar vorausgesetzt.
         base_load_kw = (
             inputs.grid_kw
             - controlled_power_for_calculation_kw
-            + inputs.battery_kw
+            + max(0.0, inputs.battery_kw)
         )
-
     else:
-
+        # NORMAL bleibt unveraendert.
         base_load_kw = (
             inputs.grid_kw
             - controlled_power_for_calculation_kw
@@ -761,24 +748,31 @@ def run_controller(
     # 7. Betriebsmodus
     # ------------------------------------------------------
 
-    if (
-        inputs.mode
-        == OperatingMode.SURPLUS
-    ):
+    # The probing state is copied into the next ControllerState
+    # after the shared priority allocator finishes.
+    probe_until_s = None
+    probe_target_kw = None
+    next_probe_s = 0.0
+    probe_started = False
+    steady_budget_kw = 0.0
 
-        # V3.0.6:
-        # Im Überschussbetrieb ist die aktuell gemessene
-        # PV-Erzeugung das Rohbudget für Überschussverbraucher.
+    if inputs.mode == OperatingMode.SURPLUS:
+        # Kirchhoff balance:
+        # house = PV + battery + grid - controlled_actual
+        # PV free after non-controllable house loads:
+        # PV - house = controlled_actual - grid - battery.
         #
-        # Eine laufende Batterieladung wird NICHT reserviert:
-        # verfügbare Verbraucher dürfen die PV-Leistung gemäß
-        # Priorität aufnehmen. Batterieentladung erweitert das
-        # PV-Budget dagegen niemals.
-        #
-        # PMAX bleibt anschließend über peak_budget_kw hart.
-        raw_surplus_budget_kw = max(
-            0.0,
-            inputs.pv_kw,
+        # This is *not* equal to all PV generation.
+        # Positive battery = discharge, negative = charge.
+        raw_surplus_budget_kw = (
+            max(
+                0.0,
+                controlled_power_for_calculation_kw
+                - inputs.grid_kw
+                - inputs.battery_kw,
+            )
+            if inputs.pv_kw > EPSILON
+            else 0.0
         )
 
         battery_soc_blocking_surplus = bool(
@@ -787,23 +781,132 @@ def run_controller(
             <= inputs.surplus_min_battery_soc
         )
 
-        if (
-            battery_soc_blocking_surplus
-        ):
+        # Hybrid battery support requires an actual power sensor,
+        # a configured SOC reserve, valid SOC, and genuine PV surplus.
+        battery_assist_allowed = (
+            inputs.hybrid_battery_assist_enabled
+            and battery_soc_gate_enabled
+            and not battery_soc_blocking_surplus
+            and raw_surplus_budget_kw > EPSILON
+        )
+        observed_discharge_kw = (
+            max(0.0, inputs.battery_kw)
+            if battery_assist_allowed else 0.0
+        )
 
-            surplus_budget_kw = 0.0
+        # Conservative observed coverage:
+        # - battery discharge may supplement PV only above reserve;
+        # - charging may not stop when flexible loads rise;
+        # - do not treat unobserved discharge as available.
+        #
+        # grid import removes uncovered demand; grid export adds
+        # immediately available headroom. Charge diversion must be
+        # learned by controlled probing, not guessed.
+        steady_budget_kw = min(
+            raw_surplus_budget_kw + observed_discharge_kw,
+            max(
+                0.0,
+                controlled_power_for_calculation_kw
+                - inputs.grid_kw
+                - (max(0.0, inputs.battery_kw)
+                   if not battery_assist_allowed else 0.0),
+            ),
+        )
+        surplus_budget_kw = steady_budget_kw
 
-        else:
+        # The requested power can exceed observed supply, but we
+        # increase only one small test step at a time. Never infer
+        # a nameplate maximum from the battery's present output.
+        current_demand_kw = sum(
+            max(0.0, min(load.requested_kw, load.max_kw))
+            for load in controlled_loads if load.available
+        )
+        last_commanded_kw = sum(
+            state.last_targets_kw.get(load.name, 0.0)
+            for load in controlled_loads
+        )
+        measured_all_loads = all(
+            load.actual_kw is not None for load in controlled_loads
+        )
+        stable_grid = (
+            inputs.grid_kw <= inputs.hybrid_grid_tolerance_kw
+        )
+        may_probe = (
+            battery_assist_allowed
+            and inputs.hybrid_probe_enabled
+            and inputs.hybrid_probe_step_kw > EPSILON
+            and measured_all_loads
+        )
 
-            surplus_budget_kw = (
-                raw_surplus_budget_kw
+        probe_pending = (
+            state.hybrid_probe_until_s is not None
+            and state.hybrid_probe_target_kw is not None
+        )
+        if may_probe and probe_pending and stable_grid:
+            if inputs.now_s < state.hybrid_probe_until_s:
+                # Await measured appliance and inverter response.
+                # PMAX may still reduce this target immediately.
+                surplus_budget_kw = max(
+                    steady_budget_kw,
+                    state.hybrid_probe_target_kw,
+                )
+                probe_until_s = state.hybrid_probe_until_s
+                probe_target_kw = state.hybrid_probe_target_kw
+                next_probe_s = state.hybrid_next_probe_s
+            else:
+                # A command is NOT proof of delivered power.
+                # Observe the actual controlled load and grid
+                # after settling before crediting battery support.
+                success = (
+                    controlled_power_for_calculation_kw
+                    >= state.hybrid_probe_target_kw
+                       - inputs.hybrid_grid_tolerance_kw
+                )
+                next_probe_s = (
+                    inputs.now_s + inputs.hybrid_probe_retry_s
+                )
+                if not success:
+                    # Fall back to measured power after a failed test.
+                    surplus_budget_kw = steady_budget_kw
+        elif may_probe and probe_pending:
+            # Grid import exceeded tolerance, PV disappeared, or
+            # SOC/sensors changed. Revoke the trial immediately.
+            next_probe_s = (
+                inputs.now_s + inputs.hybrid_probe_retry_s
             )
+        elif may_probe and (
+            inputs.now_s >= state.hybrid_next_probe_s
+            and stable_grid
+            and current_demand_kw > steady_budget_kw + EPSILON
+            and peak_budget_kw > steady_budget_kw + EPSILON
+            and abs(
+                controlled_power_for_calculation_kw
+                - last_commanded_kw
+            ) <= max(
+                inputs.hybrid_probe_step_kw,
+                inputs.hybrid_grid_tolerance_kw,
+            )
+        ):
+            addition_kw = min(
+                inputs.hybrid_probe_step_kw,
+                current_demand_kw - steady_budget_kw,
+                peak_budget_kw - steady_budget_kw,
+            )
+            if addition_kw > EPSILON:
+                surplus_budget_kw = (
+                    steady_budget_kw + addition_kw
+                )
+                probe_until_s = (
+                    inputs.now_s + inputs.hybrid_probe_settle_s
+                )
+                probe_started = True
+                next_probe_s = state.hybrid_next_probe_s
+        elif may_probe:
+            next_probe_s = state.hybrid_next_probe_s
 
-        # Selbst im Überschussbetrieb bleibt
-        # PMAX hart.
+        # PMAX is independent of SOC and probe behavior.
         available_budget_kw = min(
-            surplus_budget_kw,
-            peak_budget_kw,
+            surplus_budget_kw, peak_budget_kw,
         )
 
     else:
@@ -831,6 +934,15 @@ def run_controller(
     total_target_kw = sum(
         targets_kw.values()
     )
+
+    if probe_started:
+        if total_target_kw <= steady_budget_kw + EPSILON:
+            # An EVSE min-current/switch minimum prevented the
+            # test; never mark an unapplied setpoint as a probe.
+            probe_until_s = None
+            next_probe_s = inputs.now_s + inputs.hybrid_probe_retry_s
+        else:
+            probe_target_kw = total_target_kw
 
     # ------------------------------------------------------
     # 9. Prognostizierter Netzbezug
@@ -893,6 +1005,9 @@ def run_controller(
 
         now_s=inputs.now_s,
     )
+    next_state.hybrid_probe_until_s = probe_until_s
+    next_state.hybrid_probe_target_kw = probe_target_kw
+    next_state.hybrid_next_probe_s = next_probe_s
 
     # ------------------------------------------------------
     # 12. Diagnosewerte
