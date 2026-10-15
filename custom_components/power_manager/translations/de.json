@@ -300,10 +300,10 @@
         "name": "Peakshaving-Budget"
       },
       "raw_surplus_budget": {
-        "name": "PV-Budget Überschuss"
+        "name": "Echter PV-Überschuss nach Grundlast"
       },
       "surplus_budget": {
-        "name": "Freigegebenes Überschussbudget"
+        "name": "Beobachtetes Hybridbudget"
       },
       "available_budget": {
         "name": "Verfügbares Lastbudget"
@@ -368,7 +368,7 @@
         "name": "Netzgrenze nicht erreichbar"
       },
       "battery_soc_blocking_surplus": {
-        "name": "Batterie-Reserve sperrt Überschuss"
+        "name": "Batterieunterstützung durch SOC-Reserve gesperrt"
       }
     },
     "select": {
