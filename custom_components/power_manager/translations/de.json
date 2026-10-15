@@ -39,7 +39,7 @@
           "hybrid_probe_step_kw": "Maximale zusätzliche Last pro Prüfung. 0 deaktiviert aktive Versuche. Keine angenommene Batterie-Nennleistung.",
           "hybrid_probe_settle_s": "Zeit nach einem Lastversuch, bevor die tatsächliche Anlagenreaktion bewertet wird.",
           "hybrid_probe_retry_s": "Wartezeit nach einer erfolgreichen oder abgebrochenen Prüfung bis zum nächsten Versuch.",
-          "hybrid_grid_tolerance_kw": "Beobachteter Netzbezug oberhalb dieser Grenze beendet einen Lastversuch. PMAX gilt stets unabhängig davon."
+          "hybrid_grid_tolerance_kw": "Netzbezug bis zu dieser Grenze gilt nach der Einschwingzeit als erfolgreich. Während der Einschwingzeit wird maximal ein zusätzlicher Prüfschritt darüber toleriert; PMAX bleibt hart."
         }
       }
     },
@@ -91,7 +91,7 @@
           "hybrid_probe_step_kw": "Maximale zusätzliche Last pro Prüfung. 0 deaktiviert aktive Versuche. Keine angenommene Batterie-Nennleistung.",
           "hybrid_probe_settle_s": "Zeit nach einem Lastversuch, bevor die tatsächliche Anlagenreaktion bewertet wird.",
           "hybrid_probe_retry_s": "Wartezeit nach einer erfolgreichen oder abgebrochenen Prüfung bis zum nächsten Versuch.",
-          "hybrid_grid_tolerance_kw": "Beobachteter Netzbezug oberhalb dieser Grenze beendet einen Lastversuch. PMAX gilt stets unabhängig davon."
+          "hybrid_grid_tolerance_kw": "Netzbezug bis zu dieser Grenze gilt nach der Einschwingzeit als erfolgreich. Während der Einschwingzeit wird maximal ein zusätzlicher Prüfschritt darüber toleriert; PMAX bleibt hart."
         }
       }
     },
