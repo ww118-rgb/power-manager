@@ -131,25 +131,57 @@ def test_load_probe_discovers_increased_discharge_from_feedback():
     assert r4.targets_kw["Last"] == pytest.approx(22)
 
 
-def test_failed_probe_rolls_back_if_grid_import_rises():
+def test_failed_probe_rolls_back_after_settling_timeout():
     r0 = run_controller(plant(now=0), [load(actual=20)])
     r1 = run_controller(
         plant(now=1), [load(actual=20)], state=r0.state,
     )
-    # Battery could not increase; grid imported the extra 1 kW.
+    # A bounded 1 kW transient is permitted until settling ends.
     r2 = run_controller(
         plant(now=2, grid=1), [load(actual=21)], state=r1.state,
     )
-    assert r2.targets_kw["Last"] == pytest.approx(20)
-    assert r2.state.hybrid_probe_until_s is None
+    assert r2.targets_kw["Last"] == pytest.approx(21)
     r3 = run_controller(
-        plant(now=5), [load(actual=20)], state=r2.state,
+        plant(now=4, grid=1), [load(actual=21)], state=r2.state,
     )
     assert r3.targets_kw["Last"] == pytest.approx(20)
+    assert r3.state.hybrid_probe_until_s is None
     r4 = run_controller(
-        plant(now=12), [load(actual=20)], state=r3.state,
+        plant(now=5), [load(actual=20)], state=r3.state,
     )
+    assert r4.targets_kw["Last"] == pytest.approx(20)
+    r5 = run_controller(
+        plant(now=14), [load(actual=20)], state=r4.state,
+    )
+    assert r5.targets_kw["Last"] == pytest.approx(21)
+
+
+def test_inverter_delay_recovers_before_settling_deadline():
+    r0 = run_controller(plant(now=0), [load(actual=20)])
+    r1 = run_controller(plant(now=1), [load(actual=20)], state=r0.state)
+    r2 = run_controller(
+        plant(now=2, grid=1), [load(actual=21)], state=r1.state,
+    )
+    assert r2.targets_kw["Last"] == pytest.approx(21)
+    r3 = run_controller(
+        plant(now=2.5, battery=1), [load(actual=21)], state=r2.state,
+    )
+    assert r3.targets_kw["Last"] == pytest.approx(21)
+    r4 = run_controller(
+        plant(now=4, battery=1), [load(actual=21)], state=r3.state,
+    )
+    assert r4.state.hybrid_probe_until_s is None
     assert r4.targets_kw["Last"] == pytest.approx(21)
+
+
+def test_large_grid_excursion_cancels_probe_immediately():
+    r0 = run_controller(plant(now=0), [load(actual=20)])
+    r1 = run_controller(plant(now=1), [load(actual=20)], state=r0.state)
+    r2 = run_controller(
+        plant(now=2, grid=2), [load(actual=21)], state=r1.state,
+    )
+    assert r2.state.hybrid_probe_until_s is None
+    assert r2.targets_kw["Last"] == pytest.approx(19)
 
 
 def test_soc_drops_while_probe_pending():
