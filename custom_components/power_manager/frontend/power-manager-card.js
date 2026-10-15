@@ -1,4 +1,4 @@
-const POWER_MANAGER_CARD_VERSION = "3.1.1";
+const POWER_MANAGER_CARD_VERSION = "3.2.0";
 
 class PowerManagerCard extends HTMLElement {
   constructor() {
@@ -558,7 +558,7 @@ class PowerManagerCard extends HTMLElement {
       '<div class="control"><span class="control-label">Batterie-SOC</span><strong>' +
       this._fmt(soc, "%", 1) +
       '</strong><div class="control-label">' +
-      (this._bool("battery_soc_blocking_surplus") ? "Reserve sperrt Überschuss" : "Reserve frei") +
+      (this._bool("battery_soc_blocking_surplus") ? "Batteriehilfe gesperrt" : "Reserve frei") +
       "</div></div>" +
       "</div>" +
 
@@ -576,7 +576,7 @@ class PowerManagerCard extends HTMLElement {
       '<div class="flow-arrow">↓</div>' +
       '<div class="manager"><strong>Power Manager</strong><small>' +
       (mode === "surplus"
-        ? "PV-Budget " + this._fmt(surplus, "kW", 2)
+        ? "Hybrid-Budget " + this._fmt(surplus, "kW", 2)
         : "Peak-Budget " + this._fmt(this._num("peak_budget"), "kW", 2)) +
       " · verfügbar " +
       this._fmt(available, "kW", 2) +
