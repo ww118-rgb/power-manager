@@ -39,7 +39,7 @@
           "hybrid_probe_step_kw": "Maximum extra load per trial. 0 disables active trials; not a presumed battery rating.",
           "hybrid_probe_settle_s": "Time to wait after a load trial before evaluating real meter feedback.",
           "hybrid_probe_retry_s": "Delay before another trial after success or rollback.",
-          "hybrid_grid_tolerance_kw": "Observed grid import above this value cancels a trial. PMAX always applies independently."
+          "hybrid_grid_tolerance_kw": "Grid import must return below this level after settling. During settling at most one extra configured probe step is tolerated; PMAX always applies."
         }
       }
     },
@@ -91,7 +91,7 @@
           "hybrid_probe_step_kw": "Maximum extra load per trial. 0 disables active trials; not a presumed battery rating.",
           "hybrid_probe_settle_s": "Time to wait after a load trial before evaluating real meter feedback.",
           "hybrid_probe_retry_s": "Delay before another trial after success or rollback.",
-          "hybrid_grid_tolerance_kw": "Observed grid import above this value cancels a trial. PMAX always applies independently."
+          "hybrid_grid_tolerance_kw": "Grid import must return below this level after settling. During settling at most one extra configured probe step is tolerated; PMAX always applies."
         }
       }
     },
