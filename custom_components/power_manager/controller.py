@@ -831,6 +831,14 @@ def run_controller(
         stable_grid = (
             inputs.grid_kw <= inputs.hybrid_grid_tolerance_kw
         )
+        # A brief import of at most one configured probe step can
+        # occur while a real inverter responds. Never hold the probe
+        # if grid import exceeds the probe excursion OR PMAX.
+        transient_grid_safe = (
+            inputs.grid_kw <= inputs.hybrid_grid_tolerance_kw
+                              + inputs.hybrid_probe_step_kw
+            and inputs.grid_kw <= effective_grid_limit_kw
+        )
         may_probe = (
             battery_assist_allowed
             and inputs.hybrid_probe_enabled
@@ -842,7 +850,7 @@ def run_controller(
             state.hybrid_probe_until_s is not None
             and state.hybrid_probe_target_kw is not None
         )
-        if may_probe and probe_pending and stable_grid:
+        if may_probe and probe_pending and transient_grid_safe:
             if inputs.now_s < state.hybrid_probe_until_s:
                 # Await measured appliance and inverter response.
                 # PMAX may still reduce this target immediately.
@@ -858,9 +866,10 @@ def run_controller(
                 # Observe the actual controlled load and grid
                 # after settling before crediting battery support.
                 success = (
-                    controlled_power_for_calculation_kw
-                    >= state.hybrid_probe_target_kw
-                       - inputs.hybrid_grid_tolerance_kw
+                    stable_grid
+                    and controlled_power_for_calculation_kw
+                        >= state.hybrid_probe_target_kw
+                           - inputs.hybrid_grid_tolerance_kw
                 )
                 next_probe_s = (
                     inputs.now_s + inputs.hybrid_probe_retry_s
