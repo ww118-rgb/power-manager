@@ -2,7 +2,21 @@
 
 Power Manager ist eine generische Home-Assistant-Integration für ein zentrales Energiemanagement. Sie verbindet vorhandene Home-Assistant-Entities mit einem getesteten Reglerkern und kann damit Peakshaving, PV-Überschussbetrieb und priorisierte Verbrauchersteuerung abbilden.
 
-**Aktueller Stand: V3.1.1**
+**Aktueller Stand: V3.2.0 (Hybrid-Überschussregelung in der Entwicklung / vor Live-Abnahme)**
+
+## Neu in V3.2.0: rückgekoppelter Hybrid-Überschuss
+
+Im Überschussmodus wird die tatsächlich nach der ungeregelten Hauslast verfügbare PV-Leistung aus der Bilanz der Netz-, Batterie- und geregelten Verbraucher-Istwerte bestimmt. Die Batterie kann oberhalb der konfigurierten SOC-Reserve unterstützen, aber nur soweit ihre Entladung beobachtbar ist; bei Erreichen der Reserve bleibt reiner PV-Überschussbetrieb aktiv. Die Batterie wird nicht selbst angesteuert.
+
+**Sicherheitsverhalten:** Zusätzlich zu PMAX wird im Überschussmodus konservativ mit einem möglichen Wegfall der aktuellen Batterieentladung gerechnet. Vorübergehender Netzbezug durch unerwartete Anlagenänderungen oder Kommunikationsverzögerung kann softwareseitig nicht vollständig ausgeschlossen werden. Der NORMAL-Modus und der bestehende Prioritäts-Allocator werden nicht verändert.
+
+**Aktives Austesten ist zunächst standardmäßig AUS (Prüfschritt = 0 kW).** Nur nach bewusster Konfiguration eines positiven Prüfschritts und Aktivierung der Live-Regelung darf der Regler zusätzliche Verbraucherleistung testen. Er wertet nach der einstellbaren Einschwingzeit die tatsächlich gemessene Verbraucherleistung und den Netzbezug aus; fehlgeschlagene Schritte werden zurückgenommen und vor weiteren Versuchen gewartet. Prüfschritt, Einschwingzeit, Wiederholverzögerung und zulässiger kurzzeitiger Netzbezug sind frei einstellbar. Eine Batterie-Nennleistung wird nicht angenommen.
+
+Benötigt für Batterieunterstützung: Batterieleistungssensor, SOC-Sensor und konfigurierbare Reserve-SOC-Grenze. Für aktive Tests müssen die geregelten Verbraucher eigene aktuelle Istleistungsmessungen besitzen. Die zyklischen MQTT-Sensoren benötigen korrekt erneuerte Zeitstempel (`force_update: true` bei entsprechenden MQTT-Sensoren).
+
+**Vor Live-Test:** Zuerst neue Version installieren, Config-Flow-Werte kontrollieren und mit abgeschalteter Live-Regelung prüfen. Tests mit begrenzten Stellwerten beginnen und den Netzbezug unabhängig überwachen. Ein direkter Batterie-Aktor ist weiterhin nicht Bestandteil dieser Änderung.
+
+
 
 ## Neu in V3.1.1: responsive Power Manager Dashboard Card
 
