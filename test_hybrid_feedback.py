@@ -95,7 +95,7 @@ def test_battery_support_requires_configured_soc_and_meter():
 def test_existing_battery_charge_not_assumed_instantly_divertible():
     # 30 PV = 5 house + 15 battery charging + 10 exported.
     result = run_controller(
-        plant(grid=-10, battery=-15), [load(actual=0)]
+        plant(grid=-10, battery=-15, live=False), [load(actual=0)]
     )
     assert result.raw_surplus_budget_kw == pytest.approx(25)
     assert result.targets_kw["Last"] == pytest.approx(10)
