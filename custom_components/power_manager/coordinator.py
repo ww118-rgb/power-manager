@@ -64,6 +64,14 @@ from .const import (
     CONF_STOP_MARGIN_KW,
     CONF_SURPLUS_ENABLED,
     CONF_SURPLUS_MIN_BATTERY_SOC,
+    CONF_HYBRID_PROBE_STEP_KW,
+    CONF_HYBRID_PROBE_SETTLE_S,
+    CONF_HYBRID_PROBE_RETRY_S,
+    CONF_HYBRID_GRID_TOLERANCE_KW,
+    DEFAULT_HYBRID_PROBE_STEP_KW,
+    DEFAULT_HYBRID_PROBE_SETTLE_S,
+    DEFAULT_HYBRID_PROBE_RETRY_S,
+    DEFAULT_HYBRID_GRID_TOLERANCE_KW,
     DEFAULT_ACTUAL_SENSOR_TIMEOUT_S,
     DEFAULT_BATTERY_SOC_SCALE,
     DEFAULT_DEFAULT_REQUEST_KW,
@@ -339,6 +347,7 @@ class PowerManagerCoordinator(DataUpdateCoordinator[PowerManagerCoordinatorData]
         entity_key: str,
         invert_key: str,
         label: str,
+        require_fresh: bool = False,
     ) -> float:
         """Read an optional global power entity in kW."""
 
@@ -348,6 +357,12 @@ class PowerManagerCoordinator(DataUpdateCoordinator[PowerManagerCoordinatorData]
             return 0.0
 
         state = self._get_state(entity_id, label=label)
+        if require_fresh:
+            age_s = measurement_age_seconds(
+                state.last_reported, datetime.now(timezone.utc)
+            )
+            if not measurement_is_fresh(age_s, self._grid_timeout_s()):
+                raise MeasurementError(f"{label}: Messwert ist {age_s:.1f} s alt.")
         raw_value, unit = self._state_value_and_unit(state, label=label)
         return power_to_kw(
             raw_value,
@@ -365,6 +380,12 @@ class PowerManagerCoordinator(DataUpdateCoordinator[PowerManagerCoordinatorData]
             return None
 
         state = self._get_state(entity_id, label="Batterie-SOC")
+        if self.operating_mode == OperatingMode.SURPLUS:
+            age_s = measurement_age_seconds(
+                state.last_reported, datetime.now(timezone.utc)
+            )
+            if not measurement_is_fresh(age_s, self._grid_timeout_s()):
+                raise MeasurementError(f"Batterie-SOC: Messwert ist {age_s:.1f} s alt.")
         raw_value, unit = self._state_value_and_unit(state, label="Batterie-SOC")
         return percentage_from_scale(
             raw_value,
@@ -733,6 +754,7 @@ class PowerManagerCoordinator(DataUpdateCoordinator[PowerManagerCoordinatorData]
                 entity_key=CONF_PV_POWER_ENTITY,
                 invert_key=CONF_INVERT_PV_POWER,
                 label="PV-Leistung",
+                require_fresh=(self.operating_mode == OperatingMode.SURPLUS),
             )
         except MeasurementError as err:
             _LOGGER.warning("PV-Messwert ungültig; verwende 0 kW: %s", err)
@@ -743,6 +765,7 @@ class PowerManagerCoordinator(DataUpdateCoordinator[PowerManagerCoordinatorData]
                 entity_key=CONF_BATTERY_POWER_ENTITY,
                 invert_key=CONF_INVERT_BATTERY_POWER,
                 label="Batterieleistung",
+                require_fresh=(self.operating_mode == OperatingMode.SURPLUS),
             )
         except MeasurementError as err:
             if self.operating_mode == OperatingMode.SURPLUS:
@@ -778,23 +801,9 @@ class PowerManagerCoordinator(DataUpdateCoordinator[PowerManagerCoordinatorData]
             battery_soc = None
             surplus_min_battery_soc = None
 
-        # V3.0.6 battery reserve policy:
-        # SURPLUS is only active while the battery SOC is strictly above
-        # the configured reserve. At or below the reserve we immediately
-        # return to NORMAL. This is a mode transition, not a fail-safe.
-        if (
-            self.operating_mode == OperatingMode.SURPLUS
-            and surplus_min_battery_soc is not None
-            and battery_soc is not None
-            and battery_soc <= surplus_min_battery_soc
-        ):
-            _LOGGER.info(
-                "Batterie-SOC %.1f %% hat die Überschussreserve %.1f %% erreicht; "
-                "wechsle automatisch auf NORMAL.",
-                battery_soc,
-                surplus_min_battery_soc,
-            )
-            self.operating_mode = OperatingMode.NORMAL
+        # Hybrid A1: reaching the SOC reserve revokes *battery assistance*,
+        # not the pure PV-surplus mode. The controller still allocates PV
+        # generation above the non-controllable house load.
 
         try:
             inputs = ControllerInputs(
@@ -807,6 +816,26 @@ class PowerManagerCoordinator(DataUpdateCoordinator[PowerManagerCoordinatorData]
                 mode=self.operating_mode,
                 now_s=monotonic(),
                 surplus_min_battery_soc=surplus_min_battery_soc,
+                hybrid_battery_assist_enabled=bool(
+                    values.get(CONF_BATTERY_POWER_ENTITY)
+                    and values.get(CONF_BATTERY_SOC_ENTITY)
+                    and surplus_min_battery_soc is not None
+                ),
+                # Never run load exploration in dry-run. It requires
+                # actual applied commands and observed plant response.
+                hybrid_probe_enabled=self.live_control_enabled,
+                hybrid_probe_step_kw=float(values.get(
+                    CONF_HYBRID_PROBE_STEP_KW, DEFAULT_HYBRID_PROBE_STEP_KW,
+                )),
+                hybrid_probe_settle_s=float(values.get(
+                    CONF_HYBRID_PROBE_SETTLE_S, DEFAULT_HYBRID_PROBE_SETTLE_S,
+                )),
+                hybrid_probe_retry_s=float(values.get(
+                    CONF_HYBRID_PROBE_RETRY_S, DEFAULT_HYBRID_PROBE_RETRY_S,
+                )),
+                hybrid_grid_tolerance_kw=float(values.get(
+                    CONF_HYBRID_GRID_TOLERANCE_KW, DEFAULT_HYBRID_GRID_TOLERANCE_KW,
+                )),
             )
 
             result = run_controller(
