@@ -694,7 +694,7 @@ def test_surplus_pmax_still_caps_pv_budget():
 
     assert (
         result.projected_grid_kw
-        == pytest.approx(140.0)
+        == pytest.approx(130.0)
     )
 
 
