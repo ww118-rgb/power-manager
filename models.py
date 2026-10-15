@@ -110,8 +110,8 @@ class ControllerInputs:
 
     pv_kw:
         PV-Leistung.
-        Im Überschussbetrieb bildet sie das Rohbudget
-        für priorisierte Überschussverbraucher.
+        PV-Erzeugung; das echte Budget ergibt sich erst
+        nach Abzug der ungeregelten Hauslast.
 
     battery_soc:
         Ladezustand 0...100 %.
@@ -127,11 +127,8 @@ class ControllerInputs:
 
         None = SOC-Grenze deaktiviert.
 
-        Im Home-Assistant-Adapter wird bei Erreichen
-        oder Unterschreiten dieser Grenze automatisch
-        auf NORMAL zurückgeschaltet. Der reine Kern
-        sperrt im SURPLUS-Modus bei <= Grenze ebenfalls
-        die Überschussfreigabe.
+        Bei SOC <= Reserve wird die Batterieunterstützung
+        gesperrt, der echte PV-Überschuss bleibt nutzbar.
 
     now_s:
         Zeitwert in Sekunden.
@@ -157,6 +154,15 @@ class ControllerInputs:
 
     surplus_min_battery_soc: float | None = None
 
+    # Hybrid feedback parameters (plant-independent, all configurable).
+    # The coordinator enables active probing only during live control.
+    hybrid_battery_assist_enabled: bool = False
+    hybrid_probe_enabled: bool = False
+    hybrid_probe_step_kw: float = 0.0
+    hybrid_probe_settle_s: float = 5.0
+    hybrid_probe_retry_s: float = 30.0
+    hybrid_grid_tolerance_kw: float = 0.1
+
 
 @dataclass
 class ControllerState:
@@ -171,6 +177,12 @@ class ControllerState:
     load_states: dict[str, LoadRuntimeState] = field(
         default_factory=dict
     )
+
+    # Exactly one outstanding hybrid probe; no physical battery
+    # maximum is inferred from instantaneous discharge.
+    hybrid_probe_until_s: float | None = None
+    hybrid_probe_target_kw: float | None = None
+    hybrid_next_probe_s: float = 0.0
 
 
 @dataclass

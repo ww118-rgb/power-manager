@@ -2,7 +2,7 @@
 
 DOMAIN = "power_manager"
 NAME = "Power Manager"
-VERSION = "3.1.1"
+VERSION = "3.2.0"
 
 SUBENTRY_TYPE_LOAD = "load"
 
@@ -16,6 +16,10 @@ CONF_BATTERY_POWER_ENTITY = "battery_power_entity"
 CONF_BATTERY_SOC_ENTITY = "battery_soc_entity"
 CONF_BATTERY_SOC_SCALE = "battery_soc_scale"
 CONF_SURPLUS_MIN_BATTERY_SOC = "surplus_min_battery_soc"
+CONF_HYBRID_PROBE_STEP_KW = "hybrid_probe_step_kw"
+CONF_HYBRID_PROBE_SETTLE_S = "hybrid_probe_settle_s"
+CONF_HYBRID_PROBE_RETRY_S = "hybrid_probe_retry_s"
+CONF_HYBRID_GRID_TOLERANCE_KW = "hybrid_grid_tolerance_kw"
 CONF_INVERT_GRID_POWER = "invert_grid_power"
 CONF_INVERT_PV_POWER = "invert_pv_power"
 CONF_INVERT_BATTERY_POWER = "invert_battery_power"
@@ -80,6 +84,10 @@ BATTERY_SOC_SCALES = (
 
 DEFAULT_GRID_RESERVE_KW = 0.0
 DEFAULT_GRID_SENSOR_TIMEOUT_S = 10.0
+DEFAULT_HYBRID_PROBE_STEP_KW = 0.0
+DEFAULT_HYBRID_PROBE_SETTLE_S = 5.0
+DEFAULT_HYBRID_PROBE_RETRY_S = 30.0
+DEFAULT_HYBRID_GRID_TOLERANCE_KW = 0.1
 DEFAULT_INVERT_GRID_POWER = False
 DEFAULT_INVERT_PV_POWER = False
 DEFAULT_INVERT_BATTERY_POWER = False

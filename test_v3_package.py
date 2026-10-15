@@ -13,7 +13,7 @@ def _json(relative: str):
 
 def test_manifest_and_runtime_version_match_v3():
     manifest = _json("manifest.json")
-    assert manifest["version"] == "3.1.1"
+    assert manifest["version"] == "3.2.0"
     assert VERSION == manifest["version"]
 
 
@@ -86,17 +86,19 @@ def test_load_reconfigure_uses_parent_entry_accessor():
     assert "self._get_reconfigure_entry()" not in reconfigure_block
 
 
-def test_surplus_mode_auto_returns_to_normal_at_reserve_soc():
+def test_surplus_reserve_blocks_battery_assist_without_changing_mode():
     source = (COMPONENT / "coordinator.py").read_text(encoding="utf-8")
-    assert "battery_soc <= surplus_min_battery_soc" in source
-    assert "self.operating_mode = OperatingMode.NORMAL" in source
+    soc_policy = source[source.index("# Hybrid A1:"):source.index("inputs = ControllerInputs(")]
+    assert "self.operating_mode = OperatingMode.NORMAL" not in soc_policy
+    assert "hybrid_battery_assist_enabled" in source
 
 
-def test_surplus_core_uses_pv_as_raw_budget():
+def test_surplus_core_uses_actual_power_balance_not_total_pv():
     source = (COMPONENT / "controller.py").read_text(encoding="utf-8")
-    surplus_block = source[source.index("# V3.0.6:"):source.index("battery_soc_blocking_surplus", source.index("# V3.0.6:"))]
-    assert "inputs.pv_kw" in surplus_block
-    assert "controlled_power_for_calculation_kw\n            - inputs.grid_kw" not in surplus_block
+    assert "raw_surplus_budget_kw = (" in source
+    assert "controlled_power_for_calculation_kw" in source
+    assert "observed_discharge_kw" in source
+    assert "hybrid_probe_until_s" in source
 
 
 def test_manifest_classifies_power_manager_as_hub():

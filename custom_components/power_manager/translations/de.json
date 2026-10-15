@@ -4,7 +4,7 @@
     "step": {
       "user": {
         "title": "Power Manager konfigurieren",
-        "description": "Netzanschluss sowie optionale PV-/Batteriemessungen konfigurieren. Positive Netzleistung bedeutet Bezug, negative Einspeisung. Im Überschussbetrieb bildet die PV-Leistung das Verbraucherbudget; PMAX hat immer höchste Priorität.",
+        "description": "Netzanschluss sowie optionale PV-/Batteriemessungen konfigurieren. Positive Netzleistung bedeutet Bezug, negative Einspeisung. Im Überschussbetrieb wird nur echter PV-Überschuss nach der Hausgrundlast verteilt; eine Batterie unterstützt darüber hinaus nur oberhalb der SOC-Reserve nach gemessener Rückkopplung.",
         "data": {
           "grid_power_entity": "Netzleistungssensor",
           "grid_limit_kw": "PMAX",
@@ -17,7 +17,11 @@
           "invert_battery_power": "Vorzeichen der Batterieleistung invertieren",
           "battery_soc_entity": "Batterie-SOC-Sensor",
           "battery_soc_scale": "Skalierung der SOC-Quelle",
-          "surplus_min_battery_soc": "Batterie-Reserve-SOC für Überschussbetrieb"
+          "surplus_min_battery_soc": "Batterie-Reserve-SOC für Überschussbetrieb",
+          "hybrid_probe_step_kw": "Hybrid-Prüfschritt (kW)",
+          "hybrid_probe_settle_s": "Einschwingzeit für Hybridprüfung (s)",
+          "hybrid_probe_retry_s": "Wartezeit zwischen Hybridprüfungen (s)",
+          "hybrid_grid_tolerance_kw": "Maximal tolerierter Netzbezug bei Hybridprüfung (kW)"
         },
         "data_description": {
           "grid_power_entity": "Pflichtfeld. Nettoleistung am Netzanschlusspunkt.",
@@ -31,7 +35,11 @@
           "invert_battery_power": "Aktivieren, wenn die Quelle die entgegengesetzte Batterie-Vorzeichenkonvention nutzt.",
           "battery_soc_entity": "Optionaler Batterie-SOC-Sensor.",
           "battery_soc_scale": "Prozent für Quellen 0..100 %, Anteil für einheitenlose Quellen 0..1.",
-          "surplus_min_battery_soc": "Optional. Bei Erreichen oder Unterschreiten dieses SOC wechselt Power Manager automatisch von Überschuss auf Normal."
+          "surplus_min_battery_soc": "Nur oberhalb dieser Reserve darf die Batterie flexible Verbraucher im Überschussbetrieb unterstützen. Der PV-Überschussbetrieb bleibt darunter aktiv.",
+          "hybrid_probe_step_kw": "Maximale zusätzliche Last pro Prüfung. 0 deaktiviert aktive Versuche. Keine angenommene Batterie-Nennleistung.",
+          "hybrid_probe_settle_s": "Zeit nach einem Lastversuch, bevor die tatsächliche Anlagenreaktion bewertet wird.",
+          "hybrid_probe_retry_s": "Wartezeit nach einer erfolgreichen oder abgebrochenen Prüfung bis zum nächsten Versuch.",
+          "hybrid_grid_tolerance_kw": "Netzbezug bis zu dieser Grenze gilt nach der Einschwingzeit als erfolgreich. Während der Einschwingzeit wird maximal ein zusätzlicher Prüfschritt darüber toleriert; PMAX bleibt hart."
         }
       }
     },
@@ -48,7 +56,7 @@
     "step": {
       "init": {
         "title": "Power-Manager-Einstellungen",
-        "description": "Globale Netz-, PV- und Batteriekonfiguration ändern. Im Überschussbetrieb wird PV nach Priorität an Überschussverbraucher verteilt; bei Reserve-SOC erfolgt automatisch die Rückkehr zu Normal. Die Integration wird nach dem Speichern neu geladen.",
+        "description": "Globale Netz-, PV- und Batteriekonfiguration ändern. Im Überschussbetrieb wird nur echter PV-Überschuss nach der Hausgrundlast verteilt; eine Batterie unterstützt darüber hinaus nur oberhalb der SOC-Reserve nach gemessener Rückkopplung. Die Integration wird nach dem Speichern neu geladen.",
         "data": {
           "grid_power_entity": "Netzleistungssensor",
           "grid_limit_kw": "PMAX",
@@ -61,7 +69,11 @@
           "invert_battery_power": "Vorzeichen der Batterieleistung invertieren",
           "battery_soc_entity": "Batterie-SOC-Sensor",
           "battery_soc_scale": "Skalierung der SOC-Quelle",
-          "surplus_min_battery_soc": "Batterie-Reserve-SOC für Überschussbetrieb"
+          "surplus_min_battery_soc": "Batterie-Reserve-SOC für Überschussbetrieb",
+          "hybrid_probe_step_kw": "Hybrid-Prüfschritt (kW)",
+          "hybrid_probe_settle_s": "Einschwingzeit für Hybridprüfung (s)",
+          "hybrid_probe_retry_s": "Wartezeit zwischen Hybridprüfungen (s)",
+          "hybrid_grid_tolerance_kw": "Maximal tolerierter Netzbezug bei Hybridprüfung (kW)"
         },
         "data_description": {
           "grid_power_entity": "Pflichtfeld. Nettoleistung am Netzanschlusspunkt.",
@@ -75,7 +87,11 @@
           "invert_battery_power": "Aktivieren, wenn die Quelle die entgegengesetzte Batterie-Vorzeichenkonvention nutzt.",
           "battery_soc_entity": "Optionaler Batterie-SOC-Sensor.",
           "battery_soc_scale": "Prozent für Quellen 0..100 %, Anteil für einheitenlose Quellen 0..1.",
-          "surplus_min_battery_soc": "Optional. Bei Erreichen oder Unterschreiten dieses SOC wechselt Power Manager automatisch von Überschuss auf Normal."
+          "surplus_min_battery_soc": "Nur oberhalb dieser Reserve darf die Batterie flexible Verbraucher im Überschussbetrieb unterstützen. Der PV-Überschussbetrieb bleibt darunter aktiv.",
+          "hybrid_probe_step_kw": "Maximale zusätzliche Last pro Prüfung. 0 deaktiviert aktive Versuche. Keine angenommene Batterie-Nennleistung.",
+          "hybrid_probe_settle_s": "Zeit nach einem Lastversuch, bevor die tatsächliche Anlagenreaktion bewertet wird.",
+          "hybrid_probe_retry_s": "Wartezeit nach einer erfolgreichen oder abgebrochenen Prüfung bis zum nächsten Versuch.",
+          "hybrid_grid_tolerance_kw": "Netzbezug bis zu dieser Grenze gilt nach der Einschwingzeit als erfolgreich. Während der Einschwingzeit wird maximal ein zusätzlicher Prüfschritt darüber toleriert; PMAX bleibt hart."
         }
       }
     },
@@ -284,10 +300,10 @@
         "name": "Peakshaving-Budget"
       },
       "raw_surplus_budget": {
-        "name": "PV-Budget Überschuss"
+        "name": "Echter PV-Überschuss nach Grundlast"
       },
       "surplus_budget": {
-        "name": "Freigegebenes Überschussbudget"
+        "name": "Beobachtetes Hybridbudget"
       },
       "available_budget": {
         "name": "Verfügbares Lastbudget"
@@ -352,7 +368,7 @@
         "name": "Netzgrenze nicht erreichbar"
       },
       "battery_soc_blocking_surplus": {
-        "name": "Batterie-Reserve sperrt Überschuss"
+        "name": "Batterieunterstützung durch SOC-Reserve gesperrt"
       }
     },
     "select": {
