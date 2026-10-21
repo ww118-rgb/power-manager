@@ -21,7 +21,11 @@
           "hybrid_probe_step_kw": "Hybrid probing step (kW)",
           "hybrid_probe_settle_s": "Hybrid probe settling time (s)",
           "hybrid_probe_retry_s": "Hybrid probe retry delay (s)",
-          "hybrid_grid_tolerance_kw": "Hybrid probe grid-import tolerance (kW)"
+          "hybrid_grid_tolerance_kw": "Hybrid probe grid-import tolerance (kW)",
+          "battery_resume_hysteresis_soc": "Battery bonus restart hysteresis (%)",
+          "pv_sensor_timeout_s": "PV sensor timeout (s)",
+          "battery_sensor_timeout_s": "Battery power timeout (s)",
+          "battery_soc_sensor_timeout_s": "Battery SOC timeout (s)"
         },
         "data_description": {
           "grid_power_entity": "Required. Net power measured at the grid connection point.",
@@ -39,7 +43,11 @@
           "hybrid_probe_step_kw": "Maximum extra load per trial. 0 disables active trials; not a presumed battery rating.",
           "hybrid_probe_settle_s": "Time to wait after a load trial before evaluating real meter feedback.",
           "hybrid_probe_retry_s": "Delay before another trial after success or rollback.",
-          "hybrid_grid_tolerance_kw": "Grid import must return below this level after settling. During settling at most one extra configured probe step is tolerated; PMAX always applies."
+          "hybrid_grid_tolerance_kw": "Grid import must return below this level after settling. During settling at most one extra configured probe step is tolerated; PMAX always applies.",
+          "battery_resume_hysteresis_soc": "Battery assistance resumes only above reserve + hysteresis. Pure PV operation is always independent from SOC.",
+          "pv_sensor_timeout_s": "Maximum age of PV readings in surplus mode; independent of grid sensor.",
+          "battery_sensor_timeout_s": "Maximum age of battery-power readings when configured.",
+          "battery_soc_sensor_timeout_s": "Maximum SOC reading age; if unavailable, only battery assistance is disabled."
         }
       }
     },
@@ -73,7 +81,11 @@
           "hybrid_probe_step_kw": "Hybrid probing step (kW)",
           "hybrid_probe_settle_s": "Hybrid probe settling time (s)",
           "hybrid_probe_retry_s": "Hybrid probe retry delay (s)",
-          "hybrid_grid_tolerance_kw": "Hybrid probe grid-import tolerance (kW)"
+          "hybrid_grid_tolerance_kw": "Hybrid probe grid-import tolerance (kW)",
+          "battery_resume_hysteresis_soc": "Battery bonus restart hysteresis (%)",
+          "pv_sensor_timeout_s": "PV sensor timeout (s)",
+          "battery_sensor_timeout_s": "Battery power timeout (s)",
+          "battery_soc_sensor_timeout_s": "Battery SOC timeout (s)"
         },
         "data_description": {
           "grid_power_entity": "Required. Net power measured at the grid connection point.",
@@ -91,7 +103,11 @@
           "hybrid_probe_step_kw": "Maximum extra load per trial. 0 disables active trials; not a presumed battery rating.",
           "hybrid_probe_settle_s": "Time to wait after a load trial before evaluating real meter feedback.",
           "hybrid_probe_retry_s": "Delay before another trial after success or rollback.",
-          "hybrid_grid_tolerance_kw": "Grid import must return below this level after settling. During settling at most one extra configured probe step is tolerated; PMAX always applies."
+          "hybrid_grid_tolerance_kw": "Grid import must return below this level after settling. During settling at most one extra configured probe step is tolerated; PMAX always applies.",
+          "battery_resume_hysteresis_soc": "Battery assistance resumes only above reserve + hysteresis. Pure PV operation is always independent from SOC.",
+          "pv_sensor_timeout_s": "Maximum age of PV readings in surplus mode; independent of grid sensor.",
+          "battery_sensor_timeout_s": "Maximum age of battery-power readings when configured.",
+          "battery_soc_sensor_timeout_s": "Maximum SOC reading age; if unavailable, only battery assistance is disabled."
         }
       }
     },
