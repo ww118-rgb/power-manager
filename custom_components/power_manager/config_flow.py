@@ -5,7 +5,7 @@ from __future__ import annotations
 from math import isfinite
 from typing import Any
 
-import probatio
+import voluptuous as probatio
 
 from homeassistant.config_entries import (
     ConfigEntry,
