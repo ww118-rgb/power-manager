@@ -752,6 +752,7 @@ def run_controller(
     # after the shared priority allocator finishes.
     probe_until_s = None
     probe_target_kw = None
+    probe_increment_kw = 0.0
     next_probe_s = 0.0
     probe_started = False
     steady_budget_kw = 0.0
@@ -874,10 +875,7 @@ def run_controller(
         # increment while the autonomous battery responds. That is
         # distinct from its eventually accepted grid tolerance.
         pending_increment_kw = (
-            max(
-                inputs.hybrid_probe_step_kw,
-                state.hybrid_probe_target_kw - steady_budget_kw,
-            )
+            state.hybrid_probe_increment_kw
             if state.hybrid_probe_target_kw is not None
             else trial_max_step_kw
         )
@@ -902,6 +900,7 @@ def run_controller(
                 )
                 probe_until_s = state.hybrid_probe_until_s
                 probe_target_kw = state.hybrid_probe_target_kw
+                probe_increment_kw = state.hybrid_probe_increment_kw
                 next_probe_s = state.hybrid_next_probe_s
             else:
                 # A command is NOT proof of delivered power.
@@ -999,6 +998,7 @@ def run_controller(
             next_probe_s = inputs.now_s + inputs.hybrid_probe_retry_s
         else:
             probe_target_kw = total_target_kw
+            probe_increment_kw = total_target_kw - steady_budget_kw
 
     # ------------------------------------------------------
     # 9. Prognostizierter Netzbezug
@@ -1063,6 +1063,7 @@ def run_controller(
     )
     next_state.hybrid_probe_until_s = probe_until_s
     next_state.hybrid_probe_target_kw = probe_target_kw
+    next_state.hybrid_probe_increment_kw = probe_increment_kw
     next_state.hybrid_next_probe_s = next_probe_s
 
     # ------------------------------------------------------
