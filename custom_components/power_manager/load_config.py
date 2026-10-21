@@ -24,6 +24,8 @@ from .const import (
     CONF_OUTPUT_UNIT,
     CONF_PRIORITY,
     CONF_SAFE_OUTPUT_VALUE,
+    CONF_OUTPUT_VALUE_MODE, CONF_OUTPUT_SCALE, CONF_OUTPUT_OFFSET,
+    CONF_OUTPUT_FORBIDDEN_VALUE, CONF_EVSE_ZERO_UNLIMITED,
     CONF_SETTLING_TIME_S,
     CONF_START_MARGIN_KW,
     CONF_STOP_MARGIN_KW,
@@ -42,6 +44,8 @@ from .const import (
     DEFAULT_OUTPUT_UNIT,
     DEFAULT_PRIORITY,
     DEFAULT_SAFE_OUTPUT_VALUE,
+    DEFAULT_OUTPUT_VALUE_MODE, DEFAULT_OUTPUT_SCALE, DEFAULT_OUTPUT_OFFSET,
+    DEFAULT_EVSE_ZERO_UNLIMITED, OUTPUT_VALUE_MODES, OUTPUT_VALUE_MODE_LINEAR,
     DEFAULT_SETTLING_TIME_S,
     DEFAULT_START_MARGIN_KW,
     DEFAULT_STOP_MARGIN_KW,
@@ -124,6 +128,23 @@ def normalize_load_data(data: dict[str, Any]) -> dict[str, Any]:
     )
     normalized[CONF_OUTPUT_UNIT] = str(
         normalized.get(CONF_OUTPUT_UNIT, DEFAULT_OUTPUT_UNIT)
+    )
+    normalized[CONF_OUTPUT_VALUE_MODE] = str(
+        normalized.get(CONF_OUTPUT_VALUE_MODE, DEFAULT_OUTPUT_VALUE_MODE)
+    )
+    normalized[CONF_OUTPUT_SCALE] = _float_value(
+        normalized, CONF_OUTPUT_SCALE, DEFAULT_OUTPUT_SCALE,
+    )
+    normalized[CONF_OUTPUT_OFFSET] = _float_value(
+        normalized, CONF_OUTPUT_OFFSET, DEFAULT_OUTPUT_OFFSET,
+    )
+    forbidden = normalized.get(CONF_OUTPUT_FORBIDDEN_VALUE)
+    normalized[CONF_OUTPUT_FORBIDDEN_VALUE] = (
+        None if forbidden is None or forbidden == ""
+        else _float_value(normalized, CONF_OUTPUT_FORBIDDEN_VALUE, 0.0)
+    )
+    normalized[CONF_EVSE_ZERO_UNLIMITED] = bool(
+        normalized.get(CONF_EVSE_ZERO_UNLIMITED, DEFAULT_EVSE_ZERO_UNLIMITED)
     )
 
     normalized[CONF_EVSE_PHASES] = int(
@@ -211,6 +232,16 @@ def validate_load_data(data: dict[str, Any]) -> dict[str, str]:
 
     if values[CONF_SAFE_OUTPUT_VALUE] < 0.0:
         errors[CONF_SAFE_OUTPUT_VALUE] = "safe_output_must_be_nonnegative"
+    if values[CONF_OUTPUT_VALUE_MODE] not in OUTPUT_VALUE_MODES:
+        errors[CONF_OUTPUT_VALUE_MODE] = "invalid_output_value_mode"
+    if values[CONF_OUTPUT_VALUE_MODE] == OUTPUT_VALUE_MODE_LINEAR:
+        if values[CONF_OUTPUT_SCALE] <= 0:
+            errors[CONF_OUTPUT_SCALE] = "output_scale_must_be_positive"
+    forbidden = values[CONF_OUTPUT_FORBIDDEN_VALUE]
+    if forbidden is not None and abs(
+        values[CONF_SAFE_OUTPUT_VALUE] - forbidden
+    ) <= 0.000001 and load_type != LOAD_TYPE_EVSE:
+        errors[CONF_SAFE_OUTPUT_VALUE] = "forbidden_pause_code"
 
     output_domain = _entity_domain(values.get(CONF_OUTPUT_ENTITY))
     enable_domain = _entity_domain(values.get(CONF_ENABLE_ENTITY))
@@ -240,6 +271,10 @@ def validate_load_data(data: dict[str, Any]) -> dict[str, str]:
             errors["base"] = "invalid_current_range"
         if pause_current_a < 0.0 or pause_current_a >= min_current_a:
             errors[CONF_EVSE_PAUSE_CURRENT_A] = "invalid_pause_current"
+        if values[CONF_EVSE_ZERO_UNLIMITED] and pause_current_a <= 0.0:
+            errors[CONF_EVSE_PAUSE_CURRENT_A] = "evse_zero_means_unlimited"
+        if forbidden is not None and abs(pause_current_a - forbidden) <= 0.000001:
+            errors[CONF_EVSE_PAUSE_CURRENT_A] = "forbidden_pause_code"
 
         min_power_kw = phases * voltage_v * min_current_a / 1000.0
         max_power_kw = phases * voltage_v * max_current_a / 1000.0
