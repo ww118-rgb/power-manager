@@ -65,6 +65,8 @@ from .const import (
     CONF_PV_POWER_ENTITY,
     CONF_REQUEST_ENTITY,
     CONF_SAFE_OUTPUT_VALUE,
+    CONF_OUTPUT_VALUE_MODE, CONF_OUTPUT_SCALE, CONF_OUTPUT_OFFSET,
+    CONF_OUTPUT_FORBIDDEN_VALUE, CONF_EVSE_ZERO_UNLIMITED,
     CONF_SETTLING_TIME_S,
     CONF_START_MARGIN_KW,
     CONF_STOP_MARGIN_KW,
@@ -101,6 +103,9 @@ from .const import (
     DEFAULT_PEAK_SHAVING_ENABLED,
     DEFAULT_PRIORITY,
     DEFAULT_SAFE_OUTPUT_VALUE,
+    DEFAULT_OUTPUT_VALUE_MODE, DEFAULT_OUTPUT_SCALE,
+    DEFAULT_OUTPUT_OFFSET, DEFAULT_EVSE_ZERO_UNLIMITED,
+    OUTPUT_VALUE_MODES,
     DEFAULT_SETTLING_TIME_S,
     DEFAULT_START_MARGIN_KW,
     DEFAULT_STOP_MARGIN_KW,
@@ -401,6 +406,32 @@ def _build_load_schema(values: dict[str, Any] | None = None) -> probatio.Schema:
                     options=[SelectOptionDict(value=unit, label=unit) for unit in OUTPUT_UNITS]
                 )
             ),
+            _required_marker(
+                CONF_OUTPUT_VALUE_MODE, values, DEFAULT_OUTPUT_VALUE_MODE,
+            ): SelectSelector(SelectSelectorConfig(
+                options=list(OUTPUT_VALUE_MODES),
+                translation_key=CONF_OUTPUT_VALUE_MODE,
+            )),
+            _required_marker(
+                CONF_OUTPUT_SCALE, values, DEFAULT_OUTPUT_SCALE,
+            ): NumberSelector(NumberSelectorConfig(
+                min=0.000001, step=0.001, mode=NumberSelectorMode.BOX,
+            )),
+            _required_marker(
+                CONF_OUTPUT_OFFSET, values, DEFAULT_OUTPUT_OFFSET,
+            ): NumberSelector(NumberSelectorConfig(
+                min=-1000000000.0, max=1000000000.0,
+                step=0.001, mode=NumberSelectorMode.BOX,
+            )),
+            _optional_marker(
+                CONF_OUTPUT_FORBIDDEN_VALUE, values,
+            ): NumberSelector(NumberSelectorConfig(
+                min=-1000000000.0, max=1000000000.0,
+                step=0.001, mode=NumberSelectorMode.BOX,
+            )),
+            _required_marker(
+                CONF_EVSE_ZERO_UNLIMITED, values, DEFAULT_EVSE_ZERO_UNLIMITED,
+            ): BooleanSelector(),
             _required_marker(
                 CONF_SAFE_OUTPUT_VALUE,
                 values,
