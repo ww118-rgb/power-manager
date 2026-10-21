@@ -831,19 +831,61 @@ def run_controller(
         stable_grid = (
             inputs.grid_kw <= inputs.hybrid_grid_tolerance_kw
         )
-        # A brief import of at most one configured probe step can
-        # occur while a real inverter responds. Never hold the probe
-        # if grid import exceeds the probe excursion OR PMAX.
-        transient_grid_safe = (
-            inputs.grid_kw <= inputs.hybrid_grid_tolerance_kw
-                              + inputs.hybrid_probe_step_kw
-            and inputs.grid_kw <= effective_grid_limit_kw
+        # PV charging diversion does not require battery discharge,
+        # battery SOC above reserve, or knowledge of inverter rating.
+        # The PV remainder must nevertheless cover the device startup.
+        pv_charge_diversion = (
+            raw_surplus_budget_kw > EPSILON
+            and inputs.battery_kw < -EPSILON
         )
         may_probe = (
-            battery_assist_allowed
+            (battery_assist_allowed or pv_charge_diversion)
             and inputs.hybrid_probe_enabled
             and inputs.hybrid_probe_step_kw > EPSILON
             and measured_all_loads
+        )
+        # When a stalled EVSE needs a minimum start power, a 0.25 kW
+        # probe cannot activate it. Permit one bounded minimum-power
+        # trial only when actual unused PV and PMAX headroom suffice.
+        min_start_kw = min(
+            (
+                load.min_kw + load.start_margin_kw
+                for load in controlled_loads
+                if load.available
+                and load.requested_kw >= load.min_kw
+                and load.min_kw > EPSILON
+                and load.actual_kw is not None
+                and load.actual_kw <= EPSILON
+                and state.last_targets_kw.get(load.name, 0.0) <= EPSILON
+            ),
+            default=0.0,
+        )
+        trial_max_step_kw = inputs.hybrid_probe_step_kw
+        if pv_charge_diversion and min_start_kw > steady_budget_kw:
+            if (
+                min_start_kw <= raw_surplus_budget_kw + EPSILON
+                and min_start_kw <= peak_budget_kw + EPSILON
+            ):
+                trial_max_step_kw = max(
+                    trial_max_step_kw,
+                    min_start_kw - steady_budget_kw,
+                )
+        # The outstanding trial may import its actually requested
+        # increment while the autonomous battery responds. That is
+        # distinct from its eventually accepted grid tolerance.
+        pending_increment_kw = (
+            max(
+                inputs.hybrid_probe_step_kw,
+                state.hybrid_probe_target_kw - steady_budget_kw,
+            )
+            if state.hybrid_probe_target_kw is not None
+            else trial_max_step_kw
+        )
+        transient_grid_safe = (
+            inputs.grid_kw <= (
+                inputs.hybrid_grid_tolerance_kw + pending_increment_kw
+            )
+            and inputs.grid_kw <= effective_grid_limit_kw
         )
 
         probe_pending = (
@@ -897,9 +939,14 @@ def run_controller(
             )
         ):
             addition_kw = min(
-                inputs.hybrid_probe_step_kw,
+                trial_max_step_kw,
                 current_demand_kw - steady_budget_kw,
                 peak_budget_kw - steady_budget_kw,
+                (
+                    raw_surplus_budget_kw - steady_budget_kw
+                    if pv_charge_diversion
+                    else current_demand_kw - steady_budget_kw
+                ),
             )
             if addition_kw > EPSILON:
                 surplus_budget_kw = (
