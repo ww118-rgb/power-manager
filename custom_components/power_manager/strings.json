@@ -160,7 +160,24 @@
             "output_offset": "Offset for positive target",
             "output_forbidden_value": "Forbidden device command (optional)",
             "evse_zero_unlimited": "EVSE: zero means unrestricted power",
-            "feedback_tolerance_kw": "Reduction confirmation tolerance (kW)"
+            "feedback_tolerance_kw": "Reduction confirmation tolerance (kW)",
+            "output_transport": "Device transport",
+            "output_steps_json": "Discrete power steps JSON",
+            "device_commands_confirmed": "Verified safe device commands",
+            "modbus_host": "Modbus TCP host",
+            "modbus_port": "Modbus TCP port",
+            "modbus_unit_id": "Modbus unit ID",
+            "modbus_register": "Modbus zero-based holding register",
+            "modbus_data_type": "Modbus data type",
+            "modbus_byte_order": "Modbus byte and word order",
+            "modbus_function": "Modbus function FC06/FC16",
+            "modbus_timeout_s": "Modbus timeout (s)",
+            "mqtt_topic": "MQTT command topic",
+            "mqtt_qos": "MQTT QoS",
+            "mqtt_retain": "MQTT retain",
+            "mqtt_payload_template": "MQTT payload template with {value}",
+            "switch_on_code": "Direct ON code for switched loads",
+            "switch_off_code": "Direct OFF code for switched loads"
           },
           "data_description": {
             "load_name": "Unique name used by the controller.",
@@ -195,7 +212,24 @@
             "output_offset": "Offset only for positive requests.",
             "output_forbidden_value": "Code never to be written (e.g. 0 means unlimited).",
             "evse_zero_unlimited": "Enable if 0 means unrestricted current. Pause current must then be non-zero.",
-            "feedback_tolerance_kw": "After a reduction command, fresh measured power must fall below target + tolerance within the device settling interval; otherwise disarm and activate fail-safe. Actual-power entity is required for live control."
+            "feedback_tolerance_kw": "After a reduction command, fresh measured power must fall below target + tolerance within the device settling interval; otherwise disarm and activate fail-safe. Actual-power entity is required for live control.",
+            "output_transport": "Transport is independent of command semantics. MQTT uses the HA MQTT broker.",
+            "output_steps_json": "For steps profile: sorted JSON objects such as [{\"kw\":4.14,\"code\":6},{\"kw\":6.9,\"code\":10}].",
+            "device_commands_confirmed": "Direct outputs require acknowledgement of actual safe STOP/PAUSE codes and unsafe special values.",
+            "modbus_host": "Device hostname or IP; only for direct Modbus.",
+            "modbus_port": "Modbus TCP port",
+            "modbus_unit_id": "Modbus unit ID",
+            "modbus_register": "Manufacturer's zero-based address; never guess.",
+            "modbus_data_type": "Modbus data type",
+            "modbus_byte_order": "Modbus byte and word order",
+            "modbus_function": "Modbus function FC06/FC16",
+            "modbus_timeout_s": "Modbus timeout (s)",
+            "mqtt_topic": "MQTT command topic",
+            "mqtt_qos": "MQTT QoS",
+            "mqtt_retain": "Usually disabled to avoid replaying stale device commands.",
+            "mqtt_payload_template": "Literal {value} is substituted with the translated device code.",
+            "switch_on_code": "Direct ON code for switched loads",
+            "switch_off_code": "Direct OFF code for switched loads"
           }
         },
         "reconfigure": {
@@ -234,7 +268,24 @@
             "output_offset": "Offset for positive target",
             "output_forbidden_value": "Forbidden device command (optional)",
             "evse_zero_unlimited": "EVSE: zero means unrestricted power",
-            "feedback_tolerance_kw": "Reduction confirmation tolerance (kW)"
+            "feedback_tolerance_kw": "Reduction confirmation tolerance (kW)",
+            "output_transport": "Device transport",
+            "output_steps_json": "Discrete power steps JSON",
+            "device_commands_confirmed": "Verified safe device commands",
+            "modbus_host": "Modbus TCP host",
+            "modbus_port": "Modbus TCP port",
+            "modbus_unit_id": "Modbus unit ID",
+            "modbus_register": "Modbus zero-based holding register",
+            "modbus_data_type": "Modbus data type",
+            "modbus_byte_order": "Modbus byte and word order",
+            "modbus_function": "Modbus function FC06/FC16",
+            "modbus_timeout_s": "Modbus timeout (s)",
+            "mqtt_topic": "MQTT command topic",
+            "mqtt_qos": "MQTT QoS",
+            "mqtt_retain": "MQTT retain",
+            "mqtt_payload_template": "MQTT payload template with {value}",
+            "switch_on_code": "Direct ON code for switched loads",
+            "switch_off_code": "Direct OFF code for switched loads"
           },
           "data_description": {
             "load_name": "Unique name used by the controller.",
@@ -269,7 +320,24 @@
             "output_offset": "Offset only for positive requests.",
             "output_forbidden_value": "Code never to be written (e.g. 0 means unlimited).",
             "evse_zero_unlimited": "Enable if 0 means unrestricted current. Pause current must then be non-zero.",
-            "feedback_tolerance_kw": "After a reduction command, fresh measured power must fall below target + tolerance within the device settling interval; otherwise disarm and activate fail-safe. Actual-power entity is required for live control."
+            "feedback_tolerance_kw": "After a reduction command, fresh measured power must fall below target + tolerance within the device settling interval; otherwise disarm and activate fail-safe. Actual-power entity is required for live control.",
+            "output_transport": "Transport is independent of command semantics. MQTT uses the HA MQTT broker.",
+            "output_steps_json": "For steps profile: sorted JSON objects such as [{\"kw\":4.14,\"code\":6},{\"kw\":6.9,\"code\":10}].",
+            "device_commands_confirmed": "Direct outputs require acknowledgement of actual safe STOP/PAUSE codes and unsafe special values.",
+            "modbus_host": "Device hostname or IP; only for direct Modbus.",
+            "modbus_port": "Modbus TCP port",
+            "modbus_unit_id": "Modbus unit ID",
+            "modbus_register": "Manufacturer's zero-based address; never guess.",
+            "modbus_data_type": "Modbus data type",
+            "modbus_byte_order": "Modbus byte and word order",
+            "modbus_function": "Modbus function FC06/FC16",
+            "modbus_timeout_s": "Modbus timeout (s)",
+            "mqtt_topic": "MQTT command topic",
+            "mqtt_qos": "MQTT QoS",
+            "mqtt_retain": "Usually disabled to avoid replaying stale device commands.",
+            "mqtt_payload_template": "Literal {value} is substituted with the translated device code.",
+            "switch_on_code": "Direct ON code for switched loads",
+            "switch_off_code": "Direct OFF code for switched loads"
           }
         }
       },
@@ -300,7 +368,19 @@
         "invalid_output_value_mode": "Unknown command profile.",
         "output_scale_must_be_positive": "Output multiplier must be positive.",
         "forbidden_pause_code": "Pause code is forbidden.",
-        "evse_zero_means_unlimited": "Zero means unlimited, not pause."
+        "evse_zero_means_unlimited": "Zero means unlimited, not pause.",
+        "invalid_transport": "Invalid device profile: invalid transport",
+        "unsafe_command_unconfirmed": "Invalid device profile: unsafe command unconfirmed",
+        "invalid_modbus_host": "Invalid device profile: invalid modbus host",
+        "invalid_modbus_address": "Invalid device profile: invalid modbus address",
+        "invalid_modbus_encoding": "Invalid device profile: invalid modbus encoding",
+        "invalid_modbus_function": "Invalid device profile: invalid modbus function",
+        "invalid_modbus_timeout": "Invalid device profile: invalid modbus timeout",
+        "invalid_mqtt_topic": "Invalid device profile: invalid mqtt topic",
+        "invalid_mqtt_qos": "Invalid device profile: invalid mqtt qos",
+        "invalid_mqtt_template": "Invalid device profile: invalid mqtt template",
+        "invalid_output_steps": "Invalid device profile: invalid output steps",
+        "unit_required_for_direct_transport": "Invalid device profile: unit required for direct transport"
       },
       "entry_type": "Controllable load",
       "initiate_flow": {
@@ -447,7 +527,32 @@
     "output_value_mode": {
       "options": {
         "power": "Power (W/kW/MW)",
-        "linear": "Linear numeric device code"
+        "linear": "Linear numeric device code",
+        "steps": "Discrete device stages"
+      }
+    },
+    "output_transport": {
+      "options": {
+        "entity": "HA entity",
+        "modbus_tcp": "Modbus TCP",
+        "mqtt": "MQTT"
+      }
+    },
+    "modbus_data_type": {
+      "options": {
+        "float32": "float32",
+        "uint16": "uint16",
+        "int16": "int16",
+        "uint32": "uint32",
+        "int32": "int32"
+      }
+    },
+    "modbus_byte_order": {
+      "options": {
+        "ABCD": "ABCD",
+        "BADC": "BADC",
+        "CDAB": "CDAB",
+        "DCBA": "DCBA"
       }
     }
   }
