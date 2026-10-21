@@ -214,7 +214,7 @@
             "evse_zero_unlimited": "Wenn 0 die Ladestrombegrenzung aufhebt, muss der Pausenstrom größer als 0 sein.",
             "feedback_tolerance_kw": "Nach einem Leistungsreduzierungsbefehl muss die frische Istleistung innerhalb der gerätespezifischen Einschwingzeit auf höchstens Sollwert + Toleranz sinken. Sonst wird Live deaktiviert und Fail-Safe ausgelöst. Eine Istleistungs-Entity ist für Live erforderlich.",
             "output_transport": "Der Übertragungsweg ist unabhängig von Gerätecode und Sensortyp. MQTT nutzt den HA-MQTT-Broker.",
-            "output_steps_json": "Für steps-Profil: sortierte JSON-Liste, z.B. [{\"kw\":4.14,\"code\":6},{\"kw\":6.9,\"code\":10}].",
+            "output_steps_json": "Sortierte JSON-Liste von kW-Schwellen und Gerätecodes, z. B. Stufe 4,14 kW auf Code 6 und Stufe 6,9 kW auf Code 10.",
             "device_commands_confirmed": "Direkte Ausgänge erst freigeben, nachdem sichere Aus-/Pausenwerte und gefährliche Sonderwerte anhand des Handbuchs bestätigt sind.",
             "modbus_host": "Host des Modbus TCP Geräts. Nur für direkten Modbus-Ausgang.",
             "modbus_port": "Modbus TCP Port",
@@ -322,7 +322,7 @@
             "evse_zero_unlimited": "Wenn 0 die Ladestrombegrenzung aufhebt, muss der Pausenstrom größer als 0 sein.",
             "feedback_tolerance_kw": "Nach einem Leistungsreduzierungsbefehl muss die frische Istleistung innerhalb der gerätespezifischen Einschwingzeit auf höchstens Sollwert + Toleranz sinken. Sonst wird Live deaktiviert und Fail-Safe ausgelöst. Eine Istleistungs-Entity ist für Live erforderlich.",
             "output_transport": "Der Übertragungsweg ist unabhängig von Gerätecode und Sensortyp. MQTT nutzt den HA-MQTT-Broker.",
-            "output_steps_json": "Für steps-Profil: sortierte JSON-Liste, z.B. [{\"kw\":4.14,\"code\":6},{\"kw\":6.9,\"code\":10}].",
+            "output_steps_json": "Sortierte JSON-Liste von kW-Schwellen und Gerätecodes, z. B. Stufe 4,14 kW auf Code 6 und Stufe 6,9 kW auf Code 10.",
             "device_commands_confirmed": "Direkte Ausgänge erst freigeben, nachdem sichere Aus-/Pausenwerte und gefährliche Sonderwerte anhand des Handbuchs bestätigt sind.",
             "modbus_host": "Host des Modbus TCP Geräts. Nur für direkten Modbus-Ausgang.",
             "modbus_port": "Modbus TCP Port",
@@ -545,14 +545,6 @@
         "int16": "int16",
         "uint32": "uint32",
         "int32": "int32"
-      }
-    },
-    "modbus_byte_order": {
-      "options": {
-        "ABCD": "ABCD",
-        "BADC": "BADC",
-        "CDAB": "CDAB",
-        "DCBA": "DCBA"
       }
     }
   }
