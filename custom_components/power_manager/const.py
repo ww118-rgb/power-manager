@@ -40,6 +40,13 @@ CONF_OUTPUT_ENTITY = "output_entity"
 CONF_ENABLE_ENTITY = "enable_entity"
 CONF_OUTPUT_UNIT = "output_unit"
 CONF_SAFE_OUTPUT_VALUE = "safe_output_value"
+# Optional vendor-specific numeric command profile; remains a Home Assistant
+# number entity output until a direct protocol adapter is implemented.
+CONF_OUTPUT_VALUE_MODE = "output_value_mode"
+CONF_OUTPUT_SCALE = "output_scale"
+CONF_OUTPUT_OFFSET = "output_offset"
+CONF_OUTPUT_FORBIDDEN_VALUE = "output_forbidden_value"
+CONF_EVSE_ZERO_UNLIMITED = "evse_zero_unlimited"
 CONF_PEAK_SHAVING_ENABLED = "peak_shaving_enabled"
 CONF_SURPLUS_ENABLED = "surplus_enabled"
 CONF_START_MARGIN_KW = "start_margin_kw"
@@ -63,6 +70,10 @@ LOAD_TYPES = (
     LOAD_TYPE_SWITCH,
     LOAD_TYPE_EVSE,
 )
+
+OUTPUT_VALUE_MODE_POWER = "power"
+OUTPUT_VALUE_MODE_LINEAR = "linear"
+OUTPUT_VALUE_MODES = (OUTPUT_VALUE_MODE_POWER, OUTPUT_VALUE_MODE_LINEAR)
 
 OUTPUT_UNIT_AUTO = "auto"
 OUTPUT_UNIT_W = "W"
@@ -109,6 +120,10 @@ DEFAULT_MIN_OFF_TIME_S = 0.0
 DEFAULT_SETTLING_TIME_S = 0.0
 DEFAULT_OUTPUT_UNIT = OUTPUT_UNIT_AUTO
 DEFAULT_SAFE_OUTPUT_VALUE = 0.0
+DEFAULT_OUTPUT_VALUE_MODE = OUTPUT_VALUE_MODE_POWER
+DEFAULT_OUTPUT_SCALE = 1.0
+DEFAULT_OUTPUT_OFFSET = 0.0
+DEFAULT_EVSE_ZERO_UNLIMITED = True
 
 DEFAULT_EVSE_PHASES = 3
 DEFAULT_EVSE_VOLTAGE_V = 230.0
