@@ -126,20 +126,28 @@ async def async_modbus_write(
 
 
 async def async_mqtt_publish(
-    hass: HomeAssistant, *, topic: str, value: float,
+    hass: HomeAssistant, *, topic: str, value: float | None,
     template: str, qos: int, retain: bool,
+    payload_override: str | None = None,
 ) -> None:
     """Publish a profile code via the configured Home Assistant MQTT broker."""
     if (
         not topic or topic.startswith(("+", "$SYS/"))
         or any(s in topic for s in ("#", "+", "\x00"))
-        or not 0 <= qos <= 2 or "{value}" not in template
-        or not isfinite(value)
+        or not 0 <= qos <= 2
+        or (
+            payload_override is None
+            and ("{value}" not in template or value is None or not isfinite(value))
+        )
+        or (payload_override is not None and not payload_override)
     ):
         raise TransportError("Invalid MQTT device command configuration")
     if not hass.services.has_service("mqtt", "publish"):
         raise TransportError("HA MQTT publish service is unavailable")
-    payload = template.replace("{value}", format(value, ".9g"))
+    payload = (
+        payload_override if payload_override is not None
+        else template.replace("{value}", format(value, ".9g"))
+    )
     try:
         await hass.services.async_call(
             "mqtt", "publish",
