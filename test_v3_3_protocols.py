@@ -36,7 +36,7 @@ def test_fc16_writes_two_registers_with_valid_mbap():
     )
     assert struct.unpack(">HHHB", msg[:7]) == (7,0,11,6)
     assert struct.unpack(">BHHB", msg[7:13]) == (16,770,2,4)
-    assert msg[13:] == b"\\x41\\x20\\x00\\x00"
+    assert msg[13:] == bytes((0x41, 0x20, 0, 0))
     response=struct.pack(">HHHB",7,0,6,6)+struct.pack(">BHH",16,770,2)
     validate_modbus_response(msg,response)
 
