@@ -46,12 +46,14 @@ jobs:
               dr.text((270*scale, 78*scale), "POWER", fill="#0b3146", font=font)
               dr.text((270*scale, 137*scale), "MANAGER", fill="#137e98", font=font)
               logo.save(p/logo_name, optimize=True)
+          from shutil import copyfile
+          copyfile(p/"icon.png", Path("custom_components/power_manager/frontend/power-manager-icon.png"))
           PY
       - name: Commit generated brand assets to test branch
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add custom_components/power_manager/brand
+          git add custom_components/power_manager/brand custom_components/power_manager/frontend/power-manager-icon.png
           if ! git diff --cached --quiet; then
             git commit -m "Generate native Power Manager brand images"
             git pull --rebase origin feature/v3.3.0-rc
