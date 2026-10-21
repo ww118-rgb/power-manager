@@ -80,7 +80,7 @@ Quellstand: `Power_Manager_Konzept_Anforderungen_Testplan_v0_8.docx` (86 Anforde
 | REQ-72 | Upgrade ohne Sicherheitsregression | Teilweise | CI, keine Simulator-Abnahme |
 | REQ-73 | Echte HA-Versionstestmatrix | Offen | Bisher Pytest/Hassfest/HACS |
 | REQ-74 | HACS-Update nach validiertem Release | Extern | Erst nach GitHub-Release nachweisbar |
-| REQ-75 | GitHub-Tag/Manifest/Karte一致 | Extern | Kein offizieller v3.3.0-Tag oder Release |
+| REQ-75 | GitHub-Tag/Manifest/Karte konsistent | Extern | Kein offizieller v3.3.0-Tag oder Release |
 | REQ-76 | V3.1.1 main bleibt erhalten | Code | V3.3.0 nur Draft-Branch |
 | REQ-77 | Eigene HA-Branding-Assets | Teilweise | Dateien vorhanden, UI-Laufzeittest fehlt |
 | REQ-78 | HACS-/HA-Altversionen Fallback | Teilweise | Branding darf Start nicht blockieren, UI nicht getestet |
