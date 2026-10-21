@@ -754,6 +754,7 @@ class PowerManagerCoordinator(DataUpdateCoordinator[PowerManagerCoordinatorData]
             # state so recovery can never reuse a stale pre-fail-safe target.
             self.live_control_enabled = False
             self.controller_state = ControllerState()
+            self._pending_reductions.clear()
 
         combined_reason = reason
         if output_error:
@@ -975,6 +976,7 @@ class PowerManagerCoordinator(DataUpdateCoordinator[PowerManagerCoordinatorData]
                 # without actual-power feedback.
                 self.live_control_enabled = False
                 self.controller_state = ControllerState()
+                self._pending_reductions.clear()
                 return PowerManagerCoordinatorData(
                     inputs=inputs,
                     result=result,
@@ -1030,11 +1032,24 @@ class PowerManagerCoordinator(DataUpdateCoordinator[PowerManagerCoordinatorData]
             raise HomeAssistantError("Es ist noch kein regelbarer Verbraucher konfiguriert.")
 
         errors: list[str] = []
-        for _subentry_id, load_data in load_subentries:
+        for subentry_id, load_data in load_subentries:
+            name = load_data.get(CONF_LOAD_NAME, "Verbraucher")
+            if not load_data.get(CONF_ACTUAL_POWER_ENTITY):
+                errors.append(
+                    f"{name}: Live-Regelung benötigt eine echte Istleistungs-Entity "
+                    "zur Bestätigung von Leistungsreduzierungen."
+                )
+            else:
+                current = data.loads.get(subentry_id)
+                if current is None or current.actual_kw is None:
+                    errors.append(
+                        f"{name}: Istleistung fehlt oder ist veraltet; "
+                        "Live-Regelung nicht sicher freigebbar."
+                    )
             try:
                 validate_actuator(self.hass, load_data)
             except ActuatorError as err:
-                errors.append(f"{load_data.get(CONF_LOAD_NAME, 'Verbraucher')}: {err}")
+                errors.append(f"{name}: {err}")
 
         if errors:
             raise HomeAssistantError("Live-Regelung nicht freigegeben: " + " | ".join(errors))
@@ -1043,6 +1058,7 @@ class PowerManagerCoordinator(DataUpdateCoordinator[PowerManagerCoordinatorData]
         # physical commands were sent. Never use those values as estimates on
         # the first live cycle; start from a clean controller state.
         self.controller_state = ControllerState()
+        self._pending_reductions.clear()
         self.live_control_enabled = True
         await self.async_refresh()
 
@@ -1066,6 +1082,7 @@ class PowerManagerCoordinator(DataUpdateCoordinator[PowerManagerCoordinatorData]
         # Clear state before entering dry-run so unknown actual-power values are
         # never inferred from commands that were deliberately withdrawn.
         self.controller_state = ControllerState()
+        self._pending_reductions.clear()
         await self.async_refresh()
 
     async def async_set_operating_mode(self, mode: OperatingMode) -> None:
@@ -1089,3 +1106,4 @@ class PowerManagerCoordinator(DataUpdateCoordinator[PowerManagerCoordinatorData]
             _LOGGER.exception("Unerwarteter Fehler beim sicheren Integration-Unload")
         finally:
             self.live_control_enabled = False
+            self._pending_reductions.clear()
