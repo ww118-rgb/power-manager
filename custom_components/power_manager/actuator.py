@@ -34,6 +34,7 @@ from .const import (
     CONF_OUTPUT_FORBIDDEN_VALUE, CONF_EVSE_ZERO_UNLIMITED,
     DEFAULT_OUTPUT_VALUE_MODE, DEFAULT_OUTPUT_SCALE, DEFAULT_OUTPUT_OFFSET,
     DEFAULT_EVSE_ZERO_UNLIMITED,
+    OUTPUT_VALUE_MODE_LINEAR,
     DEFAULT_EVSE_MAX_CURRENT_A,
     DEFAULT_EVSE_MIN_CURRENT_A,
     DEFAULT_EVSE_PAUSE_CURRENT_A,
@@ -132,6 +133,18 @@ def _numeric_in_range(value: float, state: State) -> bool:
         return False
     if maximum is not None and value > maximum + 1e-9:
         return False
+    raw_step = state.attributes.get("step")
+    if raw_step is not None:
+        try:
+            step = float(raw_step)
+        except (TypeError, ValueError):
+            return False
+        if not isfinite(step) or step <= 0:
+            return False
+        base = _numeric_limits(state)[0] or 0.0
+        steps = (value - base) / step
+        if abs(steps - round(steps)) > 1e-6:
+            return False
     return True
 
 
@@ -142,7 +155,8 @@ def _numeric_equal(state: State, value: float) -> bool:
         current = float(state.state)
     except (TypeError, ValueError):
         return False
-    return isfinite(current) and abs(current - value) <= 0.001
+    # Absolute tiny float tolerance; 0.001 MW would silently hide 1 kW.
+    return isfinite(current) and abs(current - value) <= 1e-6
 
 
 def _build_plan(
@@ -154,7 +168,11 @@ def _build_plan(
 
     load_type = str(load_data.get(CONF_LOAD_TYPE, ""))
     power_unit = "kW"
-    if load_type not in (LOAD_TYPE_EVSE, LOAD_TYPE_SWITCH):
+    if (
+        load_type not in (LOAD_TYPE_EVSE, LOAD_TYPE_SWITCH)
+        and load_data.get(CONF_OUTPUT_VALUE_MODE, DEFAULT_OUTPUT_VALUE_MODE)
+            != OUTPUT_VALUE_MODE_LINEAR
+    ):
         power_unit = _effective_power_unit(hass, load_data)
 
     try:
