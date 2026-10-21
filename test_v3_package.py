@@ -162,3 +162,14 @@ def test_v3_3_compatible_config_schema_import():
     source = (COMPONENT / "config_flow.py").read_text(encoding="utf-8")
     assert "import voluptuous as probatio" in source
     assert "import probatio\\n" not in source
+
+
+def test_v3_3_requirements_traceability_covers_all_v08_items():
+    """Never silently lose a v0.8 requirement while developing toward 4.0."""
+    import re
+    source = (COMPONENT.parent.parent / "docs" /
+              "anforderungen_v0_8_traceability.md").read_text(encoding="utf-8")
+    found = re.findall(r"^\\| REQ-(\\d{2}) \\|", source, flags=re.MULTILINE)
+    assert found == [f"{i:02d}" for i in range(1, 87)]
+    assert "T01–T106" in source
+    assert "Offen" in source and "Teilweise" in source
