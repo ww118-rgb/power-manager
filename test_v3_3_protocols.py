@@ -197,3 +197,36 @@ def test_modbus_host_path_delimiter_rejected():
               modbus_host="10.0.0.1/bad",modbus_register=770,
               output_unit="kW",device_commands_confirmed=True)
     assert "modbus_host" in validate_load_data(data)
+
+
+def test_mqtt_enum_switch_payload_validation():
+    data = dict(
+        load_name="Switch", load_type="switch", priority=1, min_kw=3,
+        max_kw=3, output_transport="mqtt", mqtt_topic="plant/switch",
+        mqtt_on_payload="ENABLE", mqtt_off_payload="DISABLE",
+        device_commands_confirmed=True,
+    )
+    assert "mqtt_on_payload" not in validate_load_data(data)
+    broken = dict(data, mqtt_off_payload="")
+    assert "mqtt_on_payload" in validate_load_data(broken)
+    broken = dict(data, load_type="modulating")
+    assert "mqtt_on_payload" in validate_load_data(broken)
+
+
+@pytest.mark.asyncio
+async def test_mqtt_enum_switch_publishes_safe_text_without_numeric_cast():
+    from custom_components.power_manager.protocols import async_mqtt_publish
+    calls = []
+    class Services:
+        def has_service(self, domain, service):
+            return domain == "mqtt" and service == "publish"
+        async def async_call(self, domain, service, payload, blocking):
+            calls.append((domain, service, payload, blocking))
+    class HA:
+        services = Services()
+    await async_mqtt_publish(
+        HA(), topic="device/control", value=0,
+        template="{value}", qos=0, retain=False,
+        payload_override="DISABLE",
+    )
+    assert calls[0][2]["payload"] == "DISABLE"
