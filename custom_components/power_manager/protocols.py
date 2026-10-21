@@ -11,9 +11,10 @@ import asyncio
 import ipaddress
 import struct
 from math import isfinite
-from typing import Any
+from typing import TYPE_CHECKING
 
-from homeassistant.core import HomeAssistant
+if TYPE_CHECKING:
+    from homeassistant.core import HomeAssistant
 
 
 class TransportError(RuntimeError):
