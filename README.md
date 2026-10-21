@@ -19,7 +19,7 @@ nachverfolgbar. Der Branch bleibt bis zu tatsächlichen HA- und Simulatorprüfun
 - PV-, Batterie-Leistungs- und SOC-Messwerte haben getrennte konfigurierbare Frischegrenzen.
 - Ein veralteter SOC-Sensor schaltet nur den Batteriebonus ab, **nicht** den reinen PV-Überschussbetrieb. Ein ungültiger konfigurierter Batterie-Leistungssensor verhindert weiterhin eine unsichere PV-Bilanz.
 
-**Noch offen:** echte Geräte-Wirkbestätigung, direkte Modbus-/MQTT-Profile, diskrete Gerätecodes, Langzeit-Stabilitätstests und HA-Core-Versionsmatrix.
+**Noch offen für die vollständige Abnahme:** reale Geräte-Wirkbestätigung, echte Modbus-/MQTT-Simulatorläufe, vollständige HA-Core-Versionstests und lange Anlagen-Stabilitätstests. Die Transportprofile, Geräte-Stufentabellen und ersten Stabilitätsregressionen sind inzwischen programmiert.
 
 ## Neu im V3.3.0-Testkandidaten
 
@@ -30,14 +30,13 @@ nachverfolgbar. Der Branch bleibt bis zu tatsächlichen HA- und Simulatorprüfun
 - **Professionelles Branding:** Lokale Icons und Logo in `custom_components/power_manager/brand/` (ab HA 2026.3). HACS-Ansicht älterer Versionen kann abweichen.
 - **Versionsstrategie:** HACS stellt Update-Entitäten bereit. Ein Update für allgemeine Nutzer erscheint erst nach einem kontrollierten GitHub-Release bzw. bei unversionierter Branch-Installation nach einer Änderung des Default-Branches.
 
-**Grenzen dieser Vorabversion:** Alle neuen Zahlen-Ausgangsprofile arbeiten weiter über bestehende HA-`number`-/`input_number`-Entities. Direkte Modbus-TCP-FC16- und MQTT-Publish-Adapter sind **nicht** Teil dieser Stufe. Integrationstests auf mehreren echten HA-Core-Versionen und die Simulator-Abnahme stehen aus. Aktive Hybrid-Lastproben sind weiterhin opt-in (Standard-Prüfschritt 0 kW). Bitte nicht ungeprüft auf produktiven Netzanschlüssen einsetzen.
+**Funktionen dieser Testversion:** Home-Assistant-Entity, direktes Modbus TCP (FC06/FC16, Float32/Integer, Wort-/Bytefolge), MQTT-Publish (numerisch sowie separate Textbefehle für Schaltlasten), positive lineare Skalierung, diskrete Gerätestufen und konfigurierbarer Pausenwert. Für direkte Gerätebefehle ist eine explizite Bestätigung der Werte erforderlich. Leistungsreduzierungen erfordern frische physische Istleistungsrückmeldungen. Ein erfolgreicher Modbus-Schreib-ACK oder MQTT-Publish ist keine garantierte physische Wirkung.
+
+**Noch nicht nachgewiesen:** reale Home-Assistant-Laufzeit über eine breite Core-Matrix und Simulator-Abnahme. Aktive Hybrid-Lastproben sind opt-in (Standard-Prüfschritt 0 kW). Bitte nicht ungeprüft an produktiven Netzanschlüssen einsetzen.
 
 ## Warum neue Updates nicht automatisch sofort angezeigt werden
 
 Ohne GitHub-Release nutzt HACS den Default-Branch. Für reguläre, verständliche Versionsupdates sollen nach bestandener Freigabe GitHub-Releases mit Tag `vX.Y.Z`, derselben `manifest.json`-Version und vollständigen Release Notes veröffentlicht werden. HACS/HA zeigt danach die neue Version in der vorhandenen Update-Entität; eine automatische Installation wird nicht erzwungen. Test-Branches werden nicht automatisch verteilt.
-
-## Neu in V3.2.0: rückgekoppelter Hybrid-Überschuss
-
 
 ## Neu in V3.2.0: rückgekoppelter Hybrid-Überschuss
 
@@ -77,7 +76,7 @@ Beim Aktivieren der Live-Regelung sowie bei einem Betriebsartwechsel während ak
 
 ## Grundprinzip
 
-Power Manager implementiert bewusst keine gerätespezifische MQTT-, Modbus- oder Herstellerkommunikation. Solche Integrationen stellen in Home Assistant Mess- und Stell-Entities bereit. Power Manager liest diese Entities, rechnet intern ausschließlich in kW und schreibt anschließend auf die konfigurierten Home-Assistant-Ausgänge.
+Der Reglerkern rechnet ausschließlich in kW. Messdaten kommen weiterhin aus Home-Assistant-Entities. Für Schreibbefehle an Verbraucher unterstützt der Teststand sowohl vorhandene HA-Ausgangs-Entities als auch direkt konfiguriertes Modbus TCP und MQTT Publish. Die Bedeutung der Codes wird durch das Verbraucher-Geräteprofil festgelegt, nicht durch das Übertragungsprotokoll. Bei direkter Geräteansteuerung muss die physikalische Wirksamkeit vor dem Livebetrieb nachgewiesen werden.
 
 ```text
 Messgeräte / Geräte
