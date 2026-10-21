@@ -160,7 +160,24 @@
             "output_offset": "Offset für positive Sollwerte",
             "output_forbidden_value": "Verbotener Gerätewert (optional)",
             "evse_zero_unlimited": "EVSE: 0 bedeutet unbegrenzte Ladeleistung",
-            "feedback_tolerance_kw": "Toleranz für bestätigte Lastreduzierung (kW)"
+            "feedback_tolerance_kw": "Toleranz für bestätigte Lastreduzierung (kW)",
+            "output_transport": "Geräteanbindung",
+            "output_steps_json": "Stufentabelle als JSON (kW und Code)",
+            "device_commands_confirmed": "Sichere Gerätebefehle laut Handbuch bestätigt",
+            "modbus_host": "Modbus TCP Host/IP",
+            "modbus_port": "Modbus TCP Port",
+            "modbus_unit_id": "Modbus Unit-ID",
+            "modbus_register": "Modbus Startregister (nullbasiert)",
+            "modbus_data_type": "Modbus Datentyp",
+            "modbus_byte_order": "Modbus Byte- und Wortreihenfolge",
+            "modbus_function": "Modbus Schreibfunktion (FC06 oder FC16)",
+            "modbus_timeout_s": "Modbus Zeitüberschreitung (s)",
+            "mqtt_topic": "MQTT Schreib-Topic",
+            "mqtt_qos": "MQTT QoS",
+            "mqtt_retain": "MQTT Retain",
+            "mqtt_payload_template": "MQTT Payload-Vorlage mit {value}",
+            "switch_on_code": "Direkter EIN-Code für Schaltgeräte",
+            "switch_off_code": "Direkter AUS-Code für Schaltgeräte"
           },
           "data_description": {
             "load_name": "Eindeutiger Name des Verbrauchers im Regler.",
@@ -195,7 +212,24 @@
             "output_offset": "Offset nur bei positivem Sollwert, niemals bei Aus/Pause.",
             "output_forbidden_value": "Dieser Gerätecode darf niemals geschrieben werden (z. B. 0 = unbegrenzt).",
             "evse_zero_unlimited": "Wenn 0 die Ladestrombegrenzung aufhebt, muss der Pausenstrom größer als 0 sein.",
-            "feedback_tolerance_kw": "Nach einem Leistungsreduzierungsbefehl muss die frische Istleistung innerhalb der gerätespezifischen Einschwingzeit auf höchstens Sollwert + Toleranz sinken. Sonst wird Live deaktiviert und Fail-Safe ausgelöst. Eine Istleistungs-Entity ist für Live erforderlich."
+            "feedback_tolerance_kw": "Nach einem Leistungsreduzierungsbefehl muss die frische Istleistung innerhalb der gerätespezifischen Einschwingzeit auf höchstens Sollwert + Toleranz sinken. Sonst wird Live deaktiviert und Fail-Safe ausgelöst. Eine Istleistungs-Entity ist für Live erforderlich.",
+            "output_transport": "Der Übertragungsweg ist unabhängig von Gerätecode und Sensortyp. MQTT nutzt den HA-MQTT-Broker.",
+            "output_steps_json": "Für steps-Profil: sortierte JSON-Liste, z.B. [{\"kw\":4.14,\"code\":6},{\"kw\":6.9,\"code\":10}].",
+            "device_commands_confirmed": "Direkte Ausgänge erst freigeben, nachdem sichere Aus-/Pausenwerte und gefährliche Sonderwerte anhand des Handbuchs bestätigt sind.",
+            "modbus_host": "Host des Modbus TCP Geräts. Nur für direkten Modbus-Ausgang.",
+            "modbus_port": "Modbus TCP Port",
+            "modbus_unit_id": "Modbus Unit-ID",
+            "modbus_register": "Nullbasierte Adresse laut Gerätehandbuch, nicht erraten.",
+            "modbus_data_type": "Modbus Datentyp",
+            "modbus_byte_order": "Modbus Byte- und Wortreihenfolge",
+            "modbus_function": "Modbus Schreibfunktion (FC06 oder FC16)",
+            "modbus_timeout_s": "Modbus Zeitüberschreitung (s)",
+            "mqtt_topic": "MQTT Schreib-Topic",
+            "mqtt_qos": "MQTT QoS",
+            "mqtt_retain": "Für Gerätebefehle gewöhnlich deaktiviert, damit keine veralteten Befehle wiederholt werden.",
+            "mqtt_payload_template": "Literal {value} wird durch den sicher übersetzten Gerätecode ersetzt.",
+            "switch_on_code": "Direkter EIN-Code für Schaltgeräte",
+            "switch_off_code": "Direkter AUS-Code für Schaltgeräte"
           }
         },
         "reconfigure": {
@@ -234,7 +268,24 @@
             "output_offset": "Offset für positive Sollwerte",
             "output_forbidden_value": "Verbotener Gerätewert (optional)",
             "evse_zero_unlimited": "EVSE: 0 bedeutet unbegrenzte Ladeleistung",
-            "feedback_tolerance_kw": "Toleranz für bestätigte Lastreduzierung (kW)"
+            "feedback_tolerance_kw": "Toleranz für bestätigte Lastreduzierung (kW)",
+            "output_transport": "Geräteanbindung",
+            "output_steps_json": "Stufentabelle als JSON (kW und Code)",
+            "device_commands_confirmed": "Sichere Gerätebefehle laut Handbuch bestätigt",
+            "modbus_host": "Modbus TCP Host/IP",
+            "modbus_port": "Modbus TCP Port",
+            "modbus_unit_id": "Modbus Unit-ID",
+            "modbus_register": "Modbus Startregister (nullbasiert)",
+            "modbus_data_type": "Modbus Datentyp",
+            "modbus_byte_order": "Modbus Byte- und Wortreihenfolge",
+            "modbus_function": "Modbus Schreibfunktion (FC06 oder FC16)",
+            "modbus_timeout_s": "Modbus Zeitüberschreitung (s)",
+            "mqtt_topic": "MQTT Schreib-Topic",
+            "mqtt_qos": "MQTT QoS",
+            "mqtt_retain": "MQTT Retain",
+            "mqtt_payload_template": "MQTT Payload-Vorlage mit {value}",
+            "switch_on_code": "Direkter EIN-Code für Schaltgeräte",
+            "switch_off_code": "Direkter AUS-Code für Schaltgeräte"
           },
           "data_description": {
             "load_name": "Eindeutiger Name des Verbrauchers im Regler.",
@@ -269,7 +320,24 @@
             "output_offset": "Offset nur bei positivem Sollwert, niemals bei Aus/Pause.",
             "output_forbidden_value": "Dieser Gerätecode darf niemals geschrieben werden (z. B. 0 = unbegrenzt).",
             "evse_zero_unlimited": "Wenn 0 die Ladestrombegrenzung aufhebt, muss der Pausenstrom größer als 0 sein.",
-            "feedback_tolerance_kw": "Nach einem Leistungsreduzierungsbefehl muss die frische Istleistung innerhalb der gerätespezifischen Einschwingzeit auf höchstens Sollwert + Toleranz sinken. Sonst wird Live deaktiviert und Fail-Safe ausgelöst. Eine Istleistungs-Entity ist für Live erforderlich."
+            "feedback_tolerance_kw": "Nach einem Leistungsreduzierungsbefehl muss die frische Istleistung innerhalb der gerätespezifischen Einschwingzeit auf höchstens Sollwert + Toleranz sinken. Sonst wird Live deaktiviert und Fail-Safe ausgelöst. Eine Istleistungs-Entity ist für Live erforderlich.",
+            "output_transport": "Der Übertragungsweg ist unabhängig von Gerätecode und Sensortyp. MQTT nutzt den HA-MQTT-Broker.",
+            "output_steps_json": "Für steps-Profil: sortierte JSON-Liste, z.B. [{\"kw\":4.14,\"code\":6},{\"kw\":6.9,\"code\":10}].",
+            "device_commands_confirmed": "Direkte Ausgänge erst freigeben, nachdem sichere Aus-/Pausenwerte und gefährliche Sonderwerte anhand des Handbuchs bestätigt sind.",
+            "modbus_host": "Host des Modbus TCP Geräts. Nur für direkten Modbus-Ausgang.",
+            "modbus_port": "Modbus TCP Port",
+            "modbus_unit_id": "Modbus Unit-ID",
+            "modbus_register": "Nullbasierte Adresse laut Gerätehandbuch, nicht erraten.",
+            "modbus_data_type": "Modbus Datentyp",
+            "modbus_byte_order": "Modbus Byte- und Wortreihenfolge",
+            "modbus_function": "Modbus Schreibfunktion (FC06 oder FC16)",
+            "modbus_timeout_s": "Modbus Zeitüberschreitung (s)",
+            "mqtt_topic": "MQTT Schreib-Topic",
+            "mqtt_qos": "MQTT QoS",
+            "mqtt_retain": "Für Gerätebefehle gewöhnlich deaktiviert, damit keine veralteten Befehle wiederholt werden.",
+            "mqtt_payload_template": "Literal {value} wird durch den sicher übersetzten Gerätecode ersetzt.",
+            "switch_on_code": "Direkter EIN-Code für Schaltgeräte",
+            "switch_off_code": "Direkter AUS-Code für Schaltgeräte"
           }
         }
       },
@@ -300,7 +368,19 @@
         "invalid_output_value_mode": "Unbekanntes Gerätebefehlsprofil.",
         "output_scale_must_be_positive": "Umrechnungsfaktor muss positiv sein.",
         "forbidden_pause_code": "Der sichere Pausenwert ist verboten.",
-        "evse_zero_means_unlimited": "0 ist hier keine Pause, sondern unbegrenzt."
+        "evse_zero_means_unlimited": "0 ist hier keine Pause, sondern unbegrenzt.",
+        "invalid_transport": "Geräteprofil ungültig: invalid transport",
+        "unsafe_command_unconfirmed": "Geräteprofil ungültig: unsafe command unconfirmed",
+        "invalid_modbus_host": "Geräteprofil ungültig: invalid modbus host",
+        "invalid_modbus_address": "Geräteprofil ungültig: invalid modbus address",
+        "invalid_modbus_encoding": "Geräteprofil ungültig: invalid modbus encoding",
+        "invalid_modbus_function": "Geräteprofil ungültig: invalid modbus function",
+        "invalid_modbus_timeout": "Geräteprofil ungültig: invalid modbus timeout",
+        "invalid_mqtt_topic": "Geräteprofil ungültig: invalid mqtt topic",
+        "invalid_mqtt_qos": "Geräteprofil ungültig: invalid mqtt qos",
+        "invalid_mqtt_template": "Geräteprofil ungültig: invalid mqtt template",
+        "invalid_output_steps": "Geräteprofil ungültig: invalid output steps",
+        "unit_required_for_direct_transport": "Geräteprofil ungültig: unit required for direct transport"
       },
       "entry_type": "Regelbarer Verbraucher",
       "initiate_flow": {
@@ -447,7 +527,32 @@
     "output_value_mode": {
       "options": {
         "power": "Leistung (W/kW/MW)",
-        "linear": "Lineare Gerätecode-Umrechnung"
+        "linear": "Lineare Gerätecode-Umrechnung",
+        "steps": "Feste Gerätewert-Stufen"
+      }
+    },
+    "output_transport": {
+      "options": {
+        "entity": "HA-Entity",
+        "modbus_tcp": "Modbus TCP",
+        "mqtt": "MQTT"
+      }
+    },
+    "modbus_data_type": {
+      "options": {
+        "float32": "float32",
+        "uint16": "uint16",
+        "int16": "int16",
+        "uint32": "uint32",
+        "int32": "int32"
+      }
+    },
+    "modbus_byte_order": {
+      "options": {
+        "ABCD": "ABCD",
+        "BADC": "BADC",
+        "CDAB": "CDAB",
+        "DCBA": "DCBA"
       }
     }
   }
