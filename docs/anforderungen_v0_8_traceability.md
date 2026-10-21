@@ -46,29 +46,29 @@ Quellstand: `Power_Manager_Konzept_Anforderungen_Testplan_v0_8.docx` (86 Anforde
 | REQ-38 | Neustart/Moduswechsel Probe zurücksetzen | Teilweise | Initialisierung; Moduswechsel detailliert testen |
 | REQ-39 | Keine Prüfungs-Kennwerte in Reglerkonstanten | Code | PMAX/Leistung und Testparameter sind Variablen |
 | REQ-40 | Controller physikalische kW, Adapter getrennt | Code | Outputs-Profil getrennt |
-| REQ-41 | Wertbedeutung pro Last konfigurierbar | Teilweise | Linear, EVSE; diskrete Wertetabelle fehlt |
+| REQ-41 | Wertbedeutung pro Last konfigurierbar | Teilweise | Gerätesemantik für lineare Werte, Stufen und EVSE konfiguriert; praxisnahe Hardware-Tests fehlen |
 | REQ-42 | Pausenbefehl unabhängig von 0 | Code | Konfigurierbarer sicherer Wert |
 | REQ-43 | AMTRON-Sonderwerte korrekt | Teilweise | EVSE Pause/0-Guard; Simulator noch nicht getestet |
-| REQ-44 | Protokoll und Befehlssemantik unabhängig | Offen | Derzeit nur HA-Entity-Schreibweg |
-| REQ-45 | Modbus-TCP Kodierungsparameter | Offen | Direkter Modbus-Ausgang nicht implementiert |
+| REQ-44 | Protokoll und Befehlssemantik unabhängig | Code | Transport (HA-Entity, direkter Modbus TCP, HA-MQTT-Publish) von Wertkodierung getrennt; Geräteprüfung offen |
+| REQ-45 | Modbus-TCP Kodierungsparameter | Code | FC06/FC16, Float32/Integer, Register, Unit-ID, Byte-/Wortfolge einstellbar; Simulator-Test offen |
 | REQ-46 | Befehlswerte vor Live kontrollieren | Teilweise | Limits/Step/Forbidden; semantisches Hardwareprofil fehlt |
 | REQ-47 | Schreibaufruf nicht als Hardware-Beweis | Teilweise | Frischer Istwert nach Reduzierung mit Deadline geprüft; HA-Laufzeitnachweis fehlt |
 | REQ-48 | Einheitenrichtige Ausgabe und Rückmeldetoleranz | Teilweise | Ausgabe angepasst; Istwerttoleranz fehlt |
 | REQ-49 | Fehlkodierung/Kommunikationsausfall Fail-safe | Teilweise | HA-Servicefehler; Wirkung/Fehlreaktion fehlt |
 | REQ-50 | Herstellerneutrale Profile | Teilweise | Linear; keine universellen Code-Tabelle und Protokolle |
-| REQ-51 | Getrennte EIN-/AUS-/Freigabe-Codes | Teilweise | Pausenwert und optional enable-Entity; echte Befehlsketten fehlen |
-| REQ-52 | Transport/Kodierung unabhängig konfigurierbar | Offen | HA-Ausgabe aktuell fest |
+| REQ-51 | Getrennte EIN-/AUS-/Freigabe-Codes | Code | Separate numerische EIN/AUS- und MQTT-Textbefehle, optionale Freigabe-Entity; Gerätereaktion prüfen |
+| REQ-52 | Transport/Kodierung unabhängig konfigurierbar | Code | Direktes Modbus TCP, MQTT Publish und HA-Entity pro Verbraucher wählbar; laufende Hardwaretests offen |
 | REQ-53 | Integrationserkennung nur Vorschlag | Offen | Kein Protokolldetektor / Bestätigungsmaske |
 | REQ-54 | Controller ohne vendor-spezifische Register | Code | Regler nutzt physikalische kW |
-| REQ-55 | Schalter, stufenlos, Stufen, extra Freigabe | Teilweise | Schalter, linear, Freigabe; Stufentabelle fehlt |
+| REQ-55 | Schalter, stufenlos, Stufen, extra Freigabe | Code | Schaltlast, lineare Modulation, Gerätestufentabelle, EVSE sowie Freigabe-Entity vorhanden |
 | REQ-56 | Aus/Pause/Sonderwerte validiert | Teilweise | Ein verbotener Wert; alle Sonderzustände offen |
 | REQ-57 | Keine unbeabsichtigte Vollfreigabe | Teilweise | EVSE-Nullschutz; andere Profile brauchen Geräteprüfung |
 | REQ-58 | Auflösung/Rundung sicher | Teilweise | HA-Entity Schritt validiert; diskrete Profile fehlen |
-| REQ-59 | Modbus-/MQTT-Verbindungsprofile | Offen | Direkte Transportschicht fehlt |
+| REQ-59 | Modbus-/MQTT-Verbindungsprofile | Teilweise | Modbus/MQTT-Verbindungsprofile programmiert, Encoding getestet, echter Busnachweis offen |
 | REQ-60 | Gerätewirkung tatsächlich rückgemeldet | Teilweise | Frischer Verbraucher-Istwert nach Leistungsreduzierung, keine umfassende Freigabe-Bestätigung |
 | REQ-61 | Kommunikationsfehler und nicht reagierende Lasten | Teilweise | Servicefehler und nicht bestätigte Reduzierung erzeugen Fail-safe; reale Hardwareprüfung fehlt |
 | REQ-62 | Geräteprofile über alle Modi getestet | Teilweise | Konvertierungstests; vollständige Matrix fehlt |
-| REQ-63 | Dokumentierte HA-Mindestversion und Testmatrix | Offen | HA-Core-Versionen noch nicht live in Matrix geprüft |
+| REQ-63 | Dokumentierte HA-Mindestversion und Testmatrix | Teilweise | CI-Importmatrix für ausgewählte HA-Core-Releases angelegt; Mindestversion noch nicht nachgewiesen |
 | REQ-64 | Installation in jeder beworbenen HA-Version | Offen | Nur statische HACS/Hassfest-Prüfung |
 | REQ-65 | Importfehler vermeiden | Teilweise | Voluptuous-Fallback; weitere APIs testen |
 | REQ-66 | ConfigSubentryFlow Versionen abfangen | Offen | Keine geprüfte API-Kompatibilitätsschicht |
@@ -78,7 +78,7 @@ Quellstand: `Power_Manager_Konzept_Anforderungen_Testplan_v0_8.docx` (86 Anforde
 | REQ-70 | Nicht unterstützte HA-Versionen ausweisen | Offen | Mindestversion nach HA-Matrix zu bestimmen |
 | REQ-71 | Invalid-handler Traceback nachvollziehen | Offen | Reales Traceback einer betroffenen HA-Instanz benötigt |
 | REQ-72 | Upgrade ohne Sicherheitsregression | Teilweise | CI, keine Simulator-Abnahme |
-| REQ-73 | Echte HA-Versionstestmatrix | Offen | Bisher Pytest/Hassfest/HACS |
+| REQ-73 | Echte HA-Versionstestmatrix | Teilweise | Zusätzlicher HA-Core-Importworkflow vorhanden, echte Test-/Installationsresultate noch offen |
 | REQ-74 | HACS-Update nach validiertem Release | Extern | Erst nach GitHub-Release nachweisbar |
 | REQ-75 | GitHub-Tag/Manifest/Karte konsistent | Extern | Kein offizieller v3.3.0-Tag oder Release |
 | REQ-76 | V3.1.1 main bleibt erhalten | Code | V3.3.0 nur Draft-Branch |
