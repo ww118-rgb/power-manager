@@ -545,8 +545,7 @@ def _build_load_schema(values: dict[str, Any] | None = None) -> probatio.Schema:
             _required_marker(
                 CONF_MODBUS_BYTE_ORDER, values, DEFAULT_MODBUS_BYTE_ORDER,
             ): SelectSelector(SelectSelectorConfig(
-                options=list(MODBUS_BYTE_ORDERS),
-                translation_key=CONF_MODBUS_BYTE_ORDER,
+                options=[SelectOptionDict(value=x, label=x) for x in MODBUS_BYTE_ORDERS],
             )),
             _required_marker(
                 CONF_MODBUS_FUNCTION, values, DEFAULT_MODBUS_FUNCTION,
