@@ -214,7 +214,7 @@
             "evse_zero_unlimited": "Enable if 0 means unrestricted current. Pause current must then be non-zero.",
             "feedback_tolerance_kw": "After a reduction command, fresh measured power must fall below target + tolerance within the device settling interval; otherwise disarm and activate fail-safe. Actual-power entity is required for live control.",
             "output_transport": "Transport is independent of command semantics. MQTT uses the HA MQTT broker.",
-            "output_steps_json": "For steps profile: sorted JSON objects such as [{\"kw\":4.14,\"code\":6},{\"kw\":6.9,\"code\":10}].",
+            "output_steps_json": "Sorted JSON list of stage thresholds in kW and device command codes.",
             "device_commands_confirmed": "Direct outputs require acknowledgement of actual safe STOP/PAUSE codes and unsafe special values.",
             "modbus_host": "Device hostname or IP; only for direct Modbus.",
             "modbus_port": "Modbus TCP port",
@@ -322,7 +322,7 @@
             "evse_zero_unlimited": "Enable if 0 means unrestricted current. Pause current must then be non-zero.",
             "feedback_tolerance_kw": "After a reduction command, fresh measured power must fall below target + tolerance within the device settling interval; otherwise disarm and activate fail-safe. Actual-power entity is required for live control.",
             "output_transport": "Transport is independent of command semantics. MQTT uses the HA MQTT broker.",
-            "output_steps_json": "For steps profile: sorted JSON objects such as [{\"kw\":4.14,\"code\":6},{\"kw\":6.9,\"code\":10}].",
+            "output_steps_json": "Sorted JSON list of stage thresholds in kW and device command codes.",
             "device_commands_confirmed": "Direct outputs require acknowledgement of actual safe STOP/PAUSE codes and unsafe special values.",
             "modbus_host": "Device hostname or IP; only for direct Modbus.",
             "modbus_port": "Modbus TCP port",
@@ -545,14 +545,6 @@
         "int16": "int16",
         "uint32": "uint32",
         "int32": "int32"
-      }
-    },
-    "modbus_byte_order": {
-      "options": {
-        "ABCD": "ABCD",
-        "BADC": "BADC",
-        "CDAB": "CDAB",
-        "DCBA": "DCBA"
       }
     }
   }
