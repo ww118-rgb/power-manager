@@ -7,6 +7,7 @@ from typing import Any
 
 from .const import (
     CONF_ACTUAL_SENSOR_TIMEOUT_S,
+    CONF_FEEDBACK_TOLERANCE_KW,
     CONF_DEFAULT_REQUEST_KW,
     CONF_ENABLE_ENTITY,
     CONF_EVSE_MAX_CURRENT_A,
@@ -30,6 +31,7 @@ from .const import (
     CONF_START_MARGIN_KW,
     CONF_STOP_MARGIN_KW,
     DEFAULT_ACTUAL_SENSOR_TIMEOUT_S,
+    DEFAULT_FEEDBACK_TOLERANCE_KW,
     DEFAULT_DEFAULT_REQUEST_KW,
     DEFAULT_EVSE_MAX_CURRENT_A,
     DEFAULT_EVSE_MIN_CURRENT_A,
@@ -95,6 +97,9 @@ def normalize_load_data(data: dict[str, Any]) -> dict[str, Any]:
         normalized,
         CONF_ACTUAL_SENSOR_TIMEOUT_S,
         DEFAULT_ACTUAL_SENSOR_TIMEOUT_S,
+    )
+    normalized[CONF_FEEDBACK_TOLERANCE_KW] = _float_value(
+        normalized, CONF_FEEDBACK_TOLERANCE_KW, DEFAULT_FEEDBACK_TOLERANCE_KW,
     )
     normalized[CONF_START_MARGIN_KW] = _float_value(
         normalized,
@@ -217,6 +222,8 @@ def validate_load_data(data: dict[str, Any]) -> dict[str, str]:
 
     if values[CONF_ACTUAL_SENSOR_TIMEOUT_S] <= 0.0:
         errors[CONF_ACTUAL_SENSOR_TIMEOUT_S] = "actual_timeout_must_be_positive"
+    if values[CONF_FEEDBACK_TOLERANCE_KW] < 0:
+        errors[CONF_FEEDBACK_TOLERANCE_KW] = "invalid_number"
 
     if start_margin_kw < 0.0 or stop_margin_kw < 0.0:
         errors["base"] = "invalid_hysteresis"
