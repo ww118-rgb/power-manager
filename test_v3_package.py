@@ -147,3 +147,18 @@ def test_dashboard_card_uses_container_responsive_layout():
     assert "container-type:inline-size" in source
     assert "@container (min-width:560px)" in source
     assert "@container (min-width:820px)" in source
+
+
+def test_v3_3_has_local_ha_brand_images_and_card_logo():
+    """Native brand files must travel with the installed integration."""
+    for name in ("icon.png", "icon@2x.png", "logo.png", "logo@2x.png"):
+        path = COMPONENT / "brand" / name
+        assert path.is_file(), f"Missing local HA brand asset: {name}"
+        assert path.read_bytes().startswith(b"\\x89PNG\\r\\n\\x1a\\n")
+    assert (COMPONENT / "frontend" / "power-manager-icon.png").is_file()
+
+
+def test_v3_3_compatible_config_schema_import():
+    source = (COMPONENT / "config_flow.py").read_text(encoding="utf-8")
+    assert "import voluptuous as probatio" in source
+    assert "import probatio\\n" not in source
