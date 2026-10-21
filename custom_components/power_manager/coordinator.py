@@ -696,11 +696,27 @@ class PowerManagerCoordinator(DataUpdateCoordinator[PowerManagerCoordinatorData]
                 continue
 
             try:
+                previous_kw = self.controller_state.last_targets_kw.get(
+                    diagnostic.name, 0.0,
+                )
                 command = await async_apply_target(
                     self.hass,
                     load_data,
                     diagnostic.calculated_target_kw,
                 )
+                if (
+                    diagnostic.calculated_target_kw + EPSILON < previous_kw
+                    and load_data.get(CONF_ACTUAL_POWER_ENTITY)
+                ):
+                    settling_s = float(load_data.get(
+                        CONF_SETTLING_TIME_S, DEFAULT_SETTLING_TIME_S,
+                    ))
+                    self._pending_reductions[subentry_id] = PendingReduction(
+                        target_kw=diagnostic.calculated_target_kw,
+                        deadline_s=monotonic() + max(
+                            settling_s, HEARTBEAT_INTERVAL_SECONDS,
+                        ),
+                    )
                 self._apply_command_diagnostic(
                     diagnostic,
                     command,
@@ -784,6 +800,35 @@ class PowerManagerCoordinator(DataUpdateCoordinator[PowerManagerCoordinatorData]
 
         assert grid_kw is not None
         values = self.settings
+
+        if self.live_control_enabled and self._pending_reductions:
+            by_id = dict(self._load_subentries())
+            now_feedback_s = monotonic()
+            for subentry_id, pending in list(self._pending_reductions.items()):
+                diagnostic = diagnostics.get(subentry_id)
+                cfg = by_id.get(subentry_id, {})
+                tolerance_kw = float(cfg.get(
+                    CONF_FEEDBACK_TOLERANCE_KW, DEFAULT_FEEDBACK_TOLERANCE_KW,
+                ))
+                status = pending.assess(
+                    now_s=now_feedback_s,
+                    actual_kw=(diagnostic.actual_kw if diagnostic is not None else None),
+                    tolerance_kw=tolerance_kw,
+                )
+                if status == "confirmed":
+                    self._pending_reductions.pop(subentry_id, None)
+                elif status == "failed":
+                    name = diagnostic.name if diagnostic else subentry_id
+                    return await self._async_fail_safe_data(
+                        reason=(
+                            f"{name}: Leistungsreduzierung auf {pending.target_kw:g} kW "
+                            "nicht durch frischen Istwert bestätigt."
+                        ),
+                        grid_kw=grid_kw,
+                        age_s=grid_age_s,
+                        diagnostics=diagnostics,
+                        grid_measurement_healthy=True,
+                    )
 
         try:
             pv_kw = self._read_optional_power_kw(
@@ -889,6 +934,23 @@ class PowerManagerCoordinator(DataUpdateCoordinator[PowerManagerCoordinatorData]
                 age_s=grid_age_s,
                 diagnostics=diagnostics,
                 grid_measurement_healthy=True,
+            )
+
+        # No load increases until preceding reductions have been
+        # confirmed at the physical device. Keep controller state
+        # consistent with the held target to avoid artificial feedback.
+        if self.live_control_enabled and self._pending_reductions:
+            for name, new_target in list(result.targets_kw.items()):
+                previous = self.controller_state.last_targets_kw.get(name, 0.0)
+                if new_target > previous + EPSILON:
+                    result.targets_kw[name] = previous
+                    result.state.last_targets_kw[name] = previous
+                    runtime = result.state.load_states.get(name)
+                    if runtime is not None:
+                        runtime.last_target_kw = previous
+            result.total_target_kw = sum(result.targets_kw.values())
+            result.projected_grid_kw = (
+                result.base_load_kw + result.total_target_kw
             )
 
         self._set_calculated_targets(diagnostics, result)
