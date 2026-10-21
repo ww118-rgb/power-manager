@@ -213,8 +213,8 @@ def test_mqtt_enum_switch_payload_validation():
     assert "mqtt_on_payload" in validate_load_data(broken)
 
 
-@pytest.mark.asyncio
-async def test_mqtt_enum_switch_publishes_safe_text_without_numeric_cast():
+def test_mqtt_enum_switch_publishes_safe_text_without_numeric_cast():
+    import asyncio
     from custom_components.power_manager.protocols import async_mqtt_publish
     calls = []
     class Services:
@@ -224,9 +224,9 @@ async def test_mqtt_enum_switch_publishes_safe_text_without_numeric_cast():
             calls.append((domain, service, payload, blocking))
     class HA:
         services = Services()
-    await async_mqtt_publish(
+    asyncio.run(async_mqtt_publish(
         HA(), topic="device/control", value=0,
         template="{value}", qos=0, retain=False,
         payload_override="DISABLE",
-    )
+    ))
     assert calls[0][2]["payload"] == "DISABLE"
