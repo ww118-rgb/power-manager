@@ -138,7 +138,12 @@
             "evse_voltage_v": "EVSE phase voltage",
             "evse_min_current_a": "EVSE minimum current",
             "evse_max_current_a": "EVSE maximum current",
-            "evse_pause_current_a": "EVSE pause current"
+            "evse_pause_current_a": "EVSE pause current",
+            "output_value_mode": "Numeric device command profile",
+            "output_scale": "Output scaling factor (device units/kW)",
+            "output_offset": "Offset for positive target",
+            "output_forbidden_value": "Forbidden device command (optional)",
+            "evse_zero_unlimited": "EVSE: zero means unrestricted power"
           },
           "data_description": {
             "load_name": "Unique name used by the controller.",
@@ -167,7 +172,12 @@
             "evse_voltage_v": "Phase-to-neutral voltage used for kW-to-A conversion.",
             "evse_min_current_a": "Technical charging minimum.",
             "evse_max_current_a": "Maximum charging current.",
-            "evse_pause_current_a": "Current value that represents pause/off. It must be below the technical minimum."
+            "evse_pause_current_a": "Current value that represents pause/off. It must be below the technical minimum.",
+            "output_value_mode": "Power: W/kW/MW. Linear: device value = kW × factor + offset. Zero target uses a separate safe value. Delivery via HA number entity.",
+            "output_scale": "Positive multiplier for the linear profile.",
+            "output_offset": "Offset only for positive requests.",
+            "output_forbidden_value": "Code never to be written (e.g. 0 means unlimited).",
+            "evse_zero_unlimited": "Enable if 0 means unrestricted current. Pause current must then be non-zero."
           }
         },
         "reconfigure": {
@@ -200,7 +210,12 @@
             "evse_voltage_v": "EVSE phase voltage",
             "evse_min_current_a": "EVSE minimum current",
             "evse_max_current_a": "EVSE maximum current",
-            "evse_pause_current_a": "EVSE pause current"
+            "evse_pause_current_a": "EVSE pause current",
+            "output_value_mode": "Numeric device command profile",
+            "output_scale": "Output scaling factor (device units/kW)",
+            "output_offset": "Offset for positive target",
+            "output_forbidden_value": "Forbidden device command (optional)",
+            "evse_zero_unlimited": "EVSE: zero means unrestricted power"
           },
           "data_description": {
             "load_name": "Unique name used by the controller.",
@@ -229,7 +244,12 @@
             "evse_voltage_v": "Phase-to-neutral voltage used for kW-to-A conversion.",
             "evse_min_current_a": "Technical charging minimum.",
             "evse_max_current_a": "Maximum charging current.",
-            "evse_pause_current_a": "Current value that represents pause/off. It must be below the technical minimum."
+            "evse_pause_current_a": "Current value that represents pause/off. It must be below the technical minimum.",
+            "output_value_mode": "Power: W/kW/MW. Linear: device value = kW × factor + offset. Zero target uses a separate safe value. Delivery via HA number entity.",
+            "output_scale": "Positive multiplier for the linear profile.",
+            "output_offset": "Offset only for positive requests.",
+            "output_forbidden_value": "Code never to be written (e.g. 0 means unlimited).",
+            "evse_zero_unlimited": "Enable if 0 means unrestricted current. Pause current must then be non-zero."
           }
         }
       },
@@ -256,7 +276,11 @@
         "safe_output_must_be_nonnegative": "The safe numeric output value must not be negative.",
         "evse_min_power_below_current_minimum": "EVSE minimum power is below the power represented by the configured minimum current.",
         "evse_max_power_above_current_maximum": "EVSE maximum power cannot be reached with the configured maximum current.",
-        "actual_timeout_must_be_positive": "The actual-power sensor timeout must be greater than 0 seconds."
+        "actual_timeout_must_be_positive": "The actual-power sensor timeout must be greater than 0 seconds.",
+        "invalid_output_value_mode": "Unknown command profile.",
+        "output_scale_must_be_positive": "Output multiplier must be positive.",
+        "forbidden_pause_code": "Pause code is forbidden.",
+        "evse_zero_means_unlimited": "Zero means unlimited, not pause."
       },
       "entry_type": "Controllable load",
       "initiate_flow": {
@@ -398,6 +422,12 @@
         "modulating": "Modulating power",
         "switch": "Switch load",
         "evse": "EVSE / wallbox"
+      }
+    },
+    "output_value_mode": {
+      "options": {
+        "power": "Power (W/kW/MW)",
+        "linear": "Linear numeric device code"
       }
     }
   }
