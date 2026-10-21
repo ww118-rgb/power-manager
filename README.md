@@ -11,6 +11,9 @@ ist unter [docs/anforderungen_v0_8_traceability.md](docs/anforderungen_v0_8_trac
 nachverfolgbar. Der Branch bleibt bis zu tatsächlichen HA- und Simulatorprüfungen ein **Draft**.
 
 **Aktuelle Sicherheitsnachträge:**
+
+- **Physische Reduktionsbestätigung:** Live-Regelung lässt sich im neuen Teststand nur mit einer gültigen eigenen Istleistungs-Entity für jeden Verbraucher aktivieren. Nach einer Leistungsreduzierung wird die gemessene Leistung innerhalb einer gerätespezifischen Einschwingzeit mit dem neuen Sollwert (plus konfigurierbarer Rückmeldetoleranz) verglichen. Fehlt die Bestätigung, erfolgt Fail-Safe und Live wird deaktiviert. Solange eine Reduktion unbestätigt ist, werden keine neuen Leistungssteigerungen freigegeben. Ein bloßer `number.set_value`-Erfolg gilt nicht als Wirknachweis.
+- **Bestehende V3.1.1-Anlagen:** Diese Live-Voraussetzung kann bisherige Konfigurationen ohne Verbraucher-Istwertsensor absichtlich blockieren. Vor einem Testlauf müssen entsprechende Sensoren korrekt eingebunden und auf Frische geprüft werden. Das ist ein bewusster Sicherheitsstopp, keine automatische Änderung am installierten System.
 - Die PMAX-Sollwertprognose rechnet nun auch im NORMAL-Modus konservativ mit einem möglichen Wegfall der Batterieentladung.
 - Die Batterie-Bonusfreigabe besitzt eine eigene konfigurierbare SOC-Wiedereinschalthysterese.
 - PV-, Batterie-Leistungs- und SOC-Messwerte haben getrennte konfigurierbare Frischegrenzen.
