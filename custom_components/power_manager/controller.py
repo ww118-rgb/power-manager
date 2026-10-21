@@ -219,6 +219,7 @@ def _validate_configuration(
         "now_s": (
             inputs.now_s
         ),
+        "battery_resume_hysteresis_soc": inputs.battery_resume_hysteresis_soc,
         "hybrid_probe_step_kw": inputs.hybrid_probe_step_kw,
         "hybrid_probe_settle_s": inputs.hybrid_probe_settle_s,
         "hybrid_probe_retry_s": inputs.hybrid_probe_retry_s,
@@ -302,6 +303,9 @@ def _validate_configuration(
             "grid_reserve_kw muss kleiner als "
             "grid_limit_kw sein."
         )
+
+    if not 0.0 <= inputs.battery_resume_hysteresis_soc <= 100.0:
+        raise ValueError("SOC-Wiedereinschalthysterese muss zwischen 0 und 100 liegen.")
 
     if (
         inputs.hybrid_probe_step_kw < 0.0
@@ -682,10 +686,12 @@ def run_controller(
             + max(0.0, inputs.battery_kw)
         )
     else:
-        # NORMAL bleibt unveraendert.
+        # PMAX is independent of battery availability in NORMAL, too:
+        # a currently discharging battery may stop at any moment.
         base_load_kw = (
             inputs.grid_kw
             - controlled_power_for_calculation_kw
+            + max(0.0, inputs.battery_kw)
         )
 
     # ------------------------------------------------------
@@ -776,11 +782,20 @@ def run_controller(
             else 0.0
         )
 
-        battery_soc_blocking_surplus = bool(
-            battery_soc_gate_enabled
-            and inputs.battery_soc
-            <= inputs.surplus_min_battery_soc
-        )
+        battery_soc_blocking_surplus = False
+        if battery_soc_gate_enabled:
+            battery_soc_blocking_surplus = (
+                inputs.battery_soc <= inputs.surplus_min_battery_soc
+                or (
+                    state.battery_bonus_blocked
+                    and inputs.battery_soc
+                    < min(
+                        100.0,
+                        inputs.surplus_min_battery_soc
+                        + inputs.battery_resume_hysteresis_soc,
+                    )
+                )
+            )
 
         # Hybrid battery support requires an actual power sensor,
         # a configured SOC reserve, valid SOC, and genuine PV surplus.
@@ -1065,6 +1080,13 @@ def run_controller(
     next_state.hybrid_probe_target_kw = probe_target_kw
     next_state.hybrid_probe_increment_kw = probe_increment_kw
     next_state.hybrid_next_probe_s = next_probe_s
+    # Preserve the battery-only SOC latch across mode changes, without
+    # restricting PV-only loads or normal peak shaving.
+    next_state.battery_bonus_blocked = (
+        battery_soc_blocking_surplus
+        if inputs.mode == OperatingMode.SURPLUS
+        else state.battery_bonus_blocked
+    )
 
     # ------------------------------------------------------
     # 12. Diagnosewerte
