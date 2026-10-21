@@ -153,6 +153,9 @@ class ControllerInputs:
     now_s: float = 0.0
 
     surplus_min_battery_soc: float | None = None
+    # Battery bonus is re-enabled only above reserve + hysteresis;
+    # pure PV operation never depends on this state.
+    battery_resume_hysteresis_soc: float = 2.0
 
     # Hybrid feedback parameters (plant-independent, all configurable).
     # The coordinator enables active probing only during live control.
@@ -185,6 +188,7 @@ class ControllerState:
     # Fixed authorization from the time the probe was started.
     hybrid_probe_increment_kw: float = 0.0
     hybrid_next_probe_s: float = 0.0
+    battery_bonus_blocked: bool = False
 
 
 @dataclass
