@@ -52,7 +52,7 @@ Quellstand: `Power_Manager_Konzept_Anforderungen_Testplan_v0_8.docx` (86 Anforde
 | REQ-44 | Protokoll und Befehlssemantik unabhängig | Offen | Derzeit nur HA-Entity-Schreibweg |
 | REQ-45 | Modbus-TCP Kodierungsparameter | Offen | Direkter Modbus-Ausgang nicht implementiert |
 | REQ-46 | Befehlswerte vor Live kontrollieren | Teilweise | Limits/Step/Forbidden; semantisches Hardwareprofil fehlt |
-| REQ-47 | Schreibaufruf nicht als Hardware-Beweis | Offen | Physische Rückmeldebestätigung fehlt |
+| REQ-47 | Schreibaufruf nicht als Hardware-Beweis | Teilweise | Frischer Istwert nach Reduzierung mit Deadline geprüft; HA-Laufzeitnachweis fehlt |
 | REQ-48 | Einheitenrichtige Ausgabe und Rückmeldetoleranz | Teilweise | Ausgabe angepasst; Istwerttoleranz fehlt |
 | REQ-49 | Fehlkodierung/Kommunikationsausfall Fail-safe | Teilweise | HA-Servicefehler; Wirkung/Fehlreaktion fehlt |
 | REQ-50 | Herstellerneutrale Profile | Teilweise | Linear; keine universellen Code-Tabelle und Protokolle |
@@ -65,8 +65,8 @@ Quellstand: `Power_Manager_Konzept_Anforderungen_Testplan_v0_8.docx` (86 Anforde
 | REQ-57 | Keine unbeabsichtigte Vollfreigabe | Teilweise | EVSE-Nullschutz; andere Profile brauchen Geräteprüfung |
 | REQ-58 | Auflösung/Rundung sicher | Teilweise | HA-Entity Schritt validiert; diskrete Profile fehlen |
 | REQ-59 | Modbus-/MQTT-Verbindungsprofile | Offen | Direkte Transportschicht fehlt |
-| REQ-60 | Gerätewirkung tatsächlich rückgemeldet | Offen | Zeitlicher Wirknachweis fehlt |
-| REQ-61 | Kommunikationsfehler und nicht reagierende Lasten | Teilweise | Servicefehler-Fail-safe; keine Langzeitreaktionsdiagnose |
+| REQ-60 | Gerätewirkung tatsächlich rückgemeldet | Teilweise | Frischer Verbraucher-Istwert nach Leistungsreduzierung, keine umfassende Freigabe-Bestätigung |
+| REQ-61 | Kommunikationsfehler und nicht reagierende Lasten | Teilweise | Servicefehler und nicht bestätigte Reduzierung erzeugen Fail-safe; reale Hardwareprüfung fehlt |
 | REQ-62 | Geräteprofile über alle Modi getestet | Teilweise | Konvertierungstests; vollständige Matrix fehlt |
 | REQ-63 | Dokumentierte HA-Mindestversion und Testmatrix | Offen | HA-Core-Versionen noch nicht live in Matrix geprüft |
 | REQ-64 | Installation in jeder beworbenen HA-Version | Offen | Nur statische HACS/Hassfest-Prüfung |
@@ -85,7 +85,7 @@ Quellstand: `Power_Manager_Konzept_Anforderungen_Testplan_v0_8.docx` (86 Anforde
 | REQ-77 | Eigene HA-Branding-Assets | Teilweise | Dateien vorhanden, UI-Laufzeittest fehlt |
 | REQ-78 | HACS-/HA-Altversionen Fallback | Teilweise | Branding darf Start nicht blockieren, UI nicht getestet |
 | REQ-79 | Versions-/Projektmetadaten auffindbar | Teilweise | README/Manifest, Release-Notes noch nicht |
-| REQ-80 | Sicherheitsbefehl physisch bestätigen | Offen | Befehlserfolg ist nicht Wirkerfolg |
+| REQ-80 | Sicherheitsbefehl physisch bestätigen | Teilweise | Tatsächliche Lastreduzierung nach Einschwingzeit geprüft; Geräte-Schaltzustandsbestätigung fehlt |
 | REQ-81 | Mehrdeutiger 0-Wert ohne Warnung verhindern | Teilweise | EVSE-Guard/Forbidden; generisches Gerät nicht beweissicher |
 | REQ-82 | Winter-SOC 0 mit echtem PV | Teilweise | Core-Tests, realer HA-Prozess fehlt |
 | REQ-83 | Fehlversuch erzeugt keine Oszillation | Teilweise | Cooldown, Langzeittest fehlt |
