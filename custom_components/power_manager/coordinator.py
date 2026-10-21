@@ -64,6 +64,10 @@ from .const import (
     CONF_STOP_MARGIN_KW,
     CONF_SURPLUS_ENABLED,
     CONF_SURPLUS_MIN_BATTERY_SOC,
+    CONF_BATTERY_RESUME_HYSTERESIS_SOC,
+    CONF_PV_SENSOR_TIMEOUT_S,
+    CONF_BATTERY_SENSOR_TIMEOUT_S,
+    CONF_BATTERY_SOC_SENSOR_TIMEOUT_S,
     CONF_HYBRID_PROBE_STEP_KW,
     CONF_HYBRID_PROBE_SETTLE_S,
     CONF_HYBRID_PROBE_RETRY_S,
@@ -76,6 +80,10 @@ from .const import (
     DEFAULT_BATTERY_SOC_SCALE,
     DEFAULT_DEFAULT_REQUEST_KW,
     DEFAULT_GRID_SENSOR_TIMEOUT_S,
+    DEFAULT_BATTERY_RESUME_HYSTERESIS_SOC,
+    DEFAULT_PV_SENSOR_TIMEOUT_S,
+    DEFAULT_BATTERY_SENSOR_TIMEOUT_S,
+    DEFAULT_BATTERY_SOC_SENSOR_TIMEOUT_S,
     DEFAULT_INVERT_ACTUAL_POWER,
     DEFAULT_MAX_KW,
     DEFAULT_MIN_KW,
@@ -305,6 +313,16 @@ class PowerManagerCoordinator(DataUpdateCoordinator[PowerManagerCoordinatorData]
             raise MeasurementError("Netzsensor-Timeout muss größer als 0 sein.")
         return timeout_s
 
+    def _aux_sensor_timeout_s(self, config_key: str, default_s: float) -> float:
+        """Use individual configured freshness for PV, battery and SOC."""
+        try:
+            value = float(self.settings.get(config_key, default_s))
+        except (TypeError, ValueError) as err:
+            raise MeasurementError(f"Ungültiger Sensor-Timeout: {config_key}") from err
+        if not isfinite(value) or value <= 0.0:
+            raise MeasurementError(f"Ungültiger Sensor-Timeout: {config_key}")
+        return value
+
     def _read_grid_measurement(
         self,
     ) -> tuple[float | None, float | None, str | None]:
@@ -348,6 +366,8 @@ class PowerManagerCoordinator(DataUpdateCoordinator[PowerManagerCoordinatorData]
         invert_key: str,
         label: str,
         require_fresh: bool = False,
+        timeout_key: str = CONF_GRID_SENSOR_TIMEOUT_S,
+        default_timeout_s: float = DEFAULT_GRID_SENSOR_TIMEOUT_S,
     ) -> float:
         """Read an optional global power entity in kW."""
 
@@ -361,8 +381,12 @@ class PowerManagerCoordinator(DataUpdateCoordinator[PowerManagerCoordinatorData]
             age_s = measurement_age_seconds(
                 state.last_reported, datetime.now(timezone.utc)
             )
-            if not measurement_is_fresh(age_s, self._grid_timeout_s()):
-                raise MeasurementError(f"{label}: Messwert ist {age_s:.1f} s alt.")
+            timeout_s = self._aux_sensor_timeout_s(timeout_key, default_timeout_s)
+            if not measurement_is_fresh(age_s, timeout_s):
+                raise MeasurementError(
+                    f"{label}: Messwert ist {age_s:.1f} s alt "
+                    f"(Timeout {timeout_s:g} s)."
+                )
         raw_value, unit = self._state_value_and_unit(state, label=label)
         return power_to_kw(
             raw_value,
@@ -384,8 +408,15 @@ class PowerManagerCoordinator(DataUpdateCoordinator[PowerManagerCoordinatorData]
             age_s = measurement_age_seconds(
                 state.last_reported, datetime.now(timezone.utc)
             )
-            if not measurement_is_fresh(age_s, self._grid_timeout_s()):
-                raise MeasurementError(f"Batterie-SOC: Messwert ist {age_s:.1f} s alt.")
+            timeout_s = self._aux_sensor_timeout_s(
+                CONF_BATTERY_SOC_SENSOR_TIMEOUT_S,
+                DEFAULT_BATTERY_SOC_SENSOR_TIMEOUT_S,
+            )
+            if not measurement_is_fresh(age_s, timeout_s):
+                raise MeasurementError(
+                    f"Batterie-SOC: Messwert ist {age_s:.1f} s alt "
+                    f"(Timeout {timeout_s:g} s)."
+                )
         raw_value, unit = self._state_value_and_unit(state, label="Batterie-SOC")
         return percentage_from_scale(
             raw_value,
@@ -755,6 +786,8 @@ class PowerManagerCoordinator(DataUpdateCoordinator[PowerManagerCoordinatorData]
                 invert_key=CONF_INVERT_PV_POWER,
                 label="PV-Leistung",
                 require_fresh=(self.operating_mode == OperatingMode.SURPLUS),
+                timeout_key=CONF_PV_SENSOR_TIMEOUT_S,
+                default_timeout_s=DEFAULT_PV_SENSOR_TIMEOUT_S,
             )
         except MeasurementError as err:
             _LOGGER.warning("PV-Messwert ungültig; verwende 0 kW: %s", err)
@@ -766,6 +799,8 @@ class PowerManagerCoordinator(DataUpdateCoordinator[PowerManagerCoordinatorData]
                 invert_key=CONF_INVERT_BATTERY_POWER,
                 label="Batterieleistung",
                 require_fresh=(self.operating_mode == OperatingMode.SURPLUS),
+                timeout_key=CONF_BATTERY_SENSOR_TIMEOUT_S,
+                default_timeout_s=DEFAULT_BATTERY_SENSOR_TIMEOUT_S,
             )
         except MeasurementError as err:
             if self.operating_mode == OperatingMode.SURPLUS:
@@ -786,16 +821,11 @@ class PowerManagerCoordinator(DataUpdateCoordinator[PowerManagerCoordinatorData]
             battery_soc = self._read_battery_soc()
             surplus_min_battery_soc = self._read_surplus_min_soc()
         except MeasurementError as err:
-            if self.operating_mode == OperatingMode.SURPLUS:
-                return await self._async_fail_safe_data(
-                    reason=f"Batterie-SOC im Überschussbetrieb ungültig: {err}",
-                    grid_kw=grid_kw,
-                    age_s=grid_age_s,
-                    diagnostics=diagnostics,
-                    grid_measurement_healthy=True,
-                )
+            # Stale SOC disables only battery bonus, not pure PV loads.
+            # Battery power is checked separately for the energy balance.
             _LOGGER.warning(
-                "Batterie-SOC ungültig; SOC-Funktion im Normalbetrieb ignoriert: %s",
+                "Batterie-SOC ungültig; Batteriebonus deaktiviert, "
+                "PV-only und PMAX bleiben aktiv: %s",
                 err,
             )
             battery_soc = None
@@ -816,6 +846,10 @@ class PowerManagerCoordinator(DataUpdateCoordinator[PowerManagerCoordinatorData]
                 mode=self.operating_mode,
                 now_s=monotonic(),
                 surplus_min_battery_soc=surplus_min_battery_soc,
+                battery_resume_hysteresis_soc=float(values.get(
+                    CONF_BATTERY_RESUME_HYSTERESIS_SOC,
+                    DEFAULT_BATTERY_RESUME_HYSTERESIS_SOC,
+                )),
                 hybrid_battery_assist_enabled=bool(
                     values.get(CONF_BATTERY_POWER_ENTITY)
                     and values.get(CONF_BATTERY_SOC_ENTITY)
