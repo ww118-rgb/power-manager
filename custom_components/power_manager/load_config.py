@@ -23,6 +23,8 @@ from .const import (
     CONF_MQTT_QOS,
     CONF_MQTT_RETAIN,
     CONF_MQTT_PAYLOAD_TEMPLATE,
+    CONF_MQTT_ON_PAYLOAD,
+    CONF_MQTT_OFF_PAYLOAD,
     CONF_SWITCH_ON_CODE,
     CONF_SWITCH_OFF_CODE,
     CONF_DEVICE_COMMANDS_CONFIRMED,
@@ -37,6 +39,8 @@ from .const import (
     DEFAULT_MQTT_QOS,
     DEFAULT_MQTT_RETAIN,
     DEFAULT_MQTT_PAYLOAD_TEMPLATE,
+    DEFAULT_MQTT_ON_PAYLOAD,
+    DEFAULT_MQTT_OFF_PAYLOAD,
     DEFAULT_SWITCH_ON_CODE,
     DEFAULT_SWITCH_OFF_CODE,
     DEFAULT_DEVICE_COMMANDS_CONFIRMED,
@@ -211,6 +215,12 @@ def normalize_load_data(data: dict[str, Any]) -> dict[str, Any]:
     normalized[CONF_MQTT_QOS] = int(normalized.get(CONF_MQTT_QOS, DEFAULT_MQTT_QOS))
     normalized[CONF_MQTT_RETAIN] = bool(normalized.get(CONF_MQTT_RETAIN, DEFAULT_MQTT_RETAIN))
     normalized[CONF_MQTT_PAYLOAD_TEMPLATE] = str(normalized.get(CONF_MQTT_PAYLOAD_TEMPLATE, DEFAULT_MQTT_PAYLOAD_TEMPLATE))
+    normalized[CONF_MQTT_ON_PAYLOAD] = str(
+        normalized.get(CONF_MQTT_ON_PAYLOAD, DEFAULT_MQTT_ON_PAYLOAD)
+    )
+    normalized[CONF_MQTT_OFF_PAYLOAD] = str(
+        normalized.get(CONF_MQTT_OFF_PAYLOAD, DEFAULT_MQTT_OFF_PAYLOAD)
+    )
     normalized[CONF_SWITCH_ON_CODE] = _float_value(normalized, CONF_SWITCH_ON_CODE, DEFAULT_SWITCH_ON_CODE)
     normalized[CONF_SWITCH_OFF_CODE] = _float_value(normalized, CONF_SWITCH_OFF_CODE, DEFAULT_SWITCH_OFF_CODE)
     normalized[CONF_DEVICE_COMMANDS_CONFIRMED] = bool(
@@ -346,7 +356,18 @@ def validate_load_data(data: dict[str, Any]) -> dict[str, str]:
             errors[CONF_MQTT_TOPIC] = "invalid_mqtt_topic"
         if values[CONF_MQTT_QOS] not in (0,1,2):
             errors[CONF_MQTT_QOS] = "invalid_mqtt_qos"
-        if "{value}" not in values[CONF_MQTT_PAYLOAD_TEMPLATE]:
+        has_text_commands = bool(
+            values[CONF_MQTT_ON_PAYLOAD] or values[CONF_MQTT_OFF_PAYLOAD]
+        )
+        if has_text_commands and (
+            load_type != LOAD_TYPE_SWITCH
+            or not values[CONF_MQTT_ON_PAYLOAD]
+            or not values[CONF_MQTT_OFF_PAYLOAD]
+        ):
+            errors[CONF_MQTT_ON_PAYLOAD] = "invalid_mqtt_text_commands"
+        if (not has_text_commands or load_type != LOAD_TYPE_SWITCH) and (
+            "{value}" not in values[CONF_MQTT_PAYLOAD_TEMPLATE]
+        ):
             errors[CONF_MQTT_PAYLOAD_TEMPLATE] = "invalid_mqtt_template"
     if values[CONF_OUTPUT_VALUE_MODE] == OUTPUT_VALUE_MODE_STEPS and load_type == LOAD_TYPE_MODULATING:
         try:
