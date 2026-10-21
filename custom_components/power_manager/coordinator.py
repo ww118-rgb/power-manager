@@ -57,6 +57,11 @@ from .const import (
     CONF_MIN_OFF_TIME_S,
     CONF_MIN_ON_TIME_S,
     CONF_OUTPUT_ENTITY,
+    CONF_OUTPUT_TRANSPORT,
+    CONF_DIRECT_REFRESH_S,
+    DEFAULT_DIRECT_REFRESH_S,
+    DEFAULT_OUTPUT_TRANSPORT,
+    OUTPUT_TRANSPORT_ENTITY,
     CONF_PEAK_SHAVING_ENABLED,
     CONF_PRIORITY,
     CONF_PV_POWER_ENTITY,
@@ -199,6 +204,7 @@ class PowerManagerCoordinator(DataUpdateCoordinator[PowerManagerCoordinatorData]
         self._tracking_started = False
         self._last_output_error: str | None = None
         self._pending_reductions: dict[str, PendingReduction] = {}
+        self._direct_last_command: dict[str, tuple[float, float]] = {}
 
     @property
     def settings(self) -> dict[str, Any]:
@@ -628,11 +634,18 @@ class PowerManagerCoordinator(DataUpdateCoordinator[PowerManagerCoordinatorData]
 
         for subentry_id, diagnostic in diagnostics.items():
             load_data = data_by_id.get(subentry_id)
-            if load_data is None or not load_data.get(CONF_OUTPUT_ENTITY):
+            if load_data is None:
+                continue
+            if (
+                load_data.get(CONF_OUTPUT_TRANSPORT, DEFAULT_OUTPUT_TRANSPORT)
+                == OUTPUT_TRANSPORT_ENTITY
+                and not load_data.get(CONF_OUTPUT_ENTITY)
+            ):
                 continue
 
             try:
                 command = await async_apply_safe_state(self.hass, load_data)
+                self._direct_last_command.pop(subentry_id, None)
                 self._apply_command_diagnostic(diagnostic, command, commanded_target_kw=0.0)
             except (ActuatorError, HomeAssistantError, ValueError) as err:
                 diagnostic.command_error = str(err)
@@ -689,7 +702,11 @@ class PowerManagerCoordinator(DataUpdateCoordinator[PowerManagerCoordinatorData]
             if load_data is None:
                 continue
 
-            if not load_data.get(CONF_OUTPUT_ENTITY):
+            if (
+                load_data.get(CONF_OUTPUT_TRANSPORT, DEFAULT_OUTPUT_TRANSPORT)
+                == OUTPUT_TRANSPORT_ENTITY
+                and not load_data.get(CONF_OUTPUT_ENTITY)
+            ):
                 error = "Kein Ausgang konfiguriert."
                 diagnostic.command_error = error
                 errors.append(f"{diagnostic.name}: {error}")
@@ -699,11 +716,29 @@ class PowerManagerCoordinator(DataUpdateCoordinator[PowerManagerCoordinatorData]
                 previous_kw = self.controller_state.last_targets_kw.get(
                     diagnostic.name, 0.0,
                 )
+                transport = load_data.get(CONF_OUTPUT_TRANSPORT, DEFAULT_OUTPUT_TRANSPORT)
+                if transport != OUTPUT_TRANSPORT_ENTITY:
+                    previous_direct = self._direct_last_command.get(subentry_id)
+                    requested_kw = diagnostic.calculated_target_kw
+                    refresh_s = float(load_data.get(
+                        CONF_DIRECT_REFRESH_S, DEFAULT_DIRECT_REFRESH_S,
+                    ))
+                    if (
+                        previous_direct is not None
+                        and abs(previous_direct[0] - requested_kw) <= EPSILON
+                        and monotonic() - previous_direct[1] < refresh_s
+                    ):
+                        diagnostic.commanded_target_kw = requested_kw
+                        continue
                 command = await async_apply_target(
                     self.hass,
                     load_data,
                     diagnostic.calculated_target_kw,
                 )
+                if transport != OUTPUT_TRANSPORT_ENTITY:
+                    self._direct_last_command[subentry_id] = (
+                        diagnostic.calculated_target_kw, monotonic(),
+                    )
                 if (
                     diagnostic.calculated_target_kw + EPSILON < previous_kw
                     and load_data.get(CONF_ACTUAL_POWER_ENTITY)
@@ -755,6 +790,7 @@ class PowerManagerCoordinator(DataUpdateCoordinator[PowerManagerCoordinatorData]
             self.live_control_enabled = False
             self.controller_state = ControllerState()
             self._pending_reductions.clear()
+            self._direct_last_command.clear()
 
         combined_reason = reason
         if output_error:
@@ -977,6 +1013,7 @@ class PowerManagerCoordinator(DataUpdateCoordinator[PowerManagerCoordinatorData]
                 self.live_control_enabled = False
                 self.controller_state = ControllerState()
                 self._pending_reductions.clear()
+                self._direct_last_command.clear()
                 return PowerManagerCoordinatorData(
                     inputs=inputs,
                     result=result,
@@ -1059,6 +1096,7 @@ class PowerManagerCoordinator(DataUpdateCoordinator[PowerManagerCoordinatorData]
         # the first live cycle; start from a clean controller state.
         self.controller_state = ControllerState()
         self._pending_reductions.clear()
+        self._direct_last_command.clear()
         self.live_control_enabled = True
         await self.async_refresh()
 
@@ -1083,6 +1121,7 @@ class PowerManagerCoordinator(DataUpdateCoordinator[PowerManagerCoordinatorData]
         # never inferred from commands that were deliberately withdrawn.
         self.controller_state = ControllerState()
         self._pending_reductions.clear()
+        self._direct_last_command.clear()
         await self.async_refresh()
 
     async def async_set_operating_mode(self, mode: OperatingMode) -> None:
