@@ -7,6 +7,8 @@ import json
 from typing import Any
 
 from .const import (
+    CONF_DIRECT_REFRESH_S,
+    DEFAULT_DIRECT_REFRESH_S,
     CONF_OUTPUT_STEPS_JSON,
     CONF_OUTPUT_TRANSPORT,
     CONF_MODBUS_HOST,
@@ -214,6 +216,9 @@ def normalize_load_data(data: dict[str, Any]) -> dict[str, Any]:
     normalized[CONF_DEVICE_COMMANDS_CONFIRMED] = bool(
         normalized.get(CONF_DEVICE_COMMANDS_CONFIRMED, DEFAULT_DEVICE_COMMANDS_CONFIRMED)
     )
+    normalized[CONF_DIRECT_REFRESH_S] = _float_value(
+        normalized, CONF_DIRECT_REFRESH_S, DEFAULT_DIRECT_REFRESH_S,
+    )
 
     normalized[CONF_EVSE_PHASES] = int(
         normalized.get(CONF_EVSE_PHASES, DEFAULT_EVSE_PHASES)
@@ -313,6 +318,8 @@ def validate_load_data(data: dict[str, Any]) -> dict[str, str]:
     ) <= 0.000001 and load_type != LOAD_TYPE_EVSE:
         errors[CONF_SAFE_OUTPUT_VALUE] = "forbidden_pause_code"
 
+    if not 0.0 < values[CONF_DIRECT_REFRESH_S] <= 3600.0:
+        errors[CONF_DIRECT_REFRESH_S] = "invalid_direct_refresh"
     transport = values[CONF_OUTPUT_TRANSPORT]
     if transport not in OUTPUT_TRANSPORTS:
         errors[CONF_OUTPUT_TRANSPORT] = "invalid_transport"
