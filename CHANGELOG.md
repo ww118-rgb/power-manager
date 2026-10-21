@@ -1,5 +1,13 @@
 # Changelog
 
+## 3.3.0 – Physische Rückmeldeüberwachung (Teststand)
+
+- Frische Verbraucher-Istleistungsmessung für jeden Lastkanal als Voraussetzung der Live-Aktivierung.
+- Reduzierung wird erst nach gemessener tatsächlicher Abnahme als bestätigt angesehen.
+- Nicht bestätigte Reduzierung nach gerätespezifischer Einschwingzeit führt zu Fail-Safe und deaktiviert Live.
+- Während unbestätigter Reduzierung keine erneuten Erhöhungen; gerätebezogene kW-Toleranz konfigurierbar.
+- In einer bestehenden V3.1.1-Konfiguration ohne gültige Last-Istwertsensoren ist Live deshalb zunächst gesperrt. Dies ist nur auf Test-Branch und noch nicht released.
+
 ## 3.3.0 – Nachtrag Sicherheit und Nachweisführung
 
 - PMAX konservativ gegenüber wegfallender Batterieentladung auch im NORMAL-Modus.
