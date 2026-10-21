@@ -1,5 +1,12 @@
 # Changelog
 
+## 3.3.0 – Nachtrag Sicherheit und Nachweisführung
+
+- PMAX konservativ gegenüber wegfallender Batterieentladung auch im NORMAL-Modus.
+- Batteriebonus-Wiedereinschalthysterese separat konfigurierbar; PV-only unabhängig vom SOC.
+- Unabhängige Timeouts für PV, Batterieleistung und SOC; bei veraltetem SOC nur Batteriebonus sperren.
+- Traceability von REQ-01 bis REQ-86 aus Dokument v0.8 mit expliziten offenen Abnahmen und CI-Vollständigkeitsprüfung.
+
 ## 3.3.0 (Testkandidat; noch kein öffentlicher Release)
 
 - Konfigurierbare numerische Gerätebefehle mit Skalierung, Offset, sicherer Pause und verbotenen Sonderwerten; bestehender Standard-Ausgang unverändert.
