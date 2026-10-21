@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import json
 from math import isfinite
 
 from .allocator import EPSILON
@@ -10,6 +11,7 @@ from .const import (
     DEFAULT_OUTPUT_VALUE_MODE,
     OUTPUT_VALUE_MODE_LINEAR,
     OUTPUT_VALUE_MODE_POWER,
+    OUTPUT_VALUE_MODE_STEPS,
     LOAD_TYPE_EVSE,
     LOAD_TYPE_MODULATING,
     LOAD_TYPE_SWITCH,
@@ -102,6 +104,7 @@ def build_output_plan(
     output_offset: float = 0.0,
     forbidden_value: float | None = None,
     evse_zero_unlimited: bool = False,
+    output_steps_json: str = "[]",
 ) -> OutputPlan:
     """Convert one kW target into a generic output plan."""
 
@@ -161,6 +164,30 @@ def build_output_plan(
                 target_kw * output_scale + output_offset
                 if enabled else safe_output_value
             )
+            unit = "device"
+        elif output_value_mode == OUTPUT_VALUE_MODE_STEPS:
+            try:
+                stages = json.loads(output_steps_json)
+            except (TypeError, ValueError) as err:
+                raise OutputConversionError("Invalid JSON for numeric stages") from err
+            if not isinstance(stages, list) or not stages:
+                raise OutputConversionError("Numeric stages require at least one stage")
+            try:
+                pairs = [(float(entry["kw"]), float(entry["code"])) for entry in stages]
+            except (KeyError, TypeError, ValueError) as err:
+                raise OutputConversionError("Stages must contain kw and code") from err
+            if (
+                any(not (isfinite(kw) and isfinite(code) and kw > 0) for kw, code in pairs)
+                or len(set(kw for kw, _ in pairs)) != len(pairs)
+                or pairs != sorted(pairs)
+            ):
+                raise OutputConversionError("Stages must be finite, positive, unique and sorted")
+            selected = [code for kw, code in pairs if kw <= target_kw + EPSILON]
+            if not selected:
+                numeric_value = safe_output_value
+                enabled = False
+            else:
+                numeric_value = selected[-1]
             unit = "device"
         else:
             raise OutputConversionError("Unknown numeric device command profile")
