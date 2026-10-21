@@ -21,7 +21,11 @@
           "hybrid_probe_step_kw": "Hybrid-Prüfschritt (kW)",
           "hybrid_probe_settle_s": "Einschwingzeit für Hybridprüfung (s)",
           "hybrid_probe_retry_s": "Wartezeit zwischen Hybridprüfungen (s)",
-          "hybrid_grid_tolerance_kw": "Maximal tolerierter Netzbezug bei Hybridprüfung (kW)"
+          "hybrid_grid_tolerance_kw": "Maximal tolerierter Netzbezug bei Hybridprüfung (kW)",
+          "battery_resume_hysteresis_soc": "Wiederfreigabe Batteriebonus oberhalb Reserve (%)",
+          "pv_sensor_timeout_s": "PV-Sensor Timeout (s)",
+          "battery_sensor_timeout_s": "Batterieleistung Timeout (s)",
+          "battery_soc_sensor_timeout_s": "Batterie-SOC Timeout (s)"
         },
         "data_description": {
           "grid_power_entity": "Pflichtfeld. Nettoleistung am Netzanschlusspunkt.",
@@ -39,7 +43,11 @@
           "hybrid_probe_step_kw": "Maximale zusätzliche Last pro Prüfung. 0 deaktiviert aktive Versuche. Keine angenommene Batterie-Nennleistung.",
           "hybrid_probe_settle_s": "Zeit nach einem Lastversuch, bevor die tatsächliche Anlagenreaktion bewertet wird.",
           "hybrid_probe_retry_s": "Wartezeit nach einer erfolgreichen oder abgebrochenen Prüfung bis zum nächsten Versuch.",
-          "hybrid_grid_tolerance_kw": "Netzbezug bis zu dieser Grenze gilt nach der Einschwingzeit als erfolgreich. Während der Einschwingzeit wird maximal ein zusätzlicher Prüfschritt darüber toleriert; PMAX bleibt hart."
+          "hybrid_grid_tolerance_kw": "Netzbezug bis zu dieser Grenze gilt nach der Einschwingzeit als erfolgreich. Während der Einschwingzeit wird maximal ein zusätzlicher Prüfschritt darüber toleriert; PMAX bleibt hart.",
+          "battery_resume_hysteresis_soc": "Nur Batterieunterstützung wird nach einer SOC-Sperre oberhalb von Reserve + Hysterese wieder freigegeben. PV-only bleibt jederzeit unabhängig vom SOC.",
+          "pv_sensor_timeout_s": "Maximales Alter der PV-Messwerte im Überschussmodus, unabhängig vom Netzsensor.",
+          "battery_sensor_timeout_s": "Maximales Alter der Batterieleistung, falls ein Sensor konfiguriert ist.",
+          "battery_soc_sensor_timeout_s": "Maximales SOC-Messwertalter. Bei fehlendem SOC wird nur die Batterieunterstützung gesperrt."
         }
       }
     },
@@ -73,7 +81,11 @@
           "hybrid_probe_step_kw": "Hybrid-Prüfschritt (kW)",
           "hybrid_probe_settle_s": "Einschwingzeit für Hybridprüfung (s)",
           "hybrid_probe_retry_s": "Wartezeit zwischen Hybridprüfungen (s)",
-          "hybrid_grid_tolerance_kw": "Maximal tolerierter Netzbezug bei Hybridprüfung (kW)"
+          "hybrid_grid_tolerance_kw": "Maximal tolerierter Netzbezug bei Hybridprüfung (kW)",
+          "battery_resume_hysteresis_soc": "Wiederfreigabe Batteriebonus oberhalb Reserve (%)",
+          "pv_sensor_timeout_s": "PV-Sensor Timeout (s)",
+          "battery_sensor_timeout_s": "Batterieleistung Timeout (s)",
+          "battery_soc_sensor_timeout_s": "Batterie-SOC Timeout (s)"
         },
         "data_description": {
           "grid_power_entity": "Pflichtfeld. Nettoleistung am Netzanschlusspunkt.",
@@ -91,7 +103,11 @@
           "hybrid_probe_step_kw": "Maximale zusätzliche Last pro Prüfung. 0 deaktiviert aktive Versuche. Keine angenommene Batterie-Nennleistung.",
           "hybrid_probe_settle_s": "Zeit nach einem Lastversuch, bevor die tatsächliche Anlagenreaktion bewertet wird.",
           "hybrid_probe_retry_s": "Wartezeit nach einer erfolgreichen oder abgebrochenen Prüfung bis zum nächsten Versuch.",
-          "hybrid_grid_tolerance_kw": "Netzbezug bis zu dieser Grenze gilt nach der Einschwingzeit als erfolgreich. Während der Einschwingzeit wird maximal ein zusätzlicher Prüfschritt darüber toleriert; PMAX bleibt hart."
+          "hybrid_grid_tolerance_kw": "Netzbezug bis zu dieser Grenze gilt nach der Einschwingzeit als erfolgreich. Während der Einschwingzeit wird maximal ein zusätzlicher Prüfschritt darüber toleriert; PMAX bleibt hart.",
+          "battery_resume_hysteresis_soc": "Nur Batterieunterstützung wird nach einer SOC-Sperre oberhalb von Reserve + Hysterese wieder freigegeben. PV-only bleibt jederzeit unabhängig vom SOC.",
+          "pv_sensor_timeout_s": "Maximales Alter der PV-Messwerte im Überschussmodus, unabhängig vom Netzsensor.",
+          "battery_sensor_timeout_s": "Maximales Alter der Batterieleistung, falls ein Sensor konfiguriert ist.",
+          "battery_soc_sensor_timeout_s": "Maximales SOC-Messwertalter. Bei fehlendem SOC wird nur die Batterieunterstützung gesperrt."
         }
       }
     },
