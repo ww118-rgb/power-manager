@@ -1,5 +1,17 @@
 # Changelog
 
+## 3.3.0 (Testkandidat; noch kein öffentlicher Release)
+
+- Konfigurierbare numerische Gerätebefehle mit Skalierung, Offset, sicherer Pause und verbotenen Sonderwerten; bestehender Standard-Ausgang unverändert.
+- EVSE-Option `0 = keine Begrenzung` mit sicherer Nullwertprüfung.
+- Verfügbaren PV-Überschuss bei laufender autonomer Batterieladung auch bei SOC 0 % über begrenzte Lastversuche nutzen; mindestens erforderliche Verbraucherleistung berücksichtigen.
+- Begrenzung eines laufenden Versuchs wird als fester Wert gespeichert, statt bei steigendem Netzbezug dynamisch mitzuwachsen.
+- Kompatibler HA-Konfigurationsimport (`voluptuous as probatio`).
+- Eigene `brand/`-Icons und Logos zur Integration in Home Assistant 2026.3+.
+- Weiterentwicklung ausschließlich im Feature-Branch, ohne Veröffentlichung von `main`.
+
+
+
 ## 3.2.0 (ungetestete Hybrid-Funktion vor Live-Abnahme)
 
 - Eigenen PV-Überschuss aus Netz-, Batterie- und Verbraucher-Istleistungen statt pauschal aus PV-Erzeugung berechnen.
