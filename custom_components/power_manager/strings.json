@@ -177,7 +177,9 @@
             "mqtt_retain": "MQTT retain",
             "mqtt_payload_template": "MQTT payload template with {value}",
             "switch_on_code": "Direct ON code for switched loads",
-            "switch_off_code": "Direct OFF code for switched loads"
+            "switch_off_code": "Direct OFF code for switched loads",
+            "mqtt_on_payload": "MQTT ON text command (optional)",
+            "mqtt_off_payload": "MQTT OFF text command (optional)"
           },
           "data_description": {
             "load_name": "Unique name used by the controller.",
@@ -229,7 +231,9 @@
             "mqtt_retain": "Usually disabled to avoid replaying stale device commands.",
             "mqtt_payload_template": "Literal {value} is substituted with the translated device code.",
             "switch_on_code": "Direct ON code for switched loads",
-            "switch_off_code": "Direct OFF code for switched loads"
+            "switch_off_code": "Direct OFF code for switched loads",
+            "mqtt_on_payload": "For switches: raw MQTT text instead of numeric ON code; set both text fields.",
+            "mqtt_off_payload": "For switches: safe raw MQTT OFF code. Confirm the device interprets this as OFF."
           }
         },
         "reconfigure": {
@@ -285,7 +289,9 @@
             "mqtt_retain": "MQTT retain",
             "mqtt_payload_template": "MQTT payload template with {value}",
             "switch_on_code": "Direct ON code for switched loads",
-            "switch_off_code": "Direct OFF code for switched loads"
+            "switch_off_code": "Direct OFF code for switched loads",
+            "mqtt_on_payload": "MQTT ON text command (optional)",
+            "mqtt_off_payload": "MQTT OFF text command (optional)"
           },
           "data_description": {
             "load_name": "Unique name used by the controller.",
@@ -337,7 +343,9 @@
             "mqtt_retain": "Usually disabled to avoid replaying stale device commands.",
             "mqtt_payload_template": "Literal {value} is substituted with the translated device code.",
             "switch_on_code": "Direct ON code for switched loads",
-            "switch_off_code": "Direct OFF code for switched loads"
+            "switch_off_code": "Direct OFF code for switched loads",
+            "mqtt_on_payload": "For switches: raw MQTT text instead of numeric ON code; set both text fields.",
+            "mqtt_off_payload": "For switches: safe raw MQTT OFF code. Confirm the device interprets this as OFF."
           }
         }
       },
@@ -380,7 +388,8 @@
         "invalid_mqtt_qos": "Invalid device profile: invalid mqtt qos",
         "invalid_mqtt_template": "Invalid device profile: invalid mqtt template",
         "invalid_output_steps": "Invalid device profile: invalid output steps",
-        "unit_required_for_direct_transport": "Invalid device profile: unit required for direct transport"
+        "unit_required_for_direct_transport": "Invalid device profile: unit required for direct transport",
+        "invalid_mqtt_text_commands": "MQTT text commands only for switches; both ON and OFF required."
       },
       "entry_type": "Controllable load",
       "initiate_flow": {
