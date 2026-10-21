@@ -177,7 +177,9 @@
             "mqtt_retain": "MQTT Retain",
             "mqtt_payload_template": "MQTT Payload-Vorlage mit {value}",
             "switch_on_code": "Direkter EIN-Code für Schaltgeräte",
-            "switch_off_code": "Direkter AUS-Code für Schaltgeräte"
+            "switch_off_code": "Direkter AUS-Code für Schaltgeräte",
+            "mqtt_on_payload": "MQTT-EIN-Textbefehl (optional)",
+            "mqtt_off_payload": "MQTT-AUS-Textbefehl (optional)"
           },
           "data_description": {
             "load_name": "Eindeutiger Name des Verbrauchers im Regler.",
@@ -229,7 +231,9 @@
             "mqtt_retain": "Für Gerätebefehle gewöhnlich deaktiviert, damit keine veralteten Befehle wiederholt werden.",
             "mqtt_payload_template": "Literal {value} wird durch den sicher übersetzten Gerätecode ersetzt.",
             "switch_on_code": "Direkter EIN-Code für Schaltgeräte",
-            "switch_off_code": "Direkter AUS-Code für Schaltgeräte"
+            "switch_off_code": "Direkter AUS-Code für Schaltgeräte",
+            "mqtt_on_payload": "Nur für Schaltlasten: frei definierter MQTT-Text statt numerischem EIN-Code; beide Textfelder setzen.",
+            "mqtt_off_payload": "Nur für Schaltlasten: sicherer MQTT-AUS-Textbefehl. Nur verwenden, wenn die Gerätebeschreibung diesen Wert als AUS bestätigt."
           }
         },
         "reconfigure": {
@@ -285,7 +289,9 @@
             "mqtt_retain": "MQTT Retain",
             "mqtt_payload_template": "MQTT Payload-Vorlage mit {value}",
             "switch_on_code": "Direkter EIN-Code für Schaltgeräte",
-            "switch_off_code": "Direkter AUS-Code für Schaltgeräte"
+            "switch_off_code": "Direkter AUS-Code für Schaltgeräte",
+            "mqtt_on_payload": "MQTT-EIN-Textbefehl (optional)",
+            "mqtt_off_payload": "MQTT-AUS-Textbefehl (optional)"
           },
           "data_description": {
             "load_name": "Eindeutiger Name des Verbrauchers im Regler.",
@@ -337,7 +343,9 @@
             "mqtt_retain": "Für Gerätebefehle gewöhnlich deaktiviert, damit keine veralteten Befehle wiederholt werden.",
             "mqtt_payload_template": "Literal {value} wird durch den sicher übersetzten Gerätecode ersetzt.",
             "switch_on_code": "Direkter EIN-Code für Schaltgeräte",
-            "switch_off_code": "Direkter AUS-Code für Schaltgeräte"
+            "switch_off_code": "Direkter AUS-Code für Schaltgeräte",
+            "mqtt_on_payload": "Nur für Schaltlasten: frei definierter MQTT-Text statt numerischem EIN-Code; beide Textfelder setzen.",
+            "mqtt_off_payload": "Nur für Schaltlasten: sicherer MQTT-AUS-Textbefehl. Nur verwenden, wenn die Gerätebeschreibung diesen Wert als AUS bestätigt."
           }
         }
       },
@@ -380,7 +388,8 @@
         "invalid_mqtt_qos": "Geräteprofil ungültig: invalid mqtt qos",
         "invalid_mqtt_template": "Geräteprofil ungültig: invalid mqtt template",
         "invalid_output_steps": "Geräteprofil ungültig: invalid output steps",
-        "unit_required_for_direct_transport": "Geräteprofil ungültig: unit required for direct transport"
+        "unit_required_for_direct_transport": "Geräteprofil ungültig: unit required for direct transport",
+        "invalid_mqtt_text_commands": "MQTT-Textbefehle nur für Schaltlasten; EIN und AUS müssen beide gesetzt sein."
       },
       "entry_type": "Regelbarer Verbraucher",
       "initiate_flow": {
