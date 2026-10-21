@@ -7,6 +7,9 @@ from math import isfinite
 
 from .allocator import EPSILON
 from .const import (
+    DEFAULT_OUTPUT_VALUE_MODE,
+    OUTPUT_VALUE_MODE_LINEAR,
+    OUTPUT_VALUE_MODE_POWER,
     LOAD_TYPE_EVSE,
     LOAD_TYPE_MODULATING,
     LOAD_TYPE_SWITCH,
@@ -94,11 +97,26 @@ def build_output_plan(
     evse_min_current_a: float = 6.0,
     evse_max_current_a: float = 16.0,
     evse_pause_current_a: float = 0.01,
+    output_value_mode: str = DEFAULT_OUTPUT_VALUE_MODE,
+    output_scale: float = 1.0,
+    output_offset: float = 0.0,
+    forbidden_value: float | None = None,
+    evse_zero_unlimited: bool = False,
 ) -> OutputPlan:
     """Convert one kW target into a generic output plan."""
 
     if not isfinite(target_kw) or target_kw < 0.0:
         raise OutputConversionError("Target power must be finite and non-negative")
+
+    for name, value in (
+        ("output_scale", output_scale),
+        ("output_offset", output_offset),
+        ("safe_output_value", safe_output_value),
+    ):
+        if not isfinite(value):
+            raise OutputConversionError(f"{name} must be finite")
+    if forbidden_value is not None and not isfinite(forbidden_value):
+        raise OutputConversionError("forbidden command must be finite")
 
     enabled = target_kw > EPSILON
 
@@ -106,6 +124,10 @@ def build_output_plan(
         return OutputPlan(enabled=enabled)
 
     if load_type == LOAD_TYPE_EVSE:
+        if evse_zero_unlimited and abs(evse_pause_current_a) <= EPSILON:
+            raise OutputConversionError(
+                "0 A releases the EVSE current limit; use a non-zero safe pause command"
+            )
         current_a = evse_target_to_current_a(
             target_kw,
             phases=evse_phases,
@@ -114,6 +136,8 @@ def build_output_plan(
             max_current_a=evse_max_current_a,
             pause_current_a=evse_pause_current_a,
         )
+        if forbidden_value is not None and abs(current_a - forbidden_value) <= EPSILON:
+            raise OutputConversionError("EVSE output maps to a forbidden device command")
         evse_enabled = current_a + EPSILON >= evse_min_current_a
         return OutputPlan(
             numeric_value=current_a,
@@ -122,14 +146,33 @@ def build_output_plan(
         )
 
     if load_type == LOAD_TYPE_MODULATING:
-        numeric_value = (
-            kw_to_power_value(target_kw, power_unit)
-            if enabled
-            else safe_output_value
-        )
+        if output_value_mode == OUTPUT_VALUE_MODE_POWER:
+            numeric_value = (
+                kw_to_power_value(target_kw, power_unit)
+                if enabled else safe_output_value
+            )
+            unit = power_unit
+        elif output_value_mode == OUTPUT_VALUE_MODE_LINEAR:
+            if output_scale <= 0.0:
+                raise OutputConversionError(
+                    "Linear device mapping requires a positive scale"
+                )
+            numeric_value = (
+                target_kw * output_scale + output_offset
+                if enabled else safe_output_value
+            )
+            unit = "device"
+        else:
+            raise OutputConversionError("Unknown numeric device command profile")
+        if not isfinite(numeric_value):
+            raise OutputConversionError("Device command overflow")
+        if forbidden_value is not None and abs(numeric_value - forbidden_value) <= EPSILON:
+            raise OutputConversionError(
+                "Calculated command matches a forbidden device value"
+            )
         return OutputPlan(
             numeric_value=numeric_value,
-            numeric_unit=power_unit,
+            numeric_unit=unit,
             enabled=enabled,
         )
 
