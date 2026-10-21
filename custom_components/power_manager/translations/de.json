@@ -159,7 +159,8 @@
             "output_scale": "Leistungsfaktor (Gerätewert/kW)",
             "output_offset": "Offset für positive Sollwerte",
             "output_forbidden_value": "Verbotener Gerätewert (optional)",
-            "evse_zero_unlimited": "EVSE: 0 bedeutet unbegrenzte Ladeleistung"
+            "evse_zero_unlimited": "EVSE: 0 bedeutet unbegrenzte Ladeleistung",
+            "feedback_tolerance_kw": "Toleranz für bestätigte Lastreduzierung (kW)"
           },
           "data_description": {
             "load_name": "Eindeutiger Name des Verbrauchers im Regler.",
@@ -193,7 +194,8 @@
             "output_scale": "Positiver konfigurierbarer Faktor für das lineare Profil.",
             "output_offset": "Offset nur bei positivem Sollwert, niemals bei Aus/Pause.",
             "output_forbidden_value": "Dieser Gerätecode darf niemals geschrieben werden (z. B. 0 = unbegrenzt).",
-            "evse_zero_unlimited": "Wenn 0 die Ladestrombegrenzung aufhebt, muss der Pausenstrom größer als 0 sein."
+            "evse_zero_unlimited": "Wenn 0 die Ladestrombegrenzung aufhebt, muss der Pausenstrom größer als 0 sein.",
+            "feedback_tolerance_kw": "Nach einem Leistungsreduzierungsbefehl muss die frische Istleistung innerhalb der gerätespezifischen Einschwingzeit auf höchstens Sollwert + Toleranz sinken. Sonst wird Live deaktiviert und Fail-Safe ausgelöst. Eine Istleistungs-Entity ist für Live erforderlich."
           }
         },
         "reconfigure": {
@@ -231,7 +233,8 @@
             "output_scale": "Leistungsfaktor (Gerätewert/kW)",
             "output_offset": "Offset für positive Sollwerte",
             "output_forbidden_value": "Verbotener Gerätewert (optional)",
-            "evse_zero_unlimited": "EVSE: 0 bedeutet unbegrenzte Ladeleistung"
+            "evse_zero_unlimited": "EVSE: 0 bedeutet unbegrenzte Ladeleistung",
+            "feedback_tolerance_kw": "Toleranz für bestätigte Lastreduzierung (kW)"
           },
           "data_description": {
             "load_name": "Eindeutiger Name des Verbrauchers im Regler.",
@@ -265,7 +268,8 @@
             "output_scale": "Positiver konfigurierbarer Faktor für das lineare Profil.",
             "output_offset": "Offset nur bei positivem Sollwert, niemals bei Aus/Pause.",
             "output_forbidden_value": "Dieser Gerätecode darf niemals geschrieben werden (z. B. 0 = unbegrenzt).",
-            "evse_zero_unlimited": "Wenn 0 die Ladestrombegrenzung aufhebt, muss der Pausenstrom größer als 0 sein."
+            "evse_zero_unlimited": "Wenn 0 die Ladestrombegrenzung aufhebt, muss der Pausenstrom größer als 0 sein.",
+            "feedback_tolerance_kw": "Nach einem Leistungsreduzierungsbefehl muss die frische Istleistung innerhalb der gerätespezifischen Einschwingzeit auf höchstens Sollwert + Toleranz sinken. Sonst wird Live deaktiviert und Fail-Safe ausgelöst. Eine Istleistungs-Entity ist für Live erforderlich."
           }
         }
       },
