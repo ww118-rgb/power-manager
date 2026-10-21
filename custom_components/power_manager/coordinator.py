@@ -35,6 +35,7 @@ from .allocator import EPSILON
 from .const import (
     CONF_ACTUAL_POWER_ENTITY,
     CONF_ACTUAL_SENSOR_TIMEOUT_S,
+    CONF_FEEDBACK_TOLERANCE_KW,
     CONF_AVAILABILITY_ENTITY,
     CONF_BATTERY_POWER_ENTITY,
     CONF_BATTERY_SOC_ENTITY,
@@ -78,6 +79,7 @@ from .const import (
     DEFAULT_HYBRID_PROBE_RETRY_S,
     DEFAULT_HYBRID_GRID_TOLERANCE_KW,
     DEFAULT_ACTUAL_SENSOR_TIMEOUT_S,
+    DEFAULT_FEEDBACK_TOLERANCE_KW,
     DEFAULT_BATTERY_SOC_SCALE,
     DEFAULT_DEFAULT_REQUEST_KW,
     DEFAULT_GRID_SENSOR_TIMEOUT_S,
@@ -103,6 +105,7 @@ from .const import (
     SUBENTRY_TYPE_LOAD,
 )
 from .controller import run_controller
+from .feedback import PendingReduction
 from .load_adapter import (
     actual_kw_from_source,
     availability_from_source,
@@ -195,6 +198,7 @@ class PowerManagerCoordinator(DataUpdateCoordinator[PowerManagerCoordinatorData]
         self.live_control_enabled = False
         self._tracking_started = False
         self._last_output_error: str | None = None
+        self._pending_reductions: dict[str, PendingReduction] = {}
 
     @property
     def settings(self) -> dict[str, Any]:
