@@ -30,6 +30,10 @@ from .const import (
     CONF_OUTPUT_ENTITY,
     CONF_OUTPUT_UNIT,
     CONF_SAFE_OUTPUT_VALUE,
+    CONF_OUTPUT_VALUE_MODE, CONF_OUTPUT_SCALE, CONF_OUTPUT_OFFSET,
+    CONF_OUTPUT_FORBIDDEN_VALUE, CONF_EVSE_ZERO_UNLIMITED,
+    DEFAULT_OUTPUT_VALUE_MODE, DEFAULT_OUTPUT_SCALE, DEFAULT_OUTPUT_OFFSET,
+    DEFAULT_EVSE_ZERO_UNLIMITED,
     DEFAULT_EVSE_MAX_CURRENT_A,
     DEFAULT_EVSE_MIN_CURRENT_A,
     DEFAULT_EVSE_PAUSE_CURRENT_A,
@@ -173,6 +177,22 @@ def _build_plan(
             ),
             evse_pause_current_a=float(
                 load_data.get(CONF_EVSE_PAUSE_CURRENT_A, DEFAULT_EVSE_PAUSE_CURRENT_A)
+            ),
+            output_value_mode=str(
+                load_data.get(CONF_OUTPUT_VALUE_MODE, DEFAULT_OUTPUT_VALUE_MODE)
+            ),
+            output_scale=float(
+                load_data.get(CONF_OUTPUT_SCALE, DEFAULT_OUTPUT_SCALE)
+            ),
+            output_offset=float(
+                load_data.get(CONF_OUTPUT_OFFSET, DEFAULT_OUTPUT_OFFSET)
+            ),
+            forbidden_value=(
+                float(load_data[CONF_OUTPUT_FORBIDDEN_VALUE])
+                if load_data.get(CONF_OUTPUT_FORBIDDEN_VALUE) is not None else None
+            ),
+            evse_zero_unlimited=bool(
+                load_data.get(CONF_EVSE_ZERO_UNLIMITED, DEFAULT_EVSE_ZERO_UNLIMITED)
             ),
         )
     except OutputConversionError as err:
