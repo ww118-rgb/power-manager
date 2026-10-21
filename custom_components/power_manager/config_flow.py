@@ -30,6 +30,40 @@ from homeassistant.helpers.selector import (
 )
 
 from .const import (
+    CONF_OUTPUT_STEPS_JSON,
+    CONF_OUTPUT_TRANSPORT,
+    CONF_MODBUS_HOST,
+    CONF_MODBUS_PORT,
+    CONF_MODBUS_UNIT_ID,
+    CONF_MODBUS_REGISTER,
+    CONF_MODBUS_DATA_TYPE,
+    CONF_MODBUS_BYTE_ORDER,
+    CONF_MODBUS_FUNCTION,
+    CONF_MODBUS_TIMEOUT_S,
+    CONF_MQTT_TOPIC,
+    CONF_MQTT_QOS,
+    CONF_MQTT_RETAIN,
+    CONF_MQTT_PAYLOAD_TEMPLATE,
+    CONF_SWITCH_ON_CODE,
+    CONF_SWITCH_OFF_CODE,
+    CONF_DEVICE_COMMANDS_CONFIRMED,
+    DEFAULT_OUTPUT_STEPS_JSON,
+    DEFAULT_OUTPUT_TRANSPORT,
+    DEFAULT_MODBUS_PORT,
+    DEFAULT_MODBUS_UNIT_ID,
+    DEFAULT_MODBUS_DATA_TYPE,
+    DEFAULT_MODBUS_BYTE_ORDER,
+    DEFAULT_MODBUS_FUNCTION,
+    DEFAULT_MODBUS_TIMEOUT_S,
+    DEFAULT_MQTT_QOS,
+    DEFAULT_MQTT_RETAIN,
+    DEFAULT_MQTT_PAYLOAD_TEMPLATE,
+    DEFAULT_SWITCH_ON_CODE,
+    DEFAULT_SWITCH_OFF_CODE,
+    DEFAULT_DEVICE_COMMANDS_CONFIRMED,
+    OUTPUT_TRANSPORTS,
+    MODBUS_DATA_TYPES,
+    MODBUS_BYTE_ORDERS,
     BATTERY_SOC_SCALES,
     CONF_ACTUAL_POWER_ENTITY,
     CONF_ACTUAL_SENSOR_TIMEOUT_S,
@@ -475,6 +509,79 @@ def _build_load_schema(values: dict[str, Any] | None = None) -> probatio.Schema:
             _required_marker(
                 CONF_EVSE_ZERO_UNLIMITED, values, DEFAULT_EVSE_ZERO_UNLIMITED,
             ): BooleanSelector(),
+            _required_marker(
+                CONF_OUTPUT_TRANSPORT, values, DEFAULT_OUTPUT_TRANSPORT,
+            ): SelectSelector(SelectSelectorConfig(
+                options=list(OUTPUT_TRANSPORTS),
+                translation_key=CONF_OUTPUT_TRANSPORT,
+            )),
+            _optional_marker(CONF_OUTPUT_STEPS_JSON, values): str,
+            _required_marker(
+                CONF_DEVICE_COMMANDS_CONFIRMED, values,
+                DEFAULT_DEVICE_COMMANDS_CONFIRMED,
+            ): BooleanSelector(),
+            _optional_marker(CONF_MODBUS_HOST, values): str,
+            _required_marker(
+                CONF_MODBUS_PORT, values, DEFAULT_MODBUS_PORT,
+            ): NumberSelector(NumberSelectorConfig(
+                min=1, max=65535, step=1, mode=NumberSelectorMode.BOX,
+            )),
+            _required_marker(
+                CONF_MODBUS_UNIT_ID, values, DEFAULT_MODBUS_UNIT_ID,
+            ): NumberSelector(NumberSelectorConfig(
+                min=1, max=247, step=1, mode=NumberSelectorMode.BOX,
+            )),
+            _required_marker(
+                CONF_MODBUS_REGISTER, values, 0,
+            ): NumberSelector(NumberSelectorConfig(
+                min=0, max=65535, step=1, mode=NumberSelectorMode.BOX,
+            )),
+            _required_marker(
+                CONF_MODBUS_DATA_TYPE, values, DEFAULT_MODBUS_DATA_TYPE,
+            ): SelectSelector(SelectSelectorConfig(
+                options=list(MODBUS_DATA_TYPES),
+                translation_key=CONF_MODBUS_DATA_TYPE,
+            )),
+            _required_marker(
+                CONF_MODBUS_BYTE_ORDER, values, DEFAULT_MODBUS_BYTE_ORDER,
+            ): SelectSelector(SelectSelectorConfig(
+                options=list(MODBUS_BYTE_ORDERS),
+                translation_key=CONF_MODBUS_BYTE_ORDER,
+            )),
+            _required_marker(
+                CONF_MODBUS_FUNCTION, values, DEFAULT_MODBUS_FUNCTION,
+            ): NumberSelector(NumberSelectorConfig(
+                min=6, max=16, step=1, mode=NumberSelectorMode.BOX,
+            )),
+            _required_marker(
+                CONF_MODBUS_TIMEOUT_S, values, DEFAULT_MODBUS_TIMEOUT_S,
+            ): NumberSelector(NumberSelectorConfig(
+                min=0.1, max=60, step=0.1, mode=NumberSelectorMode.BOX,
+            )),
+            _optional_marker(CONF_MQTT_TOPIC, values): str,
+            _required_marker(
+                CONF_MQTT_QOS, values, DEFAULT_MQTT_QOS,
+            ): NumberSelector(NumberSelectorConfig(
+                min=0, max=2, step=1, mode=NumberSelectorMode.BOX,
+            )),
+            _required_marker(
+                CONF_MQTT_RETAIN, values, DEFAULT_MQTT_RETAIN,
+            ): BooleanSelector(),
+            _required_marker(
+                CONF_MQTT_PAYLOAD_TEMPLATE, values, DEFAULT_MQTT_PAYLOAD_TEMPLATE,
+            ): str,
+            _required_marker(
+                CONF_SWITCH_ON_CODE, values, DEFAULT_SWITCH_ON_CODE,
+            ): NumberSelector(NumberSelectorConfig(
+                min=-1000000000.0, max=1000000000.0,
+                step=0.001, mode=NumberSelectorMode.BOX,
+            )),
+            _required_marker(
+                CONF_SWITCH_OFF_CODE, values, DEFAULT_SWITCH_OFF_CODE,
+            ): NumberSelector(NumberSelectorConfig(
+                min=-1000000000.0, max=1000000000.0,
+                step=0.001, mode=NumberSelectorMode.BOX,
+            )),
             _required_marker(
                 CONF_SAFE_OUTPUT_VALUE,
                 values,
