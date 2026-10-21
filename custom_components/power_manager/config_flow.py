@@ -72,6 +72,10 @@ from .const import (
     CONF_STOP_MARGIN_KW,
     CONF_SURPLUS_ENABLED,
     CONF_SURPLUS_MIN_BATTERY_SOC,
+    CONF_BATTERY_RESUME_HYSTERESIS_SOC,
+    CONF_PV_SENSOR_TIMEOUT_S,
+    CONF_BATTERY_SENSOR_TIMEOUT_S,
+    CONF_BATTERY_SOC_SENSOR_TIMEOUT_S,
     CONF_HYBRID_PROBE_STEP_KW,
     CONF_HYBRID_PROBE_SETTLE_S,
     CONF_HYBRID_PROBE_RETRY_S,
@@ -90,6 +94,10 @@ from .const import (
     DEFAULT_EVSE_VOLTAGE_V,
     DEFAULT_GRID_RESERVE_KW,
     DEFAULT_GRID_SENSOR_TIMEOUT_S,
+    DEFAULT_BATTERY_RESUME_HYSTERESIS_SOC,
+    DEFAULT_PV_SENSOR_TIMEOUT_S,
+    DEFAULT_BATTERY_SENSOR_TIMEOUT_S,
+    DEFAULT_BATTERY_SOC_SENSOR_TIMEOUT_S,
     DEFAULT_INVERT_ACTUAL_POWER,
     DEFAULT_INVERT_BATTERY_POWER,
     DEFAULT_INVERT_GRID_POWER,
@@ -253,6 +261,22 @@ def _build_global_schema(values: dict[str, Any] | None = None) -> probatio.Schem
             ): SelectSelector(
                 SelectSelectorConfig(options=list(BATTERY_SOC_SCALES), translation_key=CONF_BATTERY_SOC_SCALE)
             ),
+            _required_marker(
+                CONF_PV_SENSOR_TIMEOUT_S, values, DEFAULT_PV_SENSOR_TIMEOUT_S,
+            ): _seconds_selector(),
+            _required_marker(
+                CONF_BATTERY_SENSOR_TIMEOUT_S, values, DEFAULT_BATTERY_SENSOR_TIMEOUT_S,
+            ): _seconds_selector(),
+            _required_marker(
+                CONF_BATTERY_SOC_SENSOR_TIMEOUT_S, values, DEFAULT_BATTERY_SOC_SENSOR_TIMEOUT_S,
+            ): _seconds_selector(),
+            _required_marker(
+                CONF_BATTERY_RESUME_HYSTERESIS_SOC, values,
+                DEFAULT_BATTERY_RESUME_HYSTERESIS_SOC,
+            ): NumberSelector(NumberSelectorConfig(
+                min=0.0, max=100.0, step=0.5,
+                unit_of_measurement="%", mode=NumberSelectorMode.BOX,
+            )),
             _optional_marker(CONF_SURPLUS_MIN_BATTERY_SOC, values): NumberSelector(
                 NumberSelectorConfig(
                     min=0.0,
@@ -315,6 +339,10 @@ def _validate_global_configuration(user_input: dict[str, Any]) -> dict[str, str]
         errors[CONF_GRID_SENSOR_TIMEOUT_S] = "grid_timeout_must_be_positive"
 
     hybrid_parameters = (
+        (CONF_PV_SENSOR_TIMEOUT_S, DEFAULT_PV_SENSOR_TIMEOUT_S, True),
+        (CONF_BATTERY_SENSOR_TIMEOUT_S, DEFAULT_BATTERY_SENSOR_TIMEOUT_S, True),
+        (CONF_BATTERY_SOC_SENSOR_TIMEOUT_S, DEFAULT_BATTERY_SOC_SENSOR_TIMEOUT_S, True),
+        (CONF_BATTERY_RESUME_HYSTERESIS_SOC, DEFAULT_BATTERY_RESUME_HYSTERESIS_SOC, False),
         (CONF_HYBRID_PROBE_STEP_KW, DEFAULT_HYBRID_PROBE_STEP_KW, False),
         (CONF_HYBRID_PROBE_SETTLE_S, DEFAULT_HYBRID_PROBE_SETTLE_S, True),
         (CONF_HYBRID_PROBE_RETRY_S, DEFAULT_HYBRID_PROBE_RETRY_S, False),
@@ -327,6 +355,16 @@ def _validate_global_configuration(user_input: dict[str, Any]) -> dict[str, str]
                 errors[key] = "invalid_number"
         except (ValueError, TypeError):
             errors[key] = "invalid_number"
+
+    try:
+        soc_resume = float(user_input.get(
+            CONF_BATTERY_RESUME_HYSTERESIS_SOC,
+            DEFAULT_BATTERY_RESUME_HYSTERESIS_SOC,
+        ))
+        if soc_resume > 100:
+            errors[CONF_BATTERY_RESUME_HYSTERESIS_SOC] = "invalid_number"
+    except (TypeError, ValueError):
+        errors[CONF_BATTERY_RESUME_HYSTERESIS_SOC] = "invalid_number"
 
     battery_soc_entity = user_input.get(CONF_BATTERY_SOC_ENTITY)
     surplus_min_soc = user_input.get(CONF_SURPLUS_MIN_BATTERY_SOC)
