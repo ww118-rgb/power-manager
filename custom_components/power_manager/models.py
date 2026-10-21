@@ -182,6 +182,8 @@ class ControllerState:
     # maximum is inferred from instantaneous discharge.
     hybrid_probe_until_s: float | None = None
     hybrid_probe_target_kw: float | None = None
+    # Fixed authorization from the time the probe was started.
+    hybrid_probe_increment_kw: float = 0.0
     hybrid_next_probe_s: float = 0.0
 
 
