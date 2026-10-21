@@ -312,3 +312,74 @@ def test_no_charge_diversion_if_pv_shortage_in_base_load():
         [load(actual=0, requested=8, min_kw=4.14)],
     )
     assert r.targets_kw["Last"] == 0
+
+
+def test_battery_bonus_hysteresis_does_not_oscillate_around_reserve():
+    # Even when the battery keeps discharging, bonus must not return
+    # until the SOC is >= configured reserve + hysteresis.
+    locked = run_controller(
+        plant(battery=10, soc=30, live=False),
+        [load(actual=30)],
+    )
+    assert locked.targets_kw["Last"] == pytest.approx(20)
+    assert locked.state.battery_bonus_blocked
+    for soc in (30.5, 31.9, 30.4):
+        locked = run_controller(
+            plant(battery=10, soc=soc, live=False),
+            [load(actual=30)],
+            state=locked.state,
+        )
+        assert locked.targets_kw["Last"] == pytest.approx(20)
+        assert locked.state.battery_bonus_blocked
+    released = run_controller(
+        plant(battery=10, soc=32, live=False),
+        [load(actual=30)],
+        state=locked.state,
+    )
+    assert released.targets_kw["Last"] == pytest.approx(30)
+    assert not released.state.battery_bonus_blocked
+
+
+def test_missing_soc_never_creates_battery_bonus_and_pv_still_works():
+    result = run_controller(
+        plant(battery=10, soc=None, reserve=None, live=False),
+        [load(actual=30)],
+    )
+    assert result.raw_surplus_budget_kw == pytest.approx(20)
+    assert result.targets_kw["Last"] == pytest.approx(20)
+
+
+def test_normal_peak_budget_ignores_autonomous_battery_discharge():
+    # grid 2 + battery 8 = 10 controlled, 0 house. At PMAX=10,
+    # loss of the battery cannot be assumed to be survivable with
+    # more than 10 kW controlled load.
+    result = run_controller(
+        ControllerInputs(
+            grid_kw=2, grid_limit_kw=10, grid_reserve_kw=0,
+            pv_kw=0, battery_kw=8, mode=OperatingMode.NORMAL,
+        ),
+        [load(actual=10)],
+    )
+    assert result.peak_budget_kw == pytest.approx(10)
+    assert result.targets_kw["Last"] == pytest.approx(10)
+
+
+def test_battery_bonus_recovery_hysteresis_is_configurable():
+    from dataclasses import replace
+    initial = run_controller(
+        replace(plant(battery=10, soc=40, reserve=40, live=False),
+                battery_resume_hysteresis_soc=8),
+        [load(actual=30)],
+    )
+    mid = run_controller(
+        replace(plant(battery=10, soc=45, reserve=40, live=False),
+                battery_resume_hysteresis_soc=8),
+        [load(actual=30)], state=initial.state,
+    )
+    assert mid.state.battery_bonus_blocked
+    end = run_controller(
+        replace(plant(battery=10, soc=48, reserve=40, live=False),
+                battery_resume_hysteresis_soc=8),
+        [load(actual=30)], state=mid.state,
+    )
+    assert not end.state.battery_bonus_blocked
