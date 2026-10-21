@@ -244,3 +244,71 @@ def test_technical_minimum_prevents_unsafe_partial_probe():
     # A 0.5 kW probe cannot start a 6 kW minimum load with 5 kW PV.
     assert r1.targets_kw["Last"] == 0
     assert r1.state.hybrid_probe_until_s is None
+
+
+# V3.3.0: PV loads must not depend on battery SOC to reclaim
+# existing PV surplus from autonomous battery charging.
+def test_empty_battery_does_not_block_pv_diversion_start():
+    # PV 5 kW, house 0, battery autonomously charging 5 kW, grid 0.
+    first = run_controller(
+        plant(now=0, pv=5, battery=-5, soc=0, grid_limit=10),
+        [load(actual=0, requested=8, min_kw=4.14)],
+    )
+    assert first.raw_surplus_budget_kw == pytest.approx(5)
+    # A single bounded minimum-power trial should actually turn on
+    # a 3-phase EVSE instead of futile 0.25 kW commands.
+    assert first.targets_kw["Last"] == pytest.approx(4.14)
+    assert first.state.hybrid_probe_until_s is not None
+
+
+def test_charge_diversion_ends_when_inverter_follows():
+    first = run_controller(
+        plant(now=0, pv=5, battery=-5, soc=0, grid_limit=10),
+        [load(actual=0, requested=8, min_kw=4.14)],
+    )
+    followed = run_controller(
+        plant(now=1, pv=5, battery=-0.86, soc=0, grid_limit=10),
+        [load(actual=4.14, requested=8, min_kw=4.14)],
+        state=first.state,
+    )
+    assert followed.targets_kw["Last"] == pytest.approx(4.14)
+    assert followed.projected_grid_kw <= 10
+
+
+def test_charge_diversion_trial_rolls_back_if_grid_borrow_persists():
+    first = run_controller(
+        plant(now=0, pv=5, battery=-5, soc=0, grid_limit=10),
+        [load(actual=0, requested=8, min_kw=4.14)],
+    )
+    waiting = run_controller(
+        plant(now=1, pv=5, battery=-5, soc=0, grid=4.14, grid_limit=10),
+        [load(actual=4.14, requested=8, min_kw=4.14)],
+        state=first.state,
+    )
+    assert waiting.targets_kw["Last"] == pytest.approx(4.14)
+    rejected = run_controller(
+        plant(now=3, pv=5, battery=-5, soc=0, grid=4.14, grid_limit=10),
+        [load(actual=4.14, requested=8, min_kw=4.14)],
+        state=waiting.state,
+    )
+    assert rejected.targets_kw["Last"] == 0
+    assert rejected.state.hybrid_probe_until_s is None
+
+
+def test_charge_diversion_never_violates_configured_pmax_forecast():
+    r=run_controller(
+        plant(now=0, pv=5, battery=-5, soc=0,
+              grid_limit=3, grid_reserve=0),
+        [load(actual=0, requested=8, min_kw=4.14)],
+    )
+    assert r.targets_kw["Last"] == 0
+    assert r.state.hybrid_probe_until_s is None
+
+
+def test_no_charge_diversion_if_pv_shortage_in_base_load():
+    # PV 3, house 5, grid 0, battery discharge 2 (not charging).
+    r=run_controller(
+        plant(now=0, pv=3, battery=2, soc=0, grid_limit=10),
+        [load(actual=0, requested=8, min_kw=4.14)],
+    )
+    assert r.targets_kw["Last"] == 0
