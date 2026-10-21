@@ -171,3 +171,29 @@ def test_direct_modbus_wrong_function_is_blocked():
               output_unit="kW",device_commands_confirmed=True,
               modbus_data_type="float32",modbus_function=6)
     assert "modbus_function" in validate_load_data(data)
+
+
+def test_modbus_valid_ipv4_host_not_rejected_by_literal_escape_characters():
+    data=dict(load_name="Host",load_type="modulating",priority=1,
+              min_kw=1,max_kw=5,output_transport="modbus_tcp",
+              modbus_host="192.168.0.15",modbus_register=770,
+              output_unit="kW",device_commands_confirmed=True)
+    err=validate_load_data(data)
+    assert "modbus_host" not in err, err
+
+
+def test_mqtt_valid_topic_can_contain_n_and_zero():
+    data=dict(load_name="MQTT",load_type="modulating",priority=1,
+              min_kw=1,max_kw=5,output_transport="mqtt",
+              mqtt_topic="home/zone0/energy",output_unit="kW",
+              device_commands_confirmed=True)
+    err=validate_load_data(data)
+    assert "mqtt_topic" not in err, err
+
+
+def test_modbus_host_path_delimiter_rejected():
+    data=dict(load_name="Invalid",load_type="modulating",priority=1,
+              min_kw=1,max_kw=5,output_transport="modbus_tcp",
+              modbus_host="10.0.0.1/bad",modbus_register=770,
+              output_unit="kW",device_commands_confirmed=True)
+    assert "modbus_host" in validate_load_data(data)
