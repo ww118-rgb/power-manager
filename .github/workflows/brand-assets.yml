@@ -1,0 +1,59 @@
+name: Build Power Manager branding
+
+on:
+  push:
+    branches: ["feature/v3.3.0-rc"]
+    paths: ["assets/power-manager-icon.svg"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  brand:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/v3.3.0-rc
+          persist-credentials: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install image tools
+        run: python -m pip install cairosvg pillow
+      - name: Generate native Home Assistant icons and logos
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import cairosvg
+          from PIL import Image, ImageDraw, ImageFont
+          svg = Path("assets/power-manager-icon.svg").read_bytes()
+          p = Path("custom_components/power_manager/brand")
+          p.mkdir(parents=True, exist_ok=True)
+          for scale in (1, 2):
+              size = 256 * scale
+              icon_name = "icon.png" if scale == 1 else "icon@2x.png"
+              logo_name = "logo.png" if scale == 1 else "logo@2x.png"
+              cairosvg.svg2png(bytestring=svg, write_to=str(p/icon_name),
+                              output_width=size, output_height=size)
+              image = Image.open(p/icon_name).convert("RGBA")
+              logo = Image.new("RGBA", (size*4, size), (0,0,0,0))
+              logo.alpha_composite(image, (0,0))
+              dr = ImageDraw.Draw(logo)
+              font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+                                        45*scale)
+              dr.text((270*scale, 78*scale), "POWER", fill="#0b3146", font=font)
+              dr.text((270*scale, 137*scale), "MANAGER", fill="#137e98", font=font)
+              logo.save(p/logo_name, optimize=True)
+          PY
+      - name: Commit generated brand assets to test branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add custom_components/power_manager/brand
+          if ! git diff --cached --quiet; then
+            git commit -m "Generate native Power Manager brand images"
+            git pull --rebase origin feature/v3.3.0-rc
+            git push origin HEAD:feature/v3.3.0-rc
+          fi
