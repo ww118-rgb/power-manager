@@ -4,6 +4,20 @@ Power Manager ist eine generische Home-Assistant-Integration für ein zentrales 
 
 **Aktueller offizieller Stand: V3.1.1 (main) – V3.3.0 ist ein nicht freigegebener Testkandidat im Feature-Branch.**
 
+## Offene Anforderungen und Abnahme
+
+Der aktuelle Status **aller 86 Anforderungen aus dem gemeinsamen Pflichtenheft v0.8**
+ist unter [docs/anforderungen_v0_8_traceability.md](docs/anforderungen_v0_8_traceability.md)
+nachverfolgbar. Der Branch bleibt bis zu tatsächlichen HA- und Simulatorprüfungen ein **Draft**.
+
+**Aktuelle Sicherheitsnachträge:**
+- Die PMAX-Sollwertprognose rechnet nun auch im NORMAL-Modus konservativ mit einem möglichen Wegfall der Batterieentladung.
+- Die Batterie-Bonusfreigabe besitzt eine eigene konfigurierbare SOC-Wiedereinschalthysterese.
+- PV-, Batterie-Leistungs- und SOC-Messwerte haben getrennte konfigurierbare Frischegrenzen.
+- Ein veralteter SOC-Sensor schaltet nur den Batteriebonus ab, **nicht** den reinen PV-Überschussbetrieb. Ein ungültiger konfigurierter Batterie-Leistungssensor verhindert weiterhin eine unsichere PV-Bilanz.
+
+**Noch offen:** echte Geräte-Wirkbestätigung, direkte Modbus-/MQTT-Profile, diskrete Gerätecodes, Langzeit-Stabilitätstests und HA-Core-Versionsmatrix.
+
 ## Neu im V3.3.0-Testkandidaten
 
 - **Sichere Gerätecode-Übersetzung:** Neben gewöhnlichen W/kW/MW-Ausgängen kann ein modulierender Verbraucher jetzt eine lineare kW-zu-Gerätewert-Umrechnung (Skalierung/Offset) und einen frei definierbaren gefährlichen/verbotenen Gerätewert erhalten. Aus/Pause wird über den separat konfigurierten sicheren Ausgangswert definiert.
