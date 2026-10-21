@@ -154,7 +154,7 @@ def test_v3_3_has_local_ha_brand_images_and_card_logo():
     for name in ("icon.png", "icon@2x.png", "logo.png", "logo@2x.png"):
         path = COMPONENT / "brand" / name
         assert path.is_file(), f"Missing local HA brand asset: {name}"
-        assert path.read_bytes().startswith(b"\\x89PNG\\r\\n\\x1a\\n")
+        assert path.read_bytes().startswith(bytes((137, 80, 78, 71, 13, 10, 26, 10)))
     assert (COMPONENT / "frontend" / "power-manager-icon.png").is_file()
 
 
