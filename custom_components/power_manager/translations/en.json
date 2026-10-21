@@ -159,7 +159,8 @@
             "output_scale": "Output scaling factor (device units/kW)",
             "output_offset": "Offset for positive target",
             "output_forbidden_value": "Forbidden device command (optional)",
-            "evse_zero_unlimited": "EVSE: zero means unrestricted power"
+            "evse_zero_unlimited": "EVSE: zero means unrestricted power",
+            "feedback_tolerance_kw": "Reduction confirmation tolerance (kW)"
           },
           "data_description": {
             "load_name": "Unique name used by the controller.",
@@ -193,7 +194,8 @@
             "output_scale": "Positive multiplier for the linear profile.",
             "output_offset": "Offset only for positive requests.",
             "output_forbidden_value": "Code never to be written (e.g. 0 means unlimited).",
-            "evse_zero_unlimited": "Enable if 0 means unrestricted current. Pause current must then be non-zero."
+            "evse_zero_unlimited": "Enable if 0 means unrestricted current. Pause current must then be non-zero.",
+            "feedback_tolerance_kw": "After a reduction command, fresh measured power must fall below target + tolerance within the device settling interval; otherwise disarm and activate fail-safe. Actual-power entity is required for live control."
           }
         },
         "reconfigure": {
@@ -231,7 +233,8 @@
             "output_scale": "Output scaling factor (device units/kW)",
             "output_offset": "Offset for positive target",
             "output_forbidden_value": "Forbidden device command (optional)",
-            "evse_zero_unlimited": "EVSE: zero means unrestricted power"
+            "evse_zero_unlimited": "EVSE: zero means unrestricted power",
+            "feedback_tolerance_kw": "Reduction confirmation tolerance (kW)"
           },
           "data_description": {
             "load_name": "Unique name used by the controller.",
@@ -265,7 +268,8 @@
             "output_scale": "Positive multiplier for the linear profile.",
             "output_offset": "Offset only for positive requests.",
             "output_forbidden_value": "Code never to be written (e.g. 0 means unlimited).",
-            "evse_zero_unlimited": "Enable if 0 means unrestricted current. Pause current must then be non-zero."
+            "evse_zero_unlimited": "Enable if 0 means unrestricted current. Pause current must then be non-zero.",
+            "feedback_tolerance_kw": "After a reduction command, fresh measured power must fall below target + tolerance within the device settling interval; otherwise disarm and activate fail-safe. Actual-power entity is required for live control."
           }
         }
       },
