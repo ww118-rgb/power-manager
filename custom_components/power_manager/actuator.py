@@ -32,6 +32,8 @@ from .const import (
     CONF_MQTT_QOS,
     CONF_MQTT_RETAIN,
     CONF_MQTT_PAYLOAD_TEMPLATE,
+    CONF_MQTT_ON_PAYLOAD,
+    CONF_MQTT_OFF_PAYLOAD,
     CONF_SWITCH_ON_CODE,
     CONF_SWITCH_OFF_CODE,
     CONF_DEVICE_COMMANDS_CONFIRMED,
@@ -328,6 +330,7 @@ def _validate_positive_plan_range(
 
 async def _async_write_direct(
     hass: HomeAssistant, load_data: dict[str, Any], value: float,
+    *, payload_override: str | None = None,
 ) -> None:
     """Transmit a prevalidated device command without claiming physical success."""
     transport = str(load_data.get(CONF_OUTPUT_TRANSPORT, DEFAULT_OUTPUT_TRANSPORT))
@@ -353,6 +356,7 @@ async def _async_write_direct(
                 )),
                 qos=int(load_data.get(CONF_MQTT_QOS, DEFAULT_MQTT_QOS)),
                 retain=bool(load_data.get(CONF_MQTT_RETAIN, DEFAULT_MQTT_RETAIN)),
+                payload_override=payload_override,
             )
         else:
             raise TransportError("Unknown device transport")
@@ -500,7 +504,18 @@ async def async_apply_target(
         wrote_enable = False
         if not enabled and enable_entity:
             wrote_enable = await _async_set_switch(hass, enable_entity, False)
-        await _async_write_direct(hass, load_data, code)
+        payload_override = None
+        if (
+            transport == OUTPUT_TRANSPORT_MQTT
+            and load_data.get(CONF_LOAD_TYPE) == LOAD_TYPE_SWITCH
+        ):
+            payload_override = str(load_data.get(
+                CONF_MQTT_ON_PAYLOAD if enabled else CONF_MQTT_OFF_PAYLOAD,
+                "",
+            )) or None
+        await _async_write_direct(
+            hass, load_data, code, payload_override=payload_override,
+        )
         if enabled and enable_entity:
             wrote_enable = await _async_set_switch(hass, enable_entity, True)
         return AppliedCommand(
