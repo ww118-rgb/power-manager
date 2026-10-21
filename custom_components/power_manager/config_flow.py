@@ -44,6 +44,8 @@ from .const import (
     CONF_MQTT_QOS,
     CONF_MQTT_RETAIN,
     CONF_MQTT_PAYLOAD_TEMPLATE,
+    CONF_MQTT_ON_PAYLOAD,
+    CONF_MQTT_OFF_PAYLOAD,
     CONF_SWITCH_ON_CODE,
     CONF_SWITCH_OFF_CODE,
     CONF_DEVICE_COMMANDS_CONFIRMED,
@@ -58,6 +60,8 @@ from .const import (
     DEFAULT_MQTT_QOS,
     DEFAULT_MQTT_RETAIN,
     DEFAULT_MQTT_PAYLOAD_TEMPLATE,
+    DEFAULT_MQTT_ON_PAYLOAD,
+    DEFAULT_MQTT_OFF_PAYLOAD,
     DEFAULT_SWITCH_ON_CODE,
     DEFAULT_SWITCH_OFF_CODE,
     DEFAULT_DEVICE_COMMANDS_CONFIRMED,
@@ -569,6 +573,8 @@ def _build_load_schema(values: dict[str, Any] | None = None) -> probatio.Schema:
             _required_marker(
                 CONF_MQTT_PAYLOAD_TEMPLATE, values, DEFAULT_MQTT_PAYLOAD_TEMPLATE,
             ): str,
+            _optional_marker(CONF_MQTT_ON_PAYLOAD, values): str,
+            _optional_marker(CONF_MQTT_OFF_PAYLOAD, values): str,
             _required_marker(
                 CONF_SWITCH_ON_CODE, values, DEFAULT_SWITCH_ON_CODE,
             ): NumberSelector(NumberSelectorConfig(
