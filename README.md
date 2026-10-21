@@ -2,7 +2,25 @@
 
 Power Manager ist eine generische Home-Assistant-Integration für ein zentrales Energiemanagement. Sie verbindet vorhandene Home-Assistant-Entities mit einem getesteten Reglerkern und kann damit Peakshaving, PV-Überschussbetrieb und priorisierte Verbrauchersteuerung abbilden.
 
-**Aktueller Stand: V3.2.0 (Hybrid-Überschussregelung in der Entwicklung / vor Live-Abnahme)**
+**Aktueller offizieller Stand: V3.1.1 (main) – V3.3.0 ist ein nicht freigegebener Testkandidat im Feature-Branch.**
+
+## Neu im V3.3.0-Testkandidaten
+
+- **Sichere Gerätecode-Übersetzung:** Neben gewöhnlichen W/kW/MW-Ausgängen kann ein modulierender Verbraucher jetzt eine lineare kW-zu-Gerätewert-Umrechnung (Skalierung/Offset) und einen frei definierbaren gefährlichen/verbotenen Gerätewert erhalten. Aus/Pause wird über den separat konfigurierten sicheren Ausgangswert definiert.
+- **EVSE-Sonderwertschutz:** Ein Wallbox-Profil kann explizit angeben, dass 0 A die Begrenzung aufhebt. Dann wird ein 0-A-Pausenbefehl vor dem Livebetrieb abgewiesen. Für Geräte mit tatsächlich sicherem 0-A-Aus-Kommando lässt sich diese Eigenschaft abwählen.
+- **Batterie-Ladungsumverteilung:** Wenn eine Batterie autonom PV-Überschuss lädt, darf der Regler mit aktiviertem Hybrid-Prüfschritt eine begrenzte, messwertgeprüfte Lastfreigabe auch bei 0 % SOC versuchen – unter Beachtung von Geräte-Mindestleistung und PMAX. Eine tatsächlich verringerte Ladung ist nicht garantiert.
+- **HA-Kompatibilitätsverbesserung:** Der Einrichtungsdialog nutzt jetzt den mit älteren und neuen Home-Assistant-Versionen kompatiblen Import `voluptuous as probatio`.
+- **Professionelles Branding:** Lokale Icons und Logo in `custom_components/power_manager/brand/` (ab HA 2026.3). HACS-Ansicht älterer Versionen kann abweichen.
+- **Versionsstrategie:** HACS stellt Update-Entitäten bereit. Ein Update für allgemeine Nutzer erscheint erst nach einem kontrollierten GitHub-Release bzw. bei unversionierter Branch-Installation nach einer Änderung des Default-Branches.
+
+**Grenzen dieser Vorabversion:** Alle neuen Zahlen-Ausgangsprofile arbeiten weiter über bestehende HA-`number`-/`input_number`-Entities. Direkte Modbus-TCP-FC16- und MQTT-Publish-Adapter sind **nicht** Teil dieser Stufe. Integrationstests auf mehreren echten HA-Core-Versionen und die Simulator-Abnahme stehen aus. Aktive Hybrid-Lastproben sind weiterhin opt-in (Standard-Prüfschritt 0 kW). Bitte nicht ungeprüft auf produktiven Netzanschlüssen einsetzen.
+
+## Warum neue Updates nicht automatisch sofort angezeigt werden
+
+Ohne GitHub-Release nutzt HACS den Default-Branch. Für reguläre, verständliche Versionsupdates sollen nach bestandener Freigabe GitHub-Releases mit Tag `vX.Y.Z`, derselben `manifest.json`-Version und vollständigen Release Notes veröffentlicht werden. HACS/HA zeigt danach die neue Version in der vorhandenen Update-Entität; eine automatische Installation wird nicht erzwungen. Test-Branches werden nicht automatisch verteilt.
+
+## Neu in V3.2.0: rückgekoppelter Hybrid-Überschuss
+
 
 ## Neu in V3.2.0: rückgekoppelter Hybrid-Überschuss
 
