@@ -1,0 +1,55 @@
+name: HA Core compatibility smoke test
+
+on:
+  push:
+    branches: ["feature/v3.3.0-rc"]
+  workflow_dispatch:
+
+jobs:
+  integration-import:
+    name: "Import integration on HA ${{ matrix.ha_min }} / Python ${{ matrix.python }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - python: "3.13"
+            ha_min: "2026.8.0"
+            ha_max: "2026.9.0"
+          - python: "3.14"
+            ha_min: "2026.10.0"
+            ha_max: "2026.11.0"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install actual Home Assistant Core runtime
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install "homeassistant>=${{ matrix.ha_min }},<${{ matrix.ha_max }}"
+      - name: Import Power Manager setup, flow and platforms
+        run: |
+          python - <<'PY'
+          import importlib
+          import homeassistant
+          names = [
+              "custom_components.power_manager",
+              "custom_components.power_manager.config_flow",
+              "custom_components.power_manager.coordinator",
+              "custom_components.power_manager.sensor",
+              "custom_components.power_manager.binary_sensor",
+              "custom_components.power_manager.switch",
+              "custom_components.power_manager.select",
+              "custom_components.power_manager.actuator",
+              "custom_components.power_manager.protocols",
+          ]
+          for name in names:
+              importlib.import_module(name)
+              print("OK", name)
+          from homeassistant.config_entries import ConfigSubentryFlow
+          from custom_components.power_manager.config_flow import PowerManagerConfigFlow
+          assert PowerManagerConfigFlow is not None
+          print("Home Assistant Core integration smoke import successful")
+          PY
