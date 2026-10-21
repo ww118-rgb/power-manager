@@ -326,7 +326,7 @@ def validate_load_data(data: dict[str, Any]) -> dict[str, str]:
     if transport != OUTPUT_TRANSPORT_ENTITY and not values[CONF_DEVICE_COMMANDS_CONFIRMED]:
         errors[CONF_DEVICE_COMMANDS_CONFIRMED] = "unsafe_command_unconfirmed"
     if transport == OUTPUT_TRANSPORT_MODBUS:
-        if not values[CONF_MODBUS_HOST] or any(c in values[CONF_MODBUS_HOST] for c in "/ \\n\\x00"):
+        if not values[CONF_MODBUS_HOST] or any(c in values[CONF_MODBUS_HOST] for c in "/ \n\x00"):
             errors[CONF_MODBUS_HOST] = "invalid_modbus_host"
         if not (1 <= values[CONF_MODBUS_PORT] <= 65535 and 1 <= values[CONF_MODBUS_UNIT_ID] <= 247
                 and 0 <= values[CONF_MODBUS_REGISTER] <= 65535):
@@ -342,7 +342,7 @@ def validate_load_data(data: dict[str, Any]) -> dict[str, str]:
             errors[CONF_MODBUS_FUNCTION] = "invalid_modbus_function"
     if transport == OUTPUT_TRANSPORT_MQTT:
         topic = values[CONF_MQTT_TOPIC]
-        if not topic or any(c in topic for c in "#+\\x00"):
+        if not topic or any(c in topic for c in "#+\x00"):
             errors[CONF_MQTT_TOPIC] = "invalid_mqtt_topic"
         if values[CONF_MQTT_QOS] not in (0,1,2):
             errors[CONF_MQTT_QOS] = "invalid_mqtt_qos"
