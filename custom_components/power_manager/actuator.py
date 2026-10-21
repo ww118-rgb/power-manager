@@ -18,6 +18,39 @@ from homeassistant.const import (
 from homeassistant.core import HomeAssistant, State
 
 from .const import (
+    CONF_OUTPUT_STEPS_JSON,
+    CONF_OUTPUT_TRANSPORT,
+    CONF_MODBUS_HOST,
+    CONF_MODBUS_PORT,
+    CONF_MODBUS_UNIT_ID,
+    CONF_MODBUS_REGISTER,
+    CONF_MODBUS_DATA_TYPE,
+    CONF_MODBUS_BYTE_ORDER,
+    CONF_MODBUS_FUNCTION,
+    CONF_MODBUS_TIMEOUT_S,
+    CONF_MQTT_TOPIC,
+    CONF_MQTT_QOS,
+    CONF_MQTT_RETAIN,
+    CONF_MQTT_PAYLOAD_TEMPLATE,
+    CONF_SWITCH_ON_CODE,
+    CONF_SWITCH_OFF_CODE,
+    CONF_DEVICE_COMMANDS_CONFIRMED,
+    DEFAULT_OUTPUT_STEPS_JSON,
+    DEFAULT_OUTPUT_TRANSPORT,
+    DEFAULT_MODBUS_PORT,
+    DEFAULT_MODBUS_UNIT_ID,
+    DEFAULT_MODBUS_DATA_TYPE,
+    DEFAULT_MODBUS_BYTE_ORDER,
+    DEFAULT_MODBUS_FUNCTION,
+    DEFAULT_MODBUS_TIMEOUT_S,
+    DEFAULT_MQTT_QOS,
+    DEFAULT_MQTT_RETAIN,
+    DEFAULT_MQTT_PAYLOAD_TEMPLATE,
+    DEFAULT_SWITCH_ON_CODE,
+    DEFAULT_SWITCH_OFF_CODE,
+    OUTPUT_TRANSPORT_ENTITY,
+    OUTPUT_TRANSPORT_MODBUS,
+    OUTPUT_TRANSPORT_MQTT,
     CONF_ENABLE_ENTITY,
     CONF_EVSE_MAX_CURRENT_A,
     CONF_EVSE_MIN_CURRENT_A,
@@ -52,6 +85,8 @@ from .const import (
     SUPPORTED_SWITCH_DOMAINS,
 )
 from .outputs import OutputConversionError, OutputPlan, build_output_plan
+from .protocols import TransportError, async_modbus_write, async_mqtt_publish
+from .load_config import validate_load_data
 
 
 class ActuatorError(RuntimeError):
@@ -171,9 +206,14 @@ def _build_plan(
     if (
         load_type not in (LOAD_TYPE_EVSE, LOAD_TYPE_SWITCH)
         and load_data.get(CONF_OUTPUT_VALUE_MODE, DEFAULT_OUTPUT_VALUE_MODE)
-            != OUTPUT_VALUE_MODE_LINEAR
+            == "power"
     ):
-        power_unit = _effective_power_unit(hass, load_data)
+        if load_data.get(CONF_OUTPUT_TRANSPORT, DEFAULT_OUTPUT_TRANSPORT) == OUTPUT_TRANSPORT_ENTITY:
+            power_unit = _effective_power_unit(hass, load_data)
+        else:
+            power_unit = str(load_data.get(CONF_OUTPUT_UNIT, DEFAULT_OUTPUT_UNIT))
+            if power_unit not in SUPPORTED_OUTPUT_POWER_UNITS:
+                raise ActuatorError("Direkter Geräteausgang erfordert explizit W, kW oder MW")
 
     try:
         return build_output_plan(
@@ -211,6 +251,9 @@ def _build_plan(
             ),
             evse_zero_unlimited=bool(
                 load_data.get(CONF_EVSE_ZERO_UNLIMITED, DEFAULT_EVSE_ZERO_UNLIMITED)
+            ),
+            output_steps_json=str(
+                load_data.get(CONF_OUTPUT_STEPS_JSON, DEFAULT_OUTPUT_STEPS_JSON)
             ),
         )
     except OutputConversionError as err:
@@ -283,6 +326,40 @@ def _validate_positive_plan_range(
         )
 
 
+async def _async_write_direct(
+    hass: HomeAssistant, load_data: dict[str, Any], value: float,
+) -> None:
+    """Transmit a prevalidated device command without claiming physical success."""
+    transport = str(load_data.get(CONF_OUTPUT_TRANSPORT, DEFAULT_OUTPUT_TRANSPORT))
+    try:
+        if transport == OUTPUT_TRANSPORT_MODBUS:
+            await async_modbus_write(
+                host=str(load_data.get(CONF_MODBUS_HOST, "")),
+                port=int(load_data.get(CONF_MODBUS_PORT, DEFAULT_MODBUS_PORT)),
+                unit_id=int(load_data.get(CONF_MODBUS_UNIT_ID, DEFAULT_MODBUS_UNIT_ID)),
+                address=int(load_data.get(CONF_MODBUS_REGISTER, 0)),
+                value=value,
+                data_type=str(load_data.get(CONF_MODBUS_DATA_TYPE, DEFAULT_MODBUS_DATA_TYPE)),
+                byte_order=str(load_data.get(CONF_MODBUS_BYTE_ORDER, DEFAULT_MODBUS_BYTE_ORDER)),
+                function=int(load_data.get(CONF_MODBUS_FUNCTION, DEFAULT_MODBUS_FUNCTION)),
+                timeout_s=float(load_data.get(CONF_MODBUS_TIMEOUT_S, DEFAULT_MODBUS_TIMEOUT_S)),
+            )
+        elif transport == OUTPUT_TRANSPORT_MQTT:
+            await async_mqtt_publish(
+                hass, topic=str(load_data.get(CONF_MQTT_TOPIC, "")),
+                value=value,
+                template=str(load_data.get(
+                    CONF_MQTT_PAYLOAD_TEMPLATE, DEFAULT_MQTT_PAYLOAD_TEMPLATE,
+                )),
+                qos=int(load_data.get(CONF_MQTT_QOS, DEFAULT_MQTT_QOS)),
+                retain=bool(load_data.get(CONF_MQTT_RETAIN, DEFAULT_MQTT_RETAIN)),
+            )
+        else:
+            raise TransportError("Unknown device transport")
+    except TransportError as err:
+        raise ActuatorError(str(err)) from err
+
+
 def validate_actuator(hass: HomeAssistant, load_data: dict[str, Any]) -> None:
     """Validate one configured output before live control is armed.
 
@@ -291,6 +368,38 @@ def validate_actuator(hass: HomeAssistant, load_data: dict[str, Any]) -> None:
     stored target differ from the command actually sent to the device and can
     invalidate the PMAX estimate when no actual-power sensor is available.
     """
+
+    transport = str(load_data.get(CONF_OUTPUT_TRANSPORT, DEFAULT_OUTPUT_TRANSPORT))
+    if transport != OUTPUT_TRANSPORT_ENTITY:
+        errors = validate_load_data(load_data)
+        if errors:
+            raise ActuatorError(f"Geräteprofil ungültig: {errors}")
+        if not load_data.get(CONF_DEVICE_COMMANDS_CONFIRMED):
+            raise ActuatorError("AUS-/EIN-Codes des Geräts müssen bestätigt werden")
+        if load_data.get(CONF_ENABLE_ENTITY):
+            enable_entity = str(load_data[CONF_ENABLE_ENTITY])
+            if _domain(enable_entity) not in SUPPORTED_SWITCH_DOMAINS:
+                raise ActuatorError("Freigabe-Entity muss switch oder input_boolean sein.")
+            _state_or_error(hass, enable_entity, "Freigabe-Ausgang")
+        min_kw = float(load_data.get(CONF_MIN_KW, DEFAULT_MIN_KW))
+        max_kw = float(load_data.get(CONF_MAX_KW, DEFAULT_MAX_KW))
+        for kw in (0.0, min_kw, max_kw):
+            plan = _build_plan(hass, load_data, kw)
+            if kw > 0 and plan.enabled is not True:
+                raise ActuatorError("Geräteprofil stellt technische Mindestleistung nicht dar")
+            code = (
+                float(load_data.get(
+                    CONF_SWITCH_ON_CODE if plan.enabled else CONF_SWITCH_OFF_CODE,
+                    DEFAULT_SWITCH_ON_CODE if plan.enabled else DEFAULT_SWITCH_OFF_CODE,
+                )) if load_data.get(CONF_LOAD_TYPE) == LOAD_TYPE_SWITCH
+                else plan.numeric_value
+            )
+            if code is None or not isfinite(code):
+                raise ActuatorError("Kein gültiger Gerätebefehl")
+            forbidden = load_data.get(CONF_OUTPUT_FORBIDDEN_VALUE)
+            if forbidden is not None and abs(code - float(forbidden)) <= 1e-6:
+                raise ActuatorError("Geräteprofil erzeugt einen verbotenen Befehl")
+        return
 
     output_entity = str(load_data.get(CONF_OUTPUT_ENTITY, ""))
     if not output_entity:
@@ -370,6 +479,36 @@ async def async_apply_target(
     target_kw: float,
 ) -> AppliedCommand:
     """Apply one controller target to Home Assistant output entities."""
+
+    transport = str(load_data.get(CONF_OUTPUT_TRANSPORT, DEFAULT_OUTPUT_TRANSPORT))
+    if transport != OUTPUT_TRANSPORT_ENTITY:
+        plan = _build_plan(hass, load_data, target_kw)
+        enabled = bool(plan.enabled)
+        code = (
+            float(load_data.get(
+                CONF_SWITCH_ON_CODE if enabled else CONF_SWITCH_OFF_CODE,
+                DEFAULT_SWITCH_ON_CODE if enabled else DEFAULT_SWITCH_OFF_CODE,
+            )) if load_data.get(CONF_LOAD_TYPE) == LOAD_TYPE_SWITCH
+            else plan.numeric_value
+        )
+        if code is None or not isfinite(code):
+            raise ActuatorError("No valid direct numeric command")
+        forbidden = load_data.get(CONF_OUTPUT_FORBIDDEN_VALUE)
+        if forbidden is not None and abs(code - float(forbidden)) <= 1e-6:
+            raise ActuatorError("Refusing forbidden device command")
+        enable_entity = str(load_data.get(CONF_ENABLE_ENTITY, ""))
+        wrote_enable = False
+        if not enabled and enable_entity:
+            wrote_enable = await _async_set_switch(hass, enable_entity, False)
+        await _async_write_direct(hass, load_data, code)
+        if enabled and enable_entity:
+            wrote_enable = await _async_set_switch(hass, enable_entity, True)
+        return AppliedCommand(
+            target_kw=target_kw, numeric_value=code,
+            numeric_unit=plan.numeric_unit or "device",
+            enabled=enabled, wrote_numeric=True,
+            wrote_enable=wrote_enable,
+        )
 
     output_entity = str(load_data.get(CONF_OUTPUT_ENTITY, ""))
     if not output_entity:
