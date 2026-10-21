@@ -273,7 +273,8 @@ def validate_load_data(data: dict[str, Any]) -> dict[str, str]:
             errors[CONF_EVSE_PAUSE_CURRENT_A] = "invalid_pause_current"
         if values[CONF_EVSE_ZERO_UNLIMITED] and pause_current_a <= 0.0:
             errors[CONF_EVSE_PAUSE_CURRENT_A] = "evse_zero_means_unlimited"
-        if forbidden is not None and abs(pause_current_a - forbidden) <= 0.000001:
+        if (forbidden is not None and abs(pause_current_a - forbidden) <= 0.000001
+                and not (values[CONF_EVSE_ZERO_UNLIMITED] and pause_current_a <= 0.0)):
             errors[CONF_EVSE_PAUSE_CURRENT_A] = "forbidden_pause_code"
 
         min_power_kw = phases * voltage_v * min_current_a / 1000.0
