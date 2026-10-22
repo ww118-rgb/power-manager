@@ -953,6 +953,8 @@ class PowerManagerLoadSubentryFlow(ConfigSubentryFlow):
         if not hasattr(self, "_draft"):
             subentry = self._get_reconfigure_subentry()
             self._draft = dict(subentry.data)
+            # Reconfirm safe commands after *every* reconfiguration.
+            self._draft[CONF_DEVICE_COMMANDS_CONFIRMED] = False
             self._editing = True
         return await self.async_step_load_basics(user_input)
 
@@ -1029,11 +1031,31 @@ class PowerManagerLoadSubentryFlow(ConfigSubentryFlow):
     ) -> SubentryFlowResult:
         if user_input is not None:
             self._update_draft(user_input)
+            self._draft[CONF_DEVICE_COMMANDS_CONFIRMED] = False
             return await self.async_step_load_connection_details()
         fields = [CONF_OUTPUT_TRANSPORT]
         if self._load_draft().get(CONF_LOAD_TYPE) == LOAD_TYPE_MODULATING:
             fields.append(CONF_OUTPUT_VALUE_MODE)
         return self._form("load_connection", fields)
+
+    def _connection_fields(self) -> list[str]:
+        transport = self._load_draft().get(
+            CONF_OUTPUT_TRANSPORT, DEFAULT_OUTPUT_TRANSPORT,
+        )
+        load_type = self._draft.get(CONF_LOAD_TYPE, DEFAULT_LOAD_TYPE)
+        if transport == OUTPUT_TRANSPORT_ENTITY:
+            return [CONF_OUTPUT_ENTITY] + (
+                [CONF_ENABLE_ENTITY] if load_type != LOAD_TYPE_SWITCH else []
+            )
+        if transport == OUTPUT_TRANSPORT_MODBUS:
+            return [
+                CONF_MODBUS_HOST, CONF_MODBUS_PORT, CONF_MODBUS_UNIT_ID,
+                CONF_MODBUS_REGISTER, CONF_MODBUS_DATA_TYPE,
+                CONF_MODBUS_BYTE_ORDER, CONF_MODBUS_FUNCTION,
+            ]
+        if load_type == LOAD_TYPE_SWITCH:
+            return [CONF_MQTT_TOPIC, CONF_MQTT_ON_PAYLOAD, CONF_MQTT_OFF_PAYLOAD]
+        return [CONF_MQTT_TOPIC, CONF_MQTT_PAYLOAD_TEMPLATE]
 
     async def async_step_load_connection_details(
         self, user_input: dict[str, Any] | None = None,
@@ -1041,32 +1063,42 @@ class PowerManagerLoadSubentryFlow(ConfigSubentryFlow):
         if user_input is not None:
             self._update_draft(
                 user_input, optional=(
-                    CONF_OUTPUT_ENTITY, CONF_MQTT_ON_PAYLOAD, CONF_MQTT_OFF_PAYLOAD,
+                    CONF_OUTPUT_ENTITY, CONF_ENABLE_ENTITY,
+                    CONF_MQTT_ON_PAYLOAD, CONF_MQTT_OFF_PAYLOAD,
                 ),
             )
             return await self.async_step_load_commands()
-        transport = self._load_draft().get(
-            CONF_OUTPUT_TRANSPORT, DEFAULT_OUTPUT_TRANSPORT,
-        )
-        load_type = self._draft.get(CONF_LOAD_TYPE, DEFAULT_LOAD_TYPE)
-        fields: list[str] = []
-        if transport == OUTPUT_TRANSPORT_ENTITY:
-            fields.append(CONF_OUTPUT_ENTITY)
-            if load_type != LOAD_TYPE_SWITCH:
-                fields.append(CONF_ENABLE_ENTITY)
-        elif transport == OUTPUT_TRANSPORT_MODBUS:
-            fields.extend((
-                CONF_MODBUS_HOST, CONF_MODBUS_PORT, CONF_MODBUS_UNIT_ID,
-                CONF_MODBUS_REGISTER, CONF_MODBUS_DATA_TYPE,
-                CONF_MODBUS_BYTE_ORDER, CONF_MODBUS_FUNCTION,
-            ))
-        elif transport == OUTPUT_TRANSPORT_MQTT:
-            fields.append(CONF_MQTT_TOPIC)
-            if load_type == LOAD_TYPE_SWITCH:
-                fields.extend((CONF_MQTT_ON_PAYLOAD, CONF_MQTT_OFF_PAYLOAD))
-            else:
-                fields.append(CONF_MQTT_PAYLOAD_TEMPLATE)
-        return self._form("load_connection_details", fields)
+        return self._form("load_connection_details", self._connection_fields())
+
+    def _command_fields(self) -> list[str]:
+        load_type = self._load_draft().get(CONF_LOAD_TYPE, DEFAULT_LOAD_TYPE)
+        transport = self._draft.get(CONF_OUTPUT_TRANSPORT, DEFAULT_OUTPUT_TRANSPORT)
+        if load_type == LOAD_TYPE_EVSE:
+            return [
+                CONF_EVSE_PHASES, CONF_EVSE_MIN_CURRENT_A,
+                CONF_EVSE_MAX_CURRENT_A, CONF_EVSE_PAUSE_CURRENT_A,
+                CONF_EVSE_ZERO_UNLIMITED,
+            ]
+        if load_type == LOAD_TYPE_SWITCH:
+            if transport == OUTPUT_TRANSPORT_ENTITY:
+                return []
+            if (
+                transport == OUTPUT_TRANSPORT_MQTT
+                and self._draft.get(CONF_MQTT_ON_PAYLOAD)
+                and self._draft.get(CONF_MQTT_OFF_PAYLOAD)
+            ):
+                return []  # textual MQTT ON/OFF needs no numeric codes
+            return [CONF_SWITCH_ON_CODE, CONF_SWITCH_OFF_CODE]
+        mode = self._draft.get(CONF_OUTPUT_VALUE_MODE, DEFAULT_OUTPUT_VALUE_MODE)
+        if mode == OUTPUT_VALUE_MODE_LINEAR:
+            return [
+                CONF_OUTPUT_SCALE, CONF_OUTPUT_OFFSET,
+                CONF_SAFE_OUTPUT_VALUE, CONF_OUTPUT_FORBIDDEN_VALUE,
+            ]
+        fields = [CONF_SAFE_OUTPUT_VALUE, CONF_OUTPUT_FORBIDDEN_VALUE]
+        if mode != OUTPUT_VALUE_MODE_STEPS:
+            fields.insert(0, CONF_OUTPUT_UNIT)
+        return fields
 
     async def async_step_load_commands(
         self, user_input: dict[str, Any] | None = None,
@@ -1089,38 +1121,7 @@ class PowerManagerLoadSubentryFlow(ConfigSubentryFlow):
             ):
                 return await self.async_step_load_stage_count()
             return await self._after_commands()
-        load_type = self._load_draft().get(CONF_LOAD_TYPE, DEFAULT_LOAD_TYPE)
-        transport = self._draft.get(CONF_OUTPUT_TRANSPORT, DEFAULT_OUTPUT_TRANSPORT)
-        fields: list[str] = []
-        if load_type == LOAD_TYPE_EVSE:
-            fields.extend((
-                CONF_EVSE_PHASES, CONF_EVSE_MIN_CURRENT_A,
-                CONF_EVSE_MAX_CURRENT_A, CONF_EVSE_PAUSE_CURRENT_A,
-                CONF_EVSE_ZERO_UNLIMITED,
-            ))
-        elif load_type == LOAD_TYPE_SWITCH:
-            if transport != OUTPUT_TRANSPORT_ENTITY:
-                fields.extend((CONF_SWITCH_ON_CODE, CONF_SWITCH_OFF_CODE))
-        else:
-            mode = self._draft.get(CONF_OUTPUT_VALUE_MODE, DEFAULT_OUTPUT_VALUE_MODE)
-            if mode == OUTPUT_VALUE_MODE_LINEAR:
-                fields.extend((
-                    CONF_OUTPUT_SCALE, CONF_OUTPUT_OFFSET,
-                    CONF_SAFE_OUTPUT_VALUE, CONF_OUTPUT_FORBIDDEN_VALUE,
-                ))
-            else:
-                if mode != OUTPUT_VALUE_MODE_STEPS:
-                    fields.append(CONF_OUTPUT_UNIT)
-                fields.extend((CONF_SAFE_OUTPUT_VALUE, CONF_OUTPUT_FORBIDDEN_VALUE))
-        if (
-            transport != OUTPUT_TRANSPORT_ENTITY
-            and load_type == LOAD_TYPE_MODULATING
-            and self._draft.get(CONF_OUTPUT_VALUE_MODE, DEFAULT_OUTPUT_VALUE_MODE)
-                == DEFAULT_OUTPUT_VALUE_MODE
-            and CONF_OUTPUT_UNIT not in fields
-        ):
-            fields.append(CONF_OUTPUT_UNIT)
-        return self._form("load_commands", fields)
+        return self._form("load_commands", self._command_fields())
 
     async def _after_commands(self) -> SubentryFlowResult:
         if getattr(self, "_expert", False):
@@ -1189,7 +1190,7 @@ class PowerManagerLoadSubentryFlow(ConfigSubentryFlow):
     ) -> SubentryFlowResult:
         if user_input is not None:
             self._update_draft(
-                user_input, optional=(CONF_AVAILABILITY_ENTITY, CONF_ENABLE_ENTITY),
+                user_input, optional=(CONF_AVAILABILITY_ENTITY,),
             )
             return await self.async_step_load_review()
         fields = [
@@ -1204,6 +1205,11 @@ class PowerManagerLoadSubentryFlow(ConfigSubentryFlow):
             fields.extend((CONF_MQTT_QOS, CONF_MQTT_RETAIN))
         if self._draft.get(CONF_LOAD_TYPE) == LOAD_TYPE_EVSE:
             fields.append(CONF_EVSE_VOLTAGE_V)
+        if (
+            self._draft.get(CONF_OUTPUT_TRANSPORT) != OUTPUT_TRANSPORT_ENTITY
+            and self._draft.get(CONF_LOAD_TYPE) != LOAD_TYPE_SWITCH
+        ):
+            fields.append(CONF_ENABLE_ENTITY)
         return self._form("load_expert", fields)
 
     async def async_step_load_review(
@@ -1219,6 +1225,14 @@ class PowerManagerLoadSubentryFlow(ConfigSubentryFlow):
                 )
             if not user_input.get(_WIZARD_ACK):
                 return self._review_form({"base": "ack_required"})
+            if self._draft.get(CONF_LOAD_TYPE) == LOAD_TYPE_EVSE:
+                self._draft[CONF_MIN_KW] = (
+                    float(self._draft.get(CONF_EVSE_PHASES, DEFAULT_EVSE_PHASES))
+                    * float(self._draft.get(CONF_EVSE_VOLTAGE_V, DEFAULT_EVSE_VOLTAGE_V))
+                    * float(self._draft.get(
+                        CONF_EVSE_MIN_CURRENT_A, DEFAULT_EVSE_MIN_CURRENT_A,
+                    )) / 1000.0
+                )
             try:
                 normalized = normalize_load_data(self._draft)
                 errors = validate_load_data(normalized)
@@ -1302,15 +1316,20 @@ class PowerManagerLoadSubentryFlow(ConfigSubentryFlow):
             )
         # Return to the relevant specific setup step; it will render only
         # that protocol's fields.
-        if key.startswith("modbus_") or key.startswith("mqtt_") or key == CONF_OUTPUT_ENTITY:
-            return self._form("load_connection_details", (
-                CONF_MODBUS_HOST, CONF_MODBUS_PORT, CONF_MODBUS_UNIT_ID,
-                CONF_MODBUS_REGISTER, CONF_MODBUS_DATA_TYPE,
-                CONF_MODBUS_BYTE_ORDER, CONF_MODBUS_FUNCTION,
-            ) if self._draft.get(CONF_OUTPUT_TRANSPORT) == OUTPUT_TRANSPORT_MODBUS
-            else (CONF_MQTT_TOPIC, CONF_MQTT_PAYLOAD_TEMPLATE)
-            if self._draft.get(CONF_OUTPUT_TRANSPORT) == OUTPUT_TRANSPORT_MQTT
-            else (CONF_OUTPUT_ENTITY,), errors=errors)
+        if key in self._connection_fields():
+            return self._form(
+                "load_connection_details", self._connection_fields(), errors=errors,
+            )
+        if key in self._command_fields():
+            return self._form("load_commands", self._command_fields(), errors=errors)
+        if key in (CONF_DEVICE_COMMANDS_CONFIRMED,):
+            return self._review_form(errors)
+        if key == CONF_OUTPUT_STEPS_JSON:
+            return self.async_show_form(
+                step_id="load_stages",
+                data_schema=self._stages_schema(getattr(self, "_stage_count", 2)),
+                errors={"base": "invalid_output_steps"},
+            )
         # For remaining errors show a safe summary and allow expert path
         # to edit unusual fields.
         return self._review_form({"base": "device_configuration_invalid"})
