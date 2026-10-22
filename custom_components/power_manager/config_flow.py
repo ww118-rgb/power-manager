@@ -1067,6 +1067,8 @@ class PowerManagerLoadSubentryFlow(ConfigSubentryFlow):
                     CONF_MQTT_ON_PAYLOAD, CONF_MQTT_OFF_PAYLOAD,
                 ),
             )
+            if not self._command_fields():
+                return await self._after_commands()
             return await self.async_step_load_commands()
         return self._form("load_connection_details", self._connection_fields())
 
@@ -1120,6 +1122,8 @@ class PowerManagerLoadSubentryFlow(ConfigSubentryFlow):
                 and self._draft.get(CONF_OUTPUT_VALUE_MODE) == OUTPUT_VALUE_MODE_STEPS
             ):
                 return await self.async_step_load_stage_count()
+            return await self._after_commands()
+        if not self._command_fields():
             return await self._after_commands()
         return self._form("load_commands", self._command_fields())
 
