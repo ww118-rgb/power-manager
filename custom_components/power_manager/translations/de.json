@@ -311,7 +311,11 @@
             "stage_11_kw": "Stufe 11: Leistung (kW)",
             "stage_11_code": "Stufe 11: Gerätecode",
             "stage_12_kw": "Stufe 12: Leistung (kW)",
-            "stage_12_code": "Stufe 12: Gerätecode"
+            "stage_12_code": "Stufe 12: Gerätecode",
+            "evse_output_format": "Was erwartet der Wallbox-Ausgang?",
+            "evse_current_step_a": "Ladestrom-Schrittweite (A)",
+            "evse_power_step_w": "Leistungs-Schrittweite (W)",
+            "evse_pause_power_value": "Sicherer Pausenwert für W/kW"
           },
           "data_description": {
             "load_name": "Eindeutiger Name des Verbrauchers im Regler.",
@@ -369,7 +373,11 @@
             "demand_mode": "Immer bereit = Leistung bis zur Geräte-Maximalgrenze anfordern; Bedarfssensor = erst bei Freigabe oder Anforderung; Deaktiviert = kein Bedarf. Die tatsächliche Zuteilung bestimmt weiterhin PMAX/PV.",
             "wizard_expert": "Normalerweise nicht notwendig; auf der letzten Seite optional änderbar.",
             "wizard_ack": "Der Assistent sendet keine Gerätebefehle. Erst nach kontrolliertem Dry-Run und Prüfung des sicheren AUS-/Pausenbefehls Live einschalten.",
-            "wizard_stage_count": "Wie viele Leistungsstufen stehen im Gerätehandbuch? Anschließend jeweils Leistung und zugehörigen Code eingeben."
+            "wizard_stage_count": "Wie viele Leistungsstufen stehen im Gerätehandbuch? Anschließend jeweils Leistung und zugehörigen Code eingeben.",
+            "evse_output_format": "Wähle die Einheit des wirklichen Gerätebefehls, unabhängig von Modbus oder MQTT. Bei HA-Entity kann die Einheit aus der Entity gelesen werden. Nicht mit der internen kW-Berechnung verwechseln.",
+            "evse_current_step_a": "Ganze Ampere: 1 A. 6,9 kW werden mit 3 Phasen und 230 V als 10 A geschrieben. Zwischenwerte werden aus PMAX-Sicherheitsgründen abgerundet.",
+            "evse_power_step_w": "Typisch 1000 W für MQTT-Leistungsausgänge: 5000, 6000, 7000 W. Es wird nie über das zugeteilte kW-Budget aufgerundet.",
+            "evse_pause_power_value": "Meist 0 W oder 0 kW, aber nur verwenden, wenn die Gerätebeschreibung bestätigt, dass dieser Wert sicher pausiert. 0 A ist ein anderer Befehl!"
           }
         },
         "reconfigure": {
@@ -455,7 +463,11 @@
             "stage_11_kw": "Stufe 11: Leistung (kW)",
             "stage_11_code": "Stufe 11: Gerätecode",
             "stage_12_kw": "Stufe 12: Leistung (kW)",
-            "stage_12_code": "Stufe 12: Gerätecode"
+            "stage_12_code": "Stufe 12: Gerätecode",
+            "evse_output_format": "Was erwartet der Wallbox-Ausgang?",
+            "evse_current_step_a": "Ladestrom-Schrittweite (A)",
+            "evse_power_step_w": "Leistungs-Schrittweite (W)",
+            "evse_pause_power_value": "Sicherer Pausenwert für W/kW"
           },
           "data_description": {
             "load_name": "Eindeutiger Name des Verbrauchers im Regler.",
@@ -513,7 +525,11 @@
             "demand_mode": "Immer bereit = Leistung bis zur Geräte-Maximalgrenze anfordern; Bedarfssensor = erst bei Freigabe oder Anforderung; Deaktiviert = kein Bedarf. Die tatsächliche Zuteilung bestimmt weiterhin PMAX/PV.",
             "wizard_expert": "Normalerweise nicht notwendig; auf der letzten Seite optional änderbar.",
             "wizard_ack": "Der Assistent sendet keine Gerätebefehle. Erst nach kontrolliertem Dry-Run und Prüfung des sicheren AUS-/Pausenbefehls Live einschalten.",
-            "wizard_stage_count": "Wie viele Leistungsstufen stehen im Gerätehandbuch? Anschließend jeweils Leistung und zugehörigen Code eingeben."
+            "wizard_stage_count": "Wie viele Leistungsstufen stehen im Gerätehandbuch? Anschließend jeweils Leistung und zugehörigen Code eingeben.",
+            "evse_output_format": "Wähle die Einheit des wirklichen Gerätebefehls, unabhängig von Modbus oder MQTT. Bei HA-Entity kann die Einheit aus der Entity gelesen werden. Nicht mit der internen kW-Berechnung verwechseln.",
+            "evse_current_step_a": "Ganze Ampere: 1 A. 6,9 kW werden mit 3 Phasen und 230 V als 10 A geschrieben. Zwischenwerte werden aus PMAX-Sicherheitsgründen abgerundet.",
+            "evse_power_step_w": "Typisch 1000 W für MQTT-Leistungsausgänge: 5000, 6000, 7000 W. Es wird nie über das zugeteilte kW-Budget aufgerundet.",
+            "evse_pause_power_value": "Meist 0 W oder 0 kW, aber nur verwenden, wenn die Gerätebeschreibung bestätigt, dass dieser Wert sicher pausiert. 0 A ist ein anderer Befehl!"
           }
         },
         "load_basics": {
@@ -599,7 +615,11 @@
             "stage_11_kw": "Stufe 11: Leistung (kW)",
             "stage_11_code": "Stufe 11: Gerätecode",
             "stage_12_kw": "Stufe 12: Leistung (kW)",
-            "stage_12_code": "Stufe 12: Gerätecode"
+            "stage_12_code": "Stufe 12: Gerätecode",
+            "evse_output_format": "Was erwartet der Wallbox-Ausgang?",
+            "evse_current_step_a": "Ladestrom-Schrittweite (A)",
+            "evse_power_step_w": "Leistungs-Schrittweite (W)",
+            "evse_pause_power_value": "Sicherer Pausenwert für W/kW"
           },
           "data_description": {
             "load_name": "Eindeutiger Name des Verbrauchers im Regler.",
@@ -657,7 +677,11 @@
             "demand_mode": "Immer bereit = Leistung bis zur Geräte-Maximalgrenze anfordern; Bedarfssensor = erst bei Freigabe oder Anforderung; Deaktiviert = kein Bedarf. Die tatsächliche Zuteilung bestimmt weiterhin PMAX/PV.",
             "wizard_expert": "Normalerweise nicht notwendig; auf der letzten Seite optional änderbar.",
             "wizard_ack": "Der Assistent sendet keine Gerätebefehle. Erst nach kontrolliertem Dry-Run und Prüfung des sicheren AUS-/Pausenbefehls Live einschalten.",
-            "wizard_stage_count": "Wie viele Leistungsstufen stehen im Gerätehandbuch? Anschließend jeweils Leistung und zugehörigen Code eingeben."
+            "wizard_stage_count": "Wie viele Leistungsstufen stehen im Gerätehandbuch? Anschließend jeweils Leistung und zugehörigen Code eingeben.",
+            "evse_output_format": "Wähle die Einheit des wirklichen Gerätebefehls, unabhängig von Modbus oder MQTT. Bei HA-Entity kann die Einheit aus der Entity gelesen werden. Nicht mit der internen kW-Berechnung verwechseln.",
+            "evse_current_step_a": "Ganze Ampere: 1 A. 6,9 kW werden mit 3 Phasen und 230 V als 10 A geschrieben. Zwischenwerte werden aus PMAX-Sicherheitsgründen abgerundet.",
+            "evse_power_step_w": "Typisch 1000 W für MQTT-Leistungsausgänge: 5000, 6000, 7000 W. Es wird nie über das zugeteilte kW-Budget aufgerundet.",
+            "evse_pause_power_value": "Meist 0 W oder 0 kW, aber nur verwenden, wenn die Gerätebeschreibung bestätigt, dass dieser Wert sicher pausiert. 0 A ist ein anderer Befehl!"
           }
         },
         "load_usage": {
@@ -743,7 +767,11 @@
             "stage_11_kw": "Stufe 11: Leistung (kW)",
             "stage_11_code": "Stufe 11: Gerätecode",
             "stage_12_kw": "Stufe 12: Leistung (kW)",
-            "stage_12_code": "Stufe 12: Gerätecode"
+            "stage_12_code": "Stufe 12: Gerätecode",
+            "evse_output_format": "Was erwartet der Wallbox-Ausgang?",
+            "evse_current_step_a": "Ladestrom-Schrittweite (A)",
+            "evse_power_step_w": "Leistungs-Schrittweite (W)",
+            "evse_pause_power_value": "Sicherer Pausenwert für W/kW"
           },
           "data_description": {
             "load_name": "Eindeutiger Name des Verbrauchers im Regler.",
@@ -801,7 +829,11 @@
             "demand_mode": "Immer bereit = Leistung bis zur Geräte-Maximalgrenze anfordern; Bedarfssensor = erst bei Freigabe oder Anforderung; Deaktiviert = kein Bedarf. Die tatsächliche Zuteilung bestimmt weiterhin PMAX/PV.",
             "wizard_expert": "Normalerweise nicht notwendig; auf der letzten Seite optional änderbar.",
             "wizard_ack": "Der Assistent sendet keine Gerätebefehle. Erst nach kontrolliertem Dry-Run und Prüfung des sicheren AUS-/Pausenbefehls Live einschalten.",
-            "wizard_stage_count": "Wie viele Leistungsstufen stehen im Gerätehandbuch? Anschließend jeweils Leistung und zugehörigen Code eingeben."
+            "wizard_stage_count": "Wie viele Leistungsstufen stehen im Gerätehandbuch? Anschließend jeweils Leistung und zugehörigen Code eingeben.",
+            "evse_output_format": "Wähle die Einheit des wirklichen Gerätebefehls, unabhängig von Modbus oder MQTT. Bei HA-Entity kann die Einheit aus der Entity gelesen werden. Nicht mit der internen kW-Berechnung verwechseln.",
+            "evse_current_step_a": "Ganze Ampere: 1 A. 6,9 kW werden mit 3 Phasen und 230 V als 10 A geschrieben. Zwischenwerte werden aus PMAX-Sicherheitsgründen abgerundet.",
+            "evse_power_step_w": "Typisch 1000 W für MQTT-Leistungsausgänge: 5000, 6000, 7000 W. Es wird nie über das zugeteilte kW-Budget aufgerundet.",
+            "evse_pause_power_value": "Meist 0 W oder 0 kW, aber nur verwenden, wenn die Gerätebeschreibung bestätigt, dass dieser Wert sicher pausiert. 0 A ist ein anderer Befehl!"
           }
         },
         "load_request": {
@@ -887,7 +919,11 @@
             "stage_11_kw": "Stufe 11: Leistung (kW)",
             "stage_11_code": "Stufe 11: Gerätecode",
             "stage_12_kw": "Stufe 12: Leistung (kW)",
-            "stage_12_code": "Stufe 12: Gerätecode"
+            "stage_12_code": "Stufe 12: Gerätecode",
+            "evse_output_format": "Was erwartet der Wallbox-Ausgang?",
+            "evse_current_step_a": "Ladestrom-Schrittweite (A)",
+            "evse_power_step_w": "Leistungs-Schrittweite (W)",
+            "evse_pause_power_value": "Sicherer Pausenwert für W/kW"
           },
           "data_description": {
             "load_name": "Eindeutiger Name des Verbrauchers im Regler.",
@@ -945,7 +981,11 @@
             "demand_mode": "Immer bereit = Leistung bis zur Geräte-Maximalgrenze anfordern; Bedarfssensor = erst bei Freigabe oder Anforderung; Deaktiviert = kein Bedarf. Die tatsächliche Zuteilung bestimmt weiterhin PMAX/PV.",
             "wizard_expert": "Normalerweise nicht notwendig; auf der letzten Seite optional änderbar.",
             "wizard_ack": "Der Assistent sendet keine Gerätebefehle. Erst nach kontrolliertem Dry-Run und Prüfung des sicheren AUS-/Pausenbefehls Live einschalten.",
-            "wizard_stage_count": "Wie viele Leistungsstufen stehen im Gerätehandbuch? Anschließend jeweils Leistung und zugehörigen Code eingeben."
+            "wizard_stage_count": "Wie viele Leistungsstufen stehen im Gerätehandbuch? Anschließend jeweils Leistung und zugehörigen Code eingeben.",
+            "evse_output_format": "Wähle die Einheit des wirklichen Gerätebefehls, unabhängig von Modbus oder MQTT. Bei HA-Entity kann die Einheit aus der Entity gelesen werden. Nicht mit der internen kW-Berechnung verwechseln.",
+            "evse_current_step_a": "Ganze Ampere: 1 A. 6,9 kW werden mit 3 Phasen und 230 V als 10 A geschrieben. Zwischenwerte werden aus PMAX-Sicherheitsgründen abgerundet.",
+            "evse_power_step_w": "Typisch 1000 W für MQTT-Leistungsausgänge: 5000, 6000, 7000 W. Es wird nie über das zugeteilte kW-Budget aufgerundet.",
+            "evse_pause_power_value": "Meist 0 W oder 0 kW, aber nur verwenden, wenn die Gerätebeschreibung bestätigt, dass dieser Wert sicher pausiert. 0 A ist ein anderer Befehl!"
           }
         },
         "load_connection": {
@@ -1031,7 +1071,11 @@
             "stage_11_kw": "Stufe 11: Leistung (kW)",
             "stage_11_code": "Stufe 11: Gerätecode",
             "stage_12_kw": "Stufe 12: Leistung (kW)",
-            "stage_12_code": "Stufe 12: Gerätecode"
+            "stage_12_code": "Stufe 12: Gerätecode",
+            "evse_output_format": "Was erwartet der Wallbox-Ausgang?",
+            "evse_current_step_a": "Ladestrom-Schrittweite (A)",
+            "evse_power_step_w": "Leistungs-Schrittweite (W)",
+            "evse_pause_power_value": "Sicherer Pausenwert für W/kW"
           },
           "data_description": {
             "load_name": "Eindeutiger Name des Verbrauchers im Regler.",
@@ -1089,7 +1133,11 @@
             "demand_mode": "Immer bereit = Leistung bis zur Geräte-Maximalgrenze anfordern; Bedarfssensor = erst bei Freigabe oder Anforderung; Deaktiviert = kein Bedarf. Die tatsächliche Zuteilung bestimmt weiterhin PMAX/PV.",
             "wizard_expert": "Normalerweise nicht notwendig; auf der letzten Seite optional änderbar.",
             "wizard_ack": "Der Assistent sendet keine Gerätebefehle. Erst nach kontrolliertem Dry-Run und Prüfung des sicheren AUS-/Pausenbefehls Live einschalten.",
-            "wizard_stage_count": "Wie viele Leistungsstufen stehen im Gerätehandbuch? Anschließend jeweils Leistung und zugehörigen Code eingeben."
+            "wizard_stage_count": "Wie viele Leistungsstufen stehen im Gerätehandbuch? Anschließend jeweils Leistung und zugehörigen Code eingeben.",
+            "evse_output_format": "Wähle die Einheit des wirklichen Gerätebefehls, unabhängig von Modbus oder MQTT. Bei HA-Entity kann die Einheit aus der Entity gelesen werden. Nicht mit der internen kW-Berechnung verwechseln.",
+            "evse_current_step_a": "Ganze Ampere: 1 A. 6,9 kW werden mit 3 Phasen und 230 V als 10 A geschrieben. Zwischenwerte werden aus PMAX-Sicherheitsgründen abgerundet.",
+            "evse_power_step_w": "Typisch 1000 W für MQTT-Leistungsausgänge: 5000, 6000, 7000 W. Es wird nie über das zugeteilte kW-Budget aufgerundet.",
+            "evse_pause_power_value": "Meist 0 W oder 0 kW, aber nur verwenden, wenn die Gerätebeschreibung bestätigt, dass dieser Wert sicher pausiert. 0 A ist ein anderer Befehl!"
           }
         },
         "load_connection_details": {
@@ -1175,7 +1223,11 @@
             "stage_11_kw": "Stufe 11: Leistung (kW)",
             "stage_11_code": "Stufe 11: Gerätecode",
             "stage_12_kw": "Stufe 12: Leistung (kW)",
-            "stage_12_code": "Stufe 12: Gerätecode"
+            "stage_12_code": "Stufe 12: Gerätecode",
+            "evse_output_format": "Was erwartet der Wallbox-Ausgang?",
+            "evse_current_step_a": "Ladestrom-Schrittweite (A)",
+            "evse_power_step_w": "Leistungs-Schrittweite (W)",
+            "evse_pause_power_value": "Sicherer Pausenwert für W/kW"
           },
           "data_description": {
             "load_name": "Eindeutiger Name des Verbrauchers im Regler.",
@@ -1233,7 +1285,11 @@
             "demand_mode": "Immer bereit = Leistung bis zur Geräte-Maximalgrenze anfordern; Bedarfssensor = erst bei Freigabe oder Anforderung; Deaktiviert = kein Bedarf. Die tatsächliche Zuteilung bestimmt weiterhin PMAX/PV.",
             "wizard_expert": "Normalerweise nicht notwendig; auf der letzten Seite optional änderbar.",
             "wizard_ack": "Der Assistent sendet keine Gerätebefehle. Erst nach kontrolliertem Dry-Run und Prüfung des sicheren AUS-/Pausenbefehls Live einschalten.",
-            "wizard_stage_count": "Wie viele Leistungsstufen stehen im Gerätehandbuch? Anschließend jeweils Leistung und zugehörigen Code eingeben."
+            "wizard_stage_count": "Wie viele Leistungsstufen stehen im Gerätehandbuch? Anschließend jeweils Leistung und zugehörigen Code eingeben.",
+            "evse_output_format": "Wähle die Einheit des wirklichen Gerätebefehls, unabhängig von Modbus oder MQTT. Bei HA-Entity kann die Einheit aus der Entity gelesen werden. Nicht mit der internen kW-Berechnung verwechseln.",
+            "evse_current_step_a": "Ganze Ampere: 1 A. 6,9 kW werden mit 3 Phasen und 230 V als 10 A geschrieben. Zwischenwerte werden aus PMAX-Sicherheitsgründen abgerundet.",
+            "evse_power_step_w": "Typisch 1000 W für MQTT-Leistungsausgänge: 5000, 6000, 7000 W. Es wird nie über das zugeteilte kW-Budget aufgerundet.",
+            "evse_pause_power_value": "Meist 0 W oder 0 kW, aber nur verwenden, wenn die Gerätebeschreibung bestätigt, dass dieser Wert sicher pausiert. 0 A ist ein anderer Befehl!"
           }
         },
         "load_commands": {
@@ -1319,7 +1375,11 @@
             "stage_11_kw": "Stufe 11: Leistung (kW)",
             "stage_11_code": "Stufe 11: Gerätecode",
             "stage_12_kw": "Stufe 12: Leistung (kW)",
-            "stage_12_code": "Stufe 12: Gerätecode"
+            "stage_12_code": "Stufe 12: Gerätecode",
+            "evse_output_format": "Was erwartet der Wallbox-Ausgang?",
+            "evse_current_step_a": "Ladestrom-Schrittweite (A)",
+            "evse_power_step_w": "Leistungs-Schrittweite (W)",
+            "evse_pause_power_value": "Sicherer Pausenwert für W/kW"
           },
           "data_description": {
             "load_name": "Eindeutiger Name des Verbrauchers im Regler.",
@@ -1377,7 +1437,11 @@
             "demand_mode": "Immer bereit = Leistung bis zur Geräte-Maximalgrenze anfordern; Bedarfssensor = erst bei Freigabe oder Anforderung; Deaktiviert = kein Bedarf. Die tatsächliche Zuteilung bestimmt weiterhin PMAX/PV.",
             "wizard_expert": "Normalerweise nicht notwendig; auf der letzten Seite optional änderbar.",
             "wizard_ack": "Der Assistent sendet keine Gerätebefehle. Erst nach kontrolliertem Dry-Run und Prüfung des sicheren AUS-/Pausenbefehls Live einschalten.",
-            "wizard_stage_count": "Wie viele Leistungsstufen stehen im Gerätehandbuch? Anschließend jeweils Leistung und zugehörigen Code eingeben."
+            "wizard_stage_count": "Wie viele Leistungsstufen stehen im Gerätehandbuch? Anschließend jeweils Leistung und zugehörigen Code eingeben.",
+            "evse_output_format": "Wähle die Einheit des wirklichen Gerätebefehls, unabhängig von Modbus oder MQTT. Bei HA-Entity kann die Einheit aus der Entity gelesen werden. Nicht mit der internen kW-Berechnung verwechseln.",
+            "evse_current_step_a": "Ganze Ampere: 1 A. 6,9 kW werden mit 3 Phasen und 230 V als 10 A geschrieben. Zwischenwerte werden aus PMAX-Sicherheitsgründen abgerundet.",
+            "evse_power_step_w": "Typisch 1000 W für MQTT-Leistungsausgänge: 5000, 6000, 7000 W. Es wird nie über das zugeteilte kW-Budget aufgerundet.",
+            "evse_pause_power_value": "Meist 0 W oder 0 kW, aber nur verwenden, wenn die Gerätebeschreibung bestätigt, dass dieser Wert sicher pausiert. 0 A ist ein anderer Befehl!"
           }
         },
         "load_stage_count": {
@@ -1463,7 +1527,11 @@
             "stage_11_kw": "Stufe 11: Leistung (kW)",
             "stage_11_code": "Stufe 11: Gerätecode",
             "stage_12_kw": "Stufe 12: Leistung (kW)",
-            "stage_12_code": "Stufe 12: Gerätecode"
+            "stage_12_code": "Stufe 12: Gerätecode",
+            "evse_output_format": "Was erwartet der Wallbox-Ausgang?",
+            "evse_current_step_a": "Ladestrom-Schrittweite (A)",
+            "evse_power_step_w": "Leistungs-Schrittweite (W)",
+            "evse_pause_power_value": "Sicherer Pausenwert für W/kW"
           },
           "data_description": {
             "load_name": "Eindeutiger Name des Verbrauchers im Regler.",
@@ -1521,7 +1589,11 @@
             "demand_mode": "Immer bereit = Leistung bis zur Geräte-Maximalgrenze anfordern; Bedarfssensor = erst bei Freigabe oder Anforderung; Deaktiviert = kein Bedarf. Die tatsächliche Zuteilung bestimmt weiterhin PMAX/PV.",
             "wizard_expert": "Normalerweise nicht notwendig; auf der letzten Seite optional änderbar.",
             "wizard_ack": "Der Assistent sendet keine Gerätebefehle. Erst nach kontrolliertem Dry-Run und Prüfung des sicheren AUS-/Pausenbefehls Live einschalten.",
-            "wizard_stage_count": "Wie viele Leistungsstufen stehen im Gerätehandbuch? Anschließend jeweils Leistung und zugehörigen Code eingeben."
+            "wizard_stage_count": "Wie viele Leistungsstufen stehen im Gerätehandbuch? Anschließend jeweils Leistung und zugehörigen Code eingeben.",
+            "evse_output_format": "Wähle die Einheit des wirklichen Gerätebefehls, unabhängig von Modbus oder MQTT. Bei HA-Entity kann die Einheit aus der Entity gelesen werden. Nicht mit der internen kW-Berechnung verwechseln.",
+            "evse_current_step_a": "Ganze Ampere: 1 A. 6,9 kW werden mit 3 Phasen und 230 V als 10 A geschrieben. Zwischenwerte werden aus PMAX-Sicherheitsgründen abgerundet.",
+            "evse_power_step_w": "Typisch 1000 W für MQTT-Leistungsausgänge: 5000, 6000, 7000 W. Es wird nie über das zugeteilte kW-Budget aufgerundet.",
+            "evse_pause_power_value": "Meist 0 W oder 0 kW, aber nur verwenden, wenn die Gerätebeschreibung bestätigt, dass dieser Wert sicher pausiert. 0 A ist ein anderer Befehl!"
           }
         },
         "load_stages": {
@@ -1607,7 +1679,11 @@
             "stage_11_kw": "Stufe 11: Leistung (kW)",
             "stage_11_code": "Stufe 11: Gerätecode",
             "stage_12_kw": "Stufe 12: Leistung (kW)",
-            "stage_12_code": "Stufe 12: Gerätecode"
+            "stage_12_code": "Stufe 12: Gerätecode",
+            "evse_output_format": "Was erwartet der Wallbox-Ausgang?",
+            "evse_current_step_a": "Ladestrom-Schrittweite (A)",
+            "evse_power_step_w": "Leistungs-Schrittweite (W)",
+            "evse_pause_power_value": "Sicherer Pausenwert für W/kW"
           },
           "data_description": {
             "load_name": "Eindeutiger Name des Verbrauchers im Regler.",
@@ -1665,7 +1741,11 @@
             "demand_mode": "Immer bereit = Leistung bis zur Geräte-Maximalgrenze anfordern; Bedarfssensor = erst bei Freigabe oder Anforderung; Deaktiviert = kein Bedarf. Die tatsächliche Zuteilung bestimmt weiterhin PMAX/PV.",
             "wizard_expert": "Normalerweise nicht notwendig; auf der letzten Seite optional änderbar.",
             "wizard_ack": "Der Assistent sendet keine Gerätebefehle. Erst nach kontrolliertem Dry-Run und Prüfung des sicheren AUS-/Pausenbefehls Live einschalten.",
-            "wizard_stage_count": "Wie viele Leistungsstufen stehen im Gerätehandbuch? Anschließend jeweils Leistung und zugehörigen Code eingeben."
+            "wizard_stage_count": "Wie viele Leistungsstufen stehen im Gerätehandbuch? Anschließend jeweils Leistung und zugehörigen Code eingeben.",
+            "evse_output_format": "Wähle die Einheit des wirklichen Gerätebefehls, unabhängig von Modbus oder MQTT. Bei HA-Entity kann die Einheit aus der Entity gelesen werden. Nicht mit der internen kW-Berechnung verwechseln.",
+            "evse_current_step_a": "Ganze Ampere: 1 A. 6,9 kW werden mit 3 Phasen und 230 V als 10 A geschrieben. Zwischenwerte werden aus PMAX-Sicherheitsgründen abgerundet.",
+            "evse_power_step_w": "Typisch 1000 W für MQTT-Leistungsausgänge: 5000, 6000, 7000 W. Es wird nie über das zugeteilte kW-Budget aufgerundet.",
+            "evse_pause_power_value": "Meist 0 W oder 0 kW, aber nur verwenden, wenn die Gerätebeschreibung bestätigt, dass dieser Wert sicher pausiert. 0 A ist ein anderer Befehl!"
           }
         },
         "load_expert": {
@@ -1751,7 +1831,11 @@
             "stage_11_kw": "Stufe 11: Leistung (kW)",
             "stage_11_code": "Stufe 11: Gerätecode",
             "stage_12_kw": "Stufe 12: Leistung (kW)",
-            "stage_12_code": "Stufe 12: Gerätecode"
+            "stage_12_code": "Stufe 12: Gerätecode",
+            "evse_output_format": "Was erwartet der Wallbox-Ausgang?",
+            "evse_current_step_a": "Ladestrom-Schrittweite (A)",
+            "evse_power_step_w": "Leistungs-Schrittweite (W)",
+            "evse_pause_power_value": "Sicherer Pausenwert für W/kW"
           },
           "data_description": {
             "load_name": "Eindeutiger Name des Verbrauchers im Regler.",
@@ -1809,7 +1893,11 @@
             "demand_mode": "Immer bereit = Leistung bis zur Geräte-Maximalgrenze anfordern; Bedarfssensor = erst bei Freigabe oder Anforderung; Deaktiviert = kein Bedarf. Die tatsächliche Zuteilung bestimmt weiterhin PMAX/PV.",
             "wizard_expert": "Normalerweise nicht notwendig; auf der letzten Seite optional änderbar.",
             "wizard_ack": "Der Assistent sendet keine Gerätebefehle. Erst nach kontrolliertem Dry-Run und Prüfung des sicheren AUS-/Pausenbefehls Live einschalten.",
-            "wizard_stage_count": "Wie viele Leistungsstufen stehen im Gerätehandbuch? Anschließend jeweils Leistung und zugehörigen Code eingeben."
+            "wizard_stage_count": "Wie viele Leistungsstufen stehen im Gerätehandbuch? Anschließend jeweils Leistung und zugehörigen Code eingeben.",
+            "evse_output_format": "Wähle die Einheit des wirklichen Gerätebefehls, unabhängig von Modbus oder MQTT. Bei HA-Entity kann die Einheit aus der Entity gelesen werden. Nicht mit der internen kW-Berechnung verwechseln.",
+            "evse_current_step_a": "Ganze Ampere: 1 A. 6,9 kW werden mit 3 Phasen und 230 V als 10 A geschrieben. Zwischenwerte werden aus PMAX-Sicherheitsgründen abgerundet.",
+            "evse_power_step_w": "Typisch 1000 W für MQTT-Leistungsausgänge: 5000, 6000, 7000 W. Es wird nie über das zugeteilte kW-Budget aufgerundet.",
+            "evse_pause_power_value": "Meist 0 W oder 0 kW, aber nur verwenden, wenn die Gerätebeschreibung bestätigt, dass dieser Wert sicher pausiert. 0 A ist ein anderer Befehl!"
           }
         },
         "load_review": {
@@ -1895,7 +1983,11 @@
             "stage_11_kw": "Stufe 11: Leistung (kW)",
             "stage_11_code": "Stufe 11: Gerätecode",
             "stage_12_kw": "Stufe 12: Leistung (kW)",
-            "stage_12_code": "Stufe 12: Gerätecode"
+            "stage_12_code": "Stufe 12: Gerätecode",
+            "evse_output_format": "Was erwartet der Wallbox-Ausgang?",
+            "evse_current_step_a": "Ladestrom-Schrittweite (A)",
+            "evse_power_step_w": "Leistungs-Schrittweite (W)",
+            "evse_pause_power_value": "Sicherer Pausenwert für W/kW"
           },
           "data_description": {
             "load_name": "Eindeutiger Name des Verbrauchers im Regler.",
@@ -1953,7 +2045,21 @@
             "demand_mode": "Immer bereit = Leistung bis zur Geräte-Maximalgrenze anfordern; Bedarfssensor = erst bei Freigabe oder Anforderung; Deaktiviert = kein Bedarf. Die tatsächliche Zuteilung bestimmt weiterhin PMAX/PV.",
             "wizard_expert": "Normalerweise nicht notwendig; auf der letzten Seite optional änderbar.",
             "wizard_ack": "Der Assistent sendet keine Gerätebefehle. Erst nach kontrolliertem Dry-Run und Prüfung des sicheren AUS-/Pausenbefehls Live einschalten.",
-            "wizard_stage_count": "Wie viele Leistungsstufen stehen im Gerätehandbuch? Anschließend jeweils Leistung und zugehörigen Code eingeben."
+            "wizard_stage_count": "Wie viele Leistungsstufen stehen im Gerätehandbuch? Anschließend jeweils Leistung und zugehörigen Code eingeben.",
+            "evse_output_format": "Wähle die Einheit des wirklichen Gerätebefehls, unabhängig von Modbus oder MQTT. Bei HA-Entity kann die Einheit aus der Entity gelesen werden. Nicht mit der internen kW-Berechnung verwechseln.",
+            "evse_current_step_a": "Ganze Ampere: 1 A. 6,9 kW werden mit 3 Phasen und 230 V als 10 A geschrieben. Zwischenwerte werden aus PMAX-Sicherheitsgründen abgerundet.",
+            "evse_power_step_w": "Typisch 1000 W für MQTT-Leistungsausgänge: 5000, 6000, 7000 W. Es wird nie über das zugeteilte kW-Budget aufgerundet.",
+            "evse_pause_power_value": "Meist 0 W oder 0 kW, aber nur verwenden, wenn die Gerätebeschreibung bestätigt, dass dieser Wert sicher pausiert. 0 A ist ein anderer Befehl!"
+          }
+        },
+        "load_evse_format": {
+          "title": "Wallbox: Sollwertformat",
+          "description": "Wählt, welche Einheit das angeschlossene Gerät tatsächlich erwartet. Modbus ist häufig A, MQTT häufig W, aber die Bedeutung legt das Gerät fest.",
+          "data": {
+            "evse_output_format": "Was erwartet der Wallbox-Ausgang?"
+          },
+          "data_description": {
+            "evse_output_format": "Wähle die Einheit des wirklichen Gerätebefehls, unabhängig von Modbus oder MQTT. Bei HA-Entity kann die Einheit aus der Entity gelesen werden. Nicht mit der internen kW-Berechnung verwechseln."
           }
         }
       },
@@ -2002,7 +2108,10 @@
         "request_sensor_required": "Bitte einen Bedarfs- oder Anforderungssensor auswählen.",
         "ack_required": "Bitte die sichere Konfiguration bestätigen.",
         "stages_must_increase": "Die Stufenleistungen müssen streng aufsteigend sein.",
-        "device_configuration_invalid": "Mindestens ein Gerätewert ist ungültig. Bitte im Expertenmodus prüfen."
+        "device_configuration_invalid": "Mindestens ein Gerätewert ist ungültig. Bitte im Expertenmodus prüfen.",
+        "invalid_evse_output_format": "Bitte gültiges Wallbox-Ausgangsformat A/W/kW auswählen.",
+        "evse_auto_requires_entity": "Auto funktioniert nur mit einer HA-Zahlen-Entity, nicht mit direktem Modbus/MQTT.",
+        "invalid_evse_step": "Geräteschrittweite muss positiv sein."
       },
       "entry_type": "Regelbarer Verbraucher",
       "initiate_flow": {
@@ -2174,6 +2283,14 @@
         "always": "Immer bereit (Power Manager regelt)",
         "sensor": "Nur bei Bedarf über eine Entität",
         "disabled": "Vorerst deaktiviert"
+      }
+    },
+    "evse_output_format": {
+      "options": {
+        "auto": "Automatisch aus der HA-Entity (A/W/kW)",
+        "A": "Ampere (z. B. 6 bis 16 A)",
+        "W": "Watt (z. B. 0 bis 11000 W)",
+        "kW": "Kilowatt (z. B. 0 bis 11 kW)"
       }
     }
   }
