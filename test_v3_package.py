@@ -88,19 +88,18 @@ def test_load_reconfigure_uses_parent_entry_accessor():
     assert "self._get_reconfigure_entry()" not in reconfigure_block
 
 
-def test_surplus_reserve_blocks_battery_assist_without_changing_mode():
+def test_autonomous_battery_does_not_block_pv_mode():
     source = (COMPONENT / "coordinator.py").read_text(encoding="utf-8")
-    soc_policy = source[source.index("# Hybrid A1:"):source.index("inputs = ControllerInputs(")]
-    assert "self.operating_mode = OperatingMode.NORMAL" not in soc_policy
-    assert "hybrid_battery_assist_enabled" in source
+    assert "hybrid_battery_assist_enabled=" not in source
+    assert "hybrid_probe_enabled=" not in source
+    assert "battery_kw=battery_kw,  # diagnostics; ignored by controller" in source
 
 
-def test_surplus_core_uses_actual_power_balance_not_total_pv():
+def test_surplus_core_uses_grid_export_and_existing_load_not_total_pv():
     source = (COMPONENT / "controller.py").read_text(encoding="utf-8")
-    assert "raw_surplus_budget_kw = (" in source
-    assert "controlled_power_for_calculation_kw" in source
-    assert "observed_discharge_kw" in source
-    assert "hybrid_probe_until_s" in source
+    assert "export_kw = max(0.0, -inputs.grid_kw)" in source
+    assert "controlled_kw - inputs.grid_kw" in source
+    assert "inputs.battery_kw" not in source[source.index("def run_controller("):]
 
 
 def test_manifest_classifies_power_manager_as_hub():
