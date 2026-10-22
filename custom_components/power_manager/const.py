@@ -151,7 +151,7 @@ BATTERY_SOC_SCALES = (
 DEFAULT_GRID_RESERVE_KW = 0.0
 # Defaults are independent of the installed PV/load/battery size, adjustable
 # per site. They reserve a small measurement-noise margin for NEW load only.
-DEFAULT_GRID_GROWTH_MARGIN_KW = 0.25
+DEFAULT_GRID_GROWTH_MARGIN_KW = 0.3
 DEFAULT_GRID_RECOVERY_HOLD_S = 15.0
 DEFAULT_GRID_SENSOR_TIMEOUT_S = 10.0
 DEFAULT_PV_SENSOR_TIMEOUT_S = 10.0
