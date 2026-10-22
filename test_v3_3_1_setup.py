@@ -92,9 +92,10 @@ def test_wizard_does_not_surface_every_protocol_in_first_form():
     assert "async_step_load_expert" in code
 
 
-def test_live_sensor_feedback_mandatory_gate_unchanged():
+def test_live_sensor_feedback_is_optional_but_grid_is_required():
     code = (BASE / "coordinator.py").read_text(encoding="utf-8")
-    assert "Live-Regelung benötigt eine echte Istleistungs-Entity" in code
+    assert "Live-Regelung benötigt eine echte Istleistungs-Entity" not in code
+    assert "not data.grid_measurement_healthy" in code
 
 
 def test_wizard_does_not_enable_live_control():
