@@ -803,7 +803,7 @@ class PowerManagerConfigFlow(ConfigFlow, domain=DOMAIN):
     """Configure essential plant values, optionally show expert tuning."""
 
     VERSION = 4
-    MINOR_VERSION = 1
+    MINOR_VERSION = 0
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None,
