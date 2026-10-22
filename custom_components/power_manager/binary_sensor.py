@@ -89,12 +89,6 @@ BINARY_SENSORS: tuple[PowerManagerBinarySensorDescription, ...] = (
         device_class=BinarySensorDeviceClass.PROBLEM,
         entity_category=EntityCategory.DIAGNOSTIC,
     ),
-    PowerManagerBinarySensorDescription(
-        key="battery_soc_blocking_surplus",
-        translation_key="battery_soc_blocking_surplus",
-        value_fn=_result_bool("battery_soc_blocking_surplus"),
-        entity_category=EntityCategory.DIAGNOSTIC,
-    ),
 )
 
 
