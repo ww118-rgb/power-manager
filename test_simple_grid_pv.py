@@ -290,3 +290,19 @@ def test_screenshot_139_17_kw_rebalances_equal_wallboxes_within_grid_limit():
         max(0.0, result.targets_kw[name] - previous_target)
         for name, previous_target in (("WB1", 6.0), ("WB2", 6.5))
     ) <= 140 - 139.17 - 0.3 + 1e-5
+
+
+def test_two_new_equal_wallboxes_split_net_headroom_fairly():
+    evs = [load("WB1", minimum=4.14), load("WB2", minimum=4.14)]
+    result = run_controller(data(grid=129.56, pmax=140), evs)
+    assert result.targets_kw["WB1"] == pytest.approx(5.07)
+    assert result.targets_kw["WB2"] == pytest.approx(5.07)
+    assert result.projected_grid_kw <= 139.7 + 1e-6
+
+
+def test_single_starter_is_not_disabled_when_two_minima_do_not_fit():
+    evs = [load("WB1", minimum=4.14), load("WB2", minimum=4.14)]
+    result = run_controller(data(grid=135, pmax=140), evs)
+    assert result.targets_kw["WB1"] >= 4.14
+    assert result.targets_kw["WB2"] == 0.0
+    assert result.projected_grid_kw <= 140
