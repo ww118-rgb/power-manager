@@ -723,8 +723,12 @@ def _build_load_schema(values: dict[str, Any] | None = None) -> probatio.Schema:
             _required_marker(
                 CONF_EVSE_OUTPUT_FORMAT, values, DEFAULT_EVSE_OUTPUT_FORMAT,
             ): SelectSelector(SelectSelectorConfig(
-                options=list(EVSE_OUTPUT_FORMATS),
-                translation_key=CONF_EVSE_OUTPUT_FORMAT,
+                options=[
+                    SelectOptionDict(value=EVSE_OUTPUT_AUTO, label="Automatisch (HA-Entity)"),
+                    SelectOptionDict(value=EVSE_OUTPUT_AMPERE, label="Ampere (A)"),
+                    SelectOptionDict(value=EVSE_OUTPUT_WATT, label="Watt (W)"),
+                    SelectOptionDict(value=EVSE_OUTPUT_KW, label="Kilowatt (kW)"),
+                ],
             )),
             _required_marker(
                 CONF_EVSE_CURRENT_STEP_A, values, DEFAULT_EVSE_CURRENT_STEP_A,
@@ -1231,7 +1235,12 @@ class PowerManagerLoadSubentryFlow(ConfigSubentryFlow):
             _required_marker(
                 CONF_EVSE_OUTPUT_FORMAT, self._draft, suggested,
             ): SelectSelector(SelectSelectorConfig(
-                options=allowed, translation_key=CONF_EVSE_OUTPUT_FORMAT,
+                options=[
+                    SelectOptionDict(value=x, label={
+                        EVSE_OUTPUT_AUTO:"Auto (HA)", EVSE_OUTPUT_AMPERE:"Ampere (A)",
+                        EVSE_OUTPUT_WATT:"Watt (W)", EVSE_OUTPUT_KW:"Kilowatt (kW)",
+                    }[x]) for x in allowed
+                ],
             )),
         })
 
