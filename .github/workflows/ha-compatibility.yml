@@ -2,7 +2,7 @@ name: HA Core compatibility smoke test
 
 on:
   push:
-    branches: ["feature/v3.3.0-rc", "feature/v3.3.1-simple-wizard", "feature/v3.3.2-evse-output-fix", "feature/v3.3.3-unified-output-units", "fix/grid-primary-stable-control", "fix/v3.3.5-simple-grid-and-pv"]
+    branches: ["main", "refactor/v4.0.0-unified"]
   workflow_dispatch:
 
 jobs:
