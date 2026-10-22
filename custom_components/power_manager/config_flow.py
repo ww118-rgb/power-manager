@@ -372,20 +372,18 @@ _WIZARD_EXPERT = "wizard_expert"
 _WIZARD_ACK = "wizard_ack"
 _WIZARD_STAGE_COUNT = "wizard_stage_count"
 _GLOBAL_BASIC_KEYS = (
+    # Only the two control inputs required for a simple system.
     CONF_GRID_POWER_ENTITY, CONF_GRID_LIMIT_KW, CONF_PV_POWER_ENTITY,
-    CONF_BATTERY_POWER_ENTITY, CONF_BATTERY_SOC_ENTITY,
-    CONF_BATTERY_SOC_SCALE, CONF_SURPLUS_MIN_BATTERY_SOC,
     CONF_INVERT_GRID_POWER,
 )
 _GLOBAL_ADVANCED_KEYS = (
     CONF_GRID_RESERVE_KW, CONF_GRID_SENSOR_TIMEOUT_S,
-    CONF_GRID_GROWTH_MARGIN_KW, CONF_GRID_RECOVERY_HOLD_S,
-    CONF_INVERT_PV_POWER, CONF_INVERT_BATTERY_POWER,
-    CONF_PV_SENSOR_TIMEOUT_S, CONF_BATTERY_SENSOR_TIMEOUT_S,
-    CONF_BATTERY_SOC_SENSOR_TIMEOUT_S,
-    CONF_BATTERY_RESUME_HYSTERESIS_SOC,
-    CONF_HYBRID_PROBE_STEP_KW, CONF_HYBRID_PROBE_SETTLE_S,
-    CONF_HYBRID_PROBE_RETRY_S, CONF_HYBRID_GRID_TOLERANCE_KW,
+    CONF_GRID_GROWTH_MARGIN_KW, CONF_INVERT_PV_POWER,
+    CONF_PV_SENSOR_TIMEOUT_S,
+    # Optional READ-ONLY battery diagnostics, not a controller input.
+    CONF_BATTERY_POWER_ENTITY, CONF_BATTERY_SOC_ENTITY,
+    CONF_BATTERY_SOC_SCALE, CONF_INVERT_BATTERY_POWER,
+    CONF_BATTERY_SENSOR_TIMEOUT_S, CONF_BATTERY_SOC_SENSOR_TIMEOUT_S,
 )
 _GLOBAL_DEFAULTS = {
     CONF_GRID_RESERVE_KW: DEFAULT_GRID_RESERVE_KW,
@@ -435,10 +433,7 @@ def _global_expert_schema(values: dict[str, Any]) -> probatio.Schema:
 def _merge_global_basic(old: dict[str, Any], submitted: dict[str, Any]) -> dict[str, Any]:
     """Preserve hidden expert choices, allow clearing optional sensors."""
     result = {**_GLOBAL_DEFAULTS, **old, **submitted}
-    for key in (
-        CONF_PV_POWER_ENTITY, CONF_BATTERY_POWER_ENTITY,
-        CONF_BATTERY_SOC_ENTITY, CONF_SURPLUS_MIN_BATTERY_SOC,
-    ):
+    for key in (CONF_PV_POWER_ENTITY,):
         if key not in submitted:
             result[key] = None
     result.pop(_WIZARD_EXPERT, None)
@@ -622,7 +617,6 @@ def _validate_global_configuration(user_input: dict[str, Any]) -> dict[str, str]
 
     grid_stability_parameters = (
         (CONF_GRID_GROWTH_MARGIN_KW, DEFAULT_GRID_GROWTH_MARGIN_KW),
-        (CONF_GRID_RECOVERY_HOLD_S, DEFAULT_GRID_RECOVERY_HOLD_S),
     )
     for key, default in grid_stability_parameters:
         try:
@@ -631,40 +625,6 @@ def _validate_global_configuration(user_input: dict[str, Any]) -> dict[str, str]
                 errors[key] = "invalid_number"
         except (ValueError, TypeError):
             errors[key] = "invalid_number"
-
-    hybrid_parameters = (
-        (CONF_PV_SENSOR_TIMEOUT_S, DEFAULT_PV_SENSOR_TIMEOUT_S, True),
-        (CONF_BATTERY_SENSOR_TIMEOUT_S, DEFAULT_BATTERY_SENSOR_TIMEOUT_S, True),
-        (CONF_BATTERY_SOC_SENSOR_TIMEOUT_S, DEFAULT_BATTERY_SOC_SENSOR_TIMEOUT_S, True),
-        (CONF_BATTERY_RESUME_HYSTERESIS_SOC, DEFAULT_BATTERY_RESUME_HYSTERESIS_SOC, False),
-        (CONF_HYBRID_PROBE_STEP_KW, DEFAULT_HYBRID_PROBE_STEP_KW, False),
-        (CONF_HYBRID_PROBE_SETTLE_S, DEFAULT_HYBRID_PROBE_SETTLE_S, True),
-        (CONF_HYBRID_PROBE_RETRY_S, DEFAULT_HYBRID_PROBE_RETRY_S, False),
-        (CONF_HYBRID_GRID_TOLERANCE_KW, DEFAULT_HYBRID_GRID_TOLERANCE_KW, False),
-    )
-    for key, default, positive_required in hybrid_parameters:
-        try:
-            value = float(user_input.get(key, default))
-            if not isfinite(value) or value < 0 or (positive_required and value == 0):
-                errors[key] = "invalid_number"
-        except (ValueError, TypeError):
-            errors[key] = "invalid_number"
-
-    try:
-        soc_resume = float(user_input.get(
-            CONF_BATTERY_RESUME_HYSTERESIS_SOC,
-            DEFAULT_BATTERY_RESUME_HYSTERESIS_SOC,
-        ))
-        if soc_resume > 100:
-            errors[CONF_BATTERY_RESUME_HYSTERESIS_SOC] = "invalid_number"
-    except (TypeError, ValueError):
-        errors[CONF_BATTERY_RESUME_HYSTERESIS_SOC] = "invalid_number"
-
-    battery_soc_entity = user_input.get(CONF_BATTERY_SOC_ENTITY)
-    surplus_min_soc = user_input.get(CONF_SURPLUS_MIN_BATTERY_SOC)
-
-    if surplus_min_soc is not None and not battery_soc_entity:
-        errors[CONF_SURPLUS_MIN_BATTERY_SOC] = "soc_limit_requires_soc_entity"
 
     selected_entities = [
         user_input.get(CONF_GRID_POWER_ENTITY),
