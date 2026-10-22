@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
+from math import isfinite
 import logging
 from time import monotonic
 from typing import Any
@@ -39,10 +40,13 @@ from .const import (
     CONF_BATTERY_SOC_ENTITY,
     CONF_BATTERY_SOC_SCALE,
     CONF_DEFAULT_REQUEST_KW,
+    CONF_DEMAND_MODE, DEMAND_MODE_ALWAYS, DEMAND_MODE_SENSOR,
+    DEMAND_MODE_DISABLED,
     CONF_ENABLE_ENTITY,
     CONF_GRID_LIMIT_KW,
     CONF_GRID_POWER_ENTITY,
     CONF_GRID_RESERVE_KW,
+    CONF_GRID_GROWTH_MARGIN_KW,
     CONF_GRID_SENSOR_TIMEOUT_S,
     CONF_INVERT_ACTUAL_POWER,
     CONF_INVERT_BATTERY_POWER,
@@ -55,6 +59,11 @@ from .const import (
     CONF_MIN_OFF_TIME_S,
     CONF_MIN_ON_TIME_S,
     CONF_OUTPUT_ENTITY,
+    CONF_OUTPUT_TRANSPORT,
+    CONF_DIRECT_REFRESH_S,
+    DEFAULT_DIRECT_REFRESH_S,
+    DEFAULT_OUTPUT_TRANSPORT,
+    OUTPUT_TRANSPORT_ENTITY,
     CONF_PEAK_SHAVING_ENABLED,
     CONF_PRIORITY,
     CONF_PV_POWER_ENTITY,
@@ -63,11 +72,17 @@ from .const import (
     CONF_START_MARGIN_KW,
     CONF_STOP_MARGIN_KW,
     CONF_SURPLUS_ENABLED,
-    CONF_SURPLUS_MIN_BATTERY_SOC,
+    CONF_PV_SENSOR_TIMEOUT_S,
+    CONF_BATTERY_SENSOR_TIMEOUT_S,
+    CONF_BATTERY_SOC_SENSOR_TIMEOUT_S,
     DEFAULT_ACTUAL_SENSOR_TIMEOUT_S,
     DEFAULT_BATTERY_SOC_SCALE,
     DEFAULT_DEFAULT_REQUEST_KW,
     DEFAULT_GRID_SENSOR_TIMEOUT_S,
+    DEFAULT_GRID_GROWTH_MARGIN_KW,
+    DEFAULT_PV_SENSOR_TIMEOUT_S,
+    DEFAULT_BATTERY_SENSOR_TIMEOUT_S,
+    DEFAULT_BATTERY_SOC_SENSOR_TIMEOUT_S,
     DEFAULT_INVERT_ACTUAL_POWER,
     DEFAULT_MAX_KW,
     DEFAULT_MIN_KW,
@@ -148,6 +163,9 @@ class PowerManagerCoordinatorData:
     output_healthy: bool
     last_output_error: str | None
     loads: dict[str, LoadDiagnostic]
+    # Optional read-only telemetry. Never fed back into the controller.
+    battery_power_kw: float | None = None
+    battery_soc_pct: float | None = None
 
 
 class PowerManagerCoordinator(DataUpdateCoordinator[PowerManagerCoordinatorData]):
@@ -178,6 +196,7 @@ class PowerManagerCoordinator(DataUpdateCoordinator[PowerManagerCoordinatorData]
         self.live_control_enabled = False
         self._tracking_started = False
         self._last_output_error: str | None = None
+        self._direct_last_command: dict[str, tuple[float, float, float]] = {}
 
     @property
     def settings(self) -> dict[str, Any]:
@@ -297,6 +316,16 @@ class PowerManagerCoordinator(DataUpdateCoordinator[PowerManagerCoordinatorData]
             raise MeasurementError("Netzsensor-Timeout muss größer als 0 sein.")
         return timeout_s
 
+    def _aux_sensor_timeout_s(self, config_key: str, default_s: float) -> float:
+        """Use individual configured freshness for PV, battery and SOC."""
+        try:
+            value = float(self.settings.get(config_key, default_s))
+        except (TypeError, ValueError) as err:
+            raise MeasurementError(f"Ungültiger Sensor-Timeout: {config_key}") from err
+        if not isfinite(value) or value <= 0.0:
+            raise MeasurementError(f"Ungültiger Sensor-Timeout: {config_key}")
+        return value
+
     def _read_grid_measurement(
         self,
     ) -> tuple[float | None, float | None, str | None]:
@@ -339,6 +368,9 @@ class PowerManagerCoordinator(DataUpdateCoordinator[PowerManagerCoordinatorData]
         entity_key: str,
         invert_key: str,
         label: str,
+        require_fresh: bool = False,
+        timeout_key: str = CONF_GRID_SENSOR_TIMEOUT_S,
+        default_timeout_s: float = DEFAULT_GRID_SENSOR_TIMEOUT_S,
     ) -> float:
         """Read an optional global power entity in kW."""
 
@@ -348,6 +380,16 @@ class PowerManagerCoordinator(DataUpdateCoordinator[PowerManagerCoordinatorData]
             return 0.0
 
         state = self._get_state(entity_id, label=label)
+        if require_fresh:
+            age_s = measurement_age_seconds(
+                state.last_reported, datetime.now(timezone.utc)
+            )
+            timeout_s = self._aux_sensor_timeout_s(timeout_key, default_timeout_s)
+            if not measurement_is_fresh(age_s, timeout_s):
+                raise MeasurementError(
+                    f"{label}: Messwert ist {age_s:.1f} s alt "
+                    f"(Timeout {timeout_s:g} s)."
+                )
         raw_value, unit = self._state_value_and_unit(state, label=label)
         return power_to_kw(
             raw_value,
@@ -365,6 +407,19 @@ class PowerManagerCoordinator(DataUpdateCoordinator[PowerManagerCoordinatorData]
             return None
 
         state = self._get_state(entity_id, label="Batterie-SOC")
+        if self.operating_mode == OperatingMode.SURPLUS:
+            age_s = measurement_age_seconds(
+                state.last_reported, datetime.now(timezone.utc)
+            )
+            timeout_s = self._aux_sensor_timeout_s(
+                CONF_BATTERY_SOC_SENSOR_TIMEOUT_S,
+                DEFAULT_BATTERY_SOC_SENSOR_TIMEOUT_S,
+            )
+            if not measurement_is_fresh(age_s, timeout_s):
+                raise MeasurementError(
+                    f"Batterie-SOC: Messwert ist {age_s:.1f} s alt "
+                    f"(Timeout {timeout_s:g} s)."
+                )
         raw_value, unit = self._state_value_and_unit(state, label="Batterie-SOC")
         return percentage_from_scale(
             raw_value,
@@ -372,22 +427,6 @@ class PowerManagerCoordinator(DataUpdateCoordinator[PowerManagerCoordinatorData]
             scale=str(values.get(CONF_BATTERY_SOC_SCALE, DEFAULT_BATTERY_SOC_SCALE)),
             label="Batterie-SOC",
         )
-
-    def _read_surplus_min_soc(self) -> float | None:
-        """Return optional minimum battery SOC policy."""
-
-        raw_value = self.settings.get(CONF_SURPLUS_MIN_BATTERY_SOC)
-        if raw_value is None:
-            return None
-
-        try:
-            value = float(raw_value)
-        except (TypeError, ValueError) as err:
-            raise MeasurementError("Mindest-SOC ist keine Zahl.") from err
-
-        if not 0.0 <= value <= 100.0:
-            raise MeasurementError("Mindest-SOC muss zwischen 0 und 100 % liegen.")
-        return value
 
     def _read_optional_source_state(
         self,
@@ -432,7 +471,15 @@ class PowerManagerCoordinator(DataUpdateCoordinator[PowerManagerCoordinatorData]
                     input_errors.append(str(err))
 
             requested_kw = 0.0
-            request_entity = data.get(CONF_REQUEST_ENTITY)
+            demand_mode = data.get(
+                CONF_DEMAND_MODE,
+                DEMAND_MODE_SENSOR if data.get(CONF_REQUEST_ENTITY)
+                else DEMAND_MODE_ALWAYS,
+            )
+            request_entity = (
+                data.get(CONF_REQUEST_ENTITY)
+                if demand_mode == DEMAND_MODE_SENSOR else None
+            )
             try:
                 raw_request, request_unit = self._read_optional_source_state(
                     str(request_entity) if request_entity else None,
@@ -451,6 +498,11 @@ class PowerManagerCoordinator(DataUpdateCoordinator[PowerManagerCoordinatorData]
                 # Unknown demand must never cause a load to be turned on.
                 requested_kw = 0.0
                 input_errors.append(str(err))
+            if demand_mode == DEMAND_MODE_DISABLED:
+                requested_kw = 0.0
+            elif demand_mode == DEMAND_MODE_SENSOR and not request_entity:
+                requested_kw = 0.0
+                input_errors.append("Bedarfssensor fehlt.")
 
             actual_kw: float | None = None
             actual_age_s: float | None = None
@@ -571,11 +623,18 @@ class PowerManagerCoordinator(DataUpdateCoordinator[PowerManagerCoordinatorData]
 
         for subentry_id, diagnostic in diagnostics.items():
             load_data = data_by_id.get(subentry_id)
-            if load_data is None or not load_data.get(CONF_OUTPUT_ENTITY):
+            if load_data is None:
+                continue
+            if (
+                load_data.get(CONF_OUTPUT_TRANSPORT, DEFAULT_OUTPUT_TRANSPORT)
+                == OUTPUT_TRANSPORT_ENTITY
+                and not load_data.get(CONF_OUTPUT_ENTITY)
+            ):
                 continue
 
             try:
                 command = await async_apply_safe_state(self.hass, load_data)
+                self._direct_last_command.pop(subentry_id, None)
                 self._apply_command_diagnostic(diagnostic, command, commanded_target_kw=0.0)
             except (ActuatorError, HomeAssistantError, ValueError) as err:
                 diagnostic.command_error = str(err)
@@ -592,7 +651,10 @@ class PowerManagerCoordinator(DataUpdateCoordinator[PowerManagerCoordinatorData]
     ) -> None:
         """Store output command information in one diagnostic record."""
 
-        diagnostic.commanded_target_kw = commanded_target_kw
+        diagnostic.commanded_target_kw = (
+            command.effective_target_kw
+            if command.effective_target_kw is not None else commanded_target_kw
+        )
         diagnostic.command_value = command.numeric_value
         diagnostic.command_unit = command.numeric_unit
         diagnostic.command_enabled = command.enabled
@@ -632,18 +694,47 @@ class PowerManagerCoordinator(DataUpdateCoordinator[PowerManagerCoordinatorData]
             if load_data is None:
                 continue
 
-            if not load_data.get(CONF_OUTPUT_ENTITY):
+            if (
+                load_data.get(CONF_OUTPUT_TRANSPORT, DEFAULT_OUTPUT_TRANSPORT)
+                == OUTPUT_TRANSPORT_ENTITY
+                and not load_data.get(CONF_OUTPUT_ENTITY)
+            ):
                 error = "Kein Ausgang konfiguriert."
                 diagnostic.command_error = error
                 errors.append(f"{diagnostic.name}: {error}")
                 continue
 
             try:
+                previous_kw = self.controller_state.last_targets_kw.get(
+                    diagnostic.name, 0.0,
+                )
+                transport = load_data.get(CONF_OUTPUT_TRANSPORT, DEFAULT_OUTPUT_TRANSPORT)
+                if transport != OUTPUT_TRANSPORT_ENTITY:
+                    previous_direct = self._direct_last_command.get(subentry_id)
+                    requested_kw = diagnostic.calculated_target_kw
+                    refresh_s = float(load_data.get(
+                        CONF_DIRECT_REFRESH_S, DEFAULT_DIRECT_REFRESH_S,
+                    ))
+                    if (
+                        previous_direct is not None
+                        and abs(previous_direct[0] - requested_kw) <= EPSILON
+                        and monotonic() - previous_direct[1] < refresh_s
+                    ):
+                        diagnostic.commanded_target_kw = previous_direct[2]
+                        continue
                 command = await async_apply_target(
                     self.hass,
                     load_data,
                     diagnostic.calculated_target_kw,
                 )
+                if transport != OUTPUT_TRANSPORT_ENTITY:
+                    self._direct_last_command[subentry_id] = (
+                        diagnostic.calculated_target_kw,
+                        monotonic(),
+                        command.effective_target_kw
+                        if command.effective_target_kw is not None
+                        else diagnostic.calculated_target_kw,
+                    )
                 self._apply_command_diagnostic(
                     diagnostic,
                     command,
@@ -681,6 +772,7 @@ class PowerManagerCoordinator(DataUpdateCoordinator[PowerManagerCoordinatorData]
             # state so recovery can never reuse a stale pre-fail-safe target.
             self.live_control_enabled = False
             self.controller_state = ControllerState()
+            self._direct_last_command.clear()
 
         combined_reason = reason
         if output_error:
@@ -733,80 +825,41 @@ class PowerManagerCoordinator(DataUpdateCoordinator[PowerManagerCoordinatorData]
                 entity_key=CONF_PV_POWER_ENTITY,
                 invert_key=CONF_INVERT_PV_POWER,
                 label="PV-Leistung",
+                require_fresh=(self.operating_mode == OperatingMode.SURPLUS),
+                timeout_key=CONF_PV_SENSOR_TIMEOUT_S,
+                default_timeout_s=DEFAULT_PV_SENSOR_TIMEOUT_S,
             )
         except MeasurementError as err:
             _LOGGER.warning("PV-Messwert ungültig; verwende 0 kW: %s", err)
             pv_kw = 0.0
 
+        # Battery is autonomous. Readings are retained for informational
+        # HA sensors only and never influence PMAX or PV-surplus decisions.
         try:
             battery_kw = self._read_optional_power_kw(
                 entity_key=CONF_BATTERY_POWER_ENTITY,
                 invert_key=CONF_INVERT_BATTERY_POWER,
                 label="Batterieleistung",
+                require_fresh=False,
             )
-        except MeasurementError as err:
-            if self.operating_mode == OperatingMode.SURPLUS:
-                return await self._async_fail_safe_data(
-                    reason=f"Batterieleistung im Überschussbetrieb ungültig: {err}",
-                    grid_kw=grid_kw,
-                    age_s=grid_age_s,
-                    diagnostics=diagnostics,
-                    grid_measurement_healthy=True,
-                )
-            _LOGGER.warning(
-                "Batterieleistung ungültig; verwende im Normalbetrieb 0 kW: %s",
-                err,
-            )
+        except MeasurementError:
             battery_kw = 0.0
-
         try:
             battery_soc = self._read_battery_soc()
-            surplus_min_battery_soc = self._read_surplus_min_soc()
-        except MeasurementError as err:
-            if self.operating_mode == OperatingMode.SURPLUS:
-                return await self._async_fail_safe_data(
-                    reason=f"Batterie-SOC im Überschussbetrieb ungültig: {err}",
-                    grid_kw=grid_kw,
-                    age_s=grid_age_s,
-                    diagnostics=diagnostics,
-                    grid_measurement_healthy=True,
-                )
-            _LOGGER.warning(
-                "Batterie-SOC ungültig; SOC-Funktion im Normalbetrieb ignoriert: %s",
-                err,
-            )
+        except MeasurementError:
             battery_soc = None
-            surplus_min_battery_soc = None
-
-        # V3.0.6 battery reserve policy:
-        # SURPLUS is only active while the battery SOC is strictly above
-        # the configured reserve. At or below the reserve we immediately
-        # return to NORMAL. This is a mode transition, not a fail-safe.
-        if (
-            self.operating_mode == OperatingMode.SURPLUS
-            and surplus_min_battery_soc is not None
-            and battery_soc is not None
-            and battery_soc <= surplus_min_battery_soc
-        ):
-            _LOGGER.info(
-                "Batterie-SOC %.1f %% hat die Überschussreserve %.1f %% erreicht; "
-                "wechsle automatisch auf NORMAL.",
-                battery_soc,
-                surplus_min_battery_soc,
-            )
-            self.operating_mode = OperatingMode.NORMAL
 
         try:
             inputs = ControllerInputs(
                 grid_kw=grid_kw,
                 grid_limit_kw=float(values[CONF_GRID_LIMIT_KW]),
                 grid_reserve_kw=float(values.get(CONF_GRID_RESERVE_KW, 0.0)),
+                grid_growth_margin_kw=float(values.get(
+                    CONF_GRID_GROWTH_MARGIN_KW, DEFAULT_GRID_GROWTH_MARGIN_KW,
+                )),
                 pv_kw=pv_kw,
-                battery_soc=battery_soc,
-                battery_kw=battery_kw,
                 mode=self.operating_mode,
                 now_s=monotonic(),
-                surplus_min_battery_soc=surplus_min_battery_soc,
             )
 
             result = run_controller(
@@ -845,6 +898,7 @@ class PowerManagerCoordinator(DataUpdateCoordinator[PowerManagerCoordinatorData]
                 # without actual-power feedback.
                 self.live_control_enabled = False
                 self.controller_state = ControllerState()
+                self._direct_last_command.clear()
                 return PowerManagerCoordinatorData(
                     inputs=inputs,
                     result=result,
@@ -859,6 +913,25 @@ class PowerManagerCoordinator(DataUpdateCoordinator[PowerManagerCoordinatorData]
                     last_output_error=output_error,
                     loads=diagnostics,
                 )
+
+        # For devices lacking an Istleistung sensor, use the PHYSICAL command
+        # accepted by the output adapter (after W/kW/A step rounding) as the
+        # next-cycle estimate. Keep it distinct from the calculated request.
+        # A command is not an actual-power measurement; only the grid meter
+        # confirms the net effect in the following cycles.
+        if self.live_control_enabled:
+            for diagnostic in diagnostics.values():
+                actual_command_kw = diagnostic.commanded_target_kw
+                if actual_command_kw is None:
+                    continue
+                result.state.last_targets_kw[diagnostic.name] = actual_command_kw
+                runtime = result.state.load_states.get(diagnostic.name)
+                if runtime is not None:
+                    physical_on = actual_command_kw > EPSILON
+                    if runtime.is_on != physical_on:
+                        runtime.last_switch_s = inputs.now_s
+                    runtime.is_on = physical_on
+                    runtime.last_target_kw = actual_command_kw
 
         # Controller state advances only after all measurements and calculations
         # were valid. In live mode it also requires successful output commands.
@@ -878,6 +951,8 @@ class PowerManagerCoordinator(DataUpdateCoordinator[PowerManagerCoordinatorData]
             output_healthy=True,
             last_output_error=None,
             loads=diagnostics,
+            battery_power_kw=battery_kw,
+            battery_soc_pct=battery_soc,
         )
 
     async def async_enable_live_control(self) -> None:
@@ -900,11 +975,13 @@ class PowerManagerCoordinator(DataUpdateCoordinator[PowerManagerCoordinatorData]
             raise HomeAssistantError("Es ist noch kein regelbarer Verbraucher konfiguriert.")
 
         errors: list[str] = []
-        for _subentry_id, load_data in load_subentries:
+        for subentry_id, load_data in load_subentries:
+            # Actual-power sensors are optional. Grid measurement is mandatory.
+            # Actuator validation still protects all configured outputs.
             try:
                 validate_actuator(self.hass, load_data)
             except ActuatorError as err:
-                errors.append(f"{load_data.get(CONF_LOAD_NAME, 'Verbraucher')}: {err}")
+                errors.append(f"{name}: {err}")
 
         if errors:
             raise HomeAssistantError("Live-Regelung nicht freigegeben: " + " | ".join(errors))
@@ -913,6 +990,7 @@ class PowerManagerCoordinator(DataUpdateCoordinator[PowerManagerCoordinatorData]
         # physical commands were sent. Never use those values as estimates on
         # the first live cycle; start from a clean controller state.
         self.controller_state = ControllerState()
+        self._direct_last_command.clear()
         self.live_control_enabled = True
         await self.async_refresh()
 
@@ -936,6 +1014,7 @@ class PowerManagerCoordinator(DataUpdateCoordinator[PowerManagerCoordinatorData]
         # Clear state before entering dry-run so unknown actual-power values are
         # never inferred from commands that were deliberately withdrawn.
         self.controller_state = ControllerState()
+        self._direct_last_command.clear()
         await self.async_refresh()
 
     async def async_set_operating_mode(self, mode: OperatingMode) -> None:

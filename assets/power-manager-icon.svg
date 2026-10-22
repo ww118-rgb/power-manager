@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><!-- Power Manager original artwork; generate local HA brand + card image -->
+<g fill="none" stroke="#062A3D" stroke-width="9" stroke-linecap="round" stroke-linejoin="round">
+<circle cx="128" cy="128" r="112" fill="#0b3146"/><path d="M54 194A93 93 0 0 1 57 57" stroke="#22D7B0" stroke-width="12"/><path d="M196 59A93 93 0 0 1 199 196" stroke="#18B9DB" stroke-width="12"/>
+<circle cx="128" cy="128" r="55" fill="#07364d" stroke="#eaf9fb" stroke-width="7"/>
+<path d="M139 91 102 139h32l-13 33 40-50h-32z" fill="#20D7C3" stroke="#eaf9fb" stroke-width="3"/>
+<circle cx="128" cy="37" r="27" fill="#07364d" stroke="#eaf9fb" stroke-width="5"/>
+<path d="M111 45h34l-6-14h-22z" fill="#eaf9fb" stroke="none"/><path d="M116 38h24M128 31v14" stroke="#07364d" stroke-width="2"/>
+<circle cx="48" cy="202" r="29" fill="#07364d" stroke="#eaf9fb" stroke-width="5"/>
+<rect x="35" y="186" width="26" height="33" rx="4" fill="none" stroke="#eaf9fb" stroke-width="4"/><path d="M44 183h8" stroke="#eaf9fb" stroke-width="3"/><path d="M41 195h15M41 202h15M41 209h15" stroke="#22D7B0" stroke-width="5"/>
+<circle cx="208" cy="202" r="29" fill="#07364d" stroke="#eaf9fb" stroke-width="5"/>
+<path d="M208 181l-17 38m17-38 17 38m-24-24h14m-22 14h30m-24-13 18 13m-18 0 18-13" stroke="#eaf9fb" stroke-width="3"/>
+</g></svg>

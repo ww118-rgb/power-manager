@@ -120,29 +120,42 @@ async def async_migrate_entry(
     hass: HomeAssistant,
     entry: ConfigEntry,
 ) -> bool:
-    """Migrate older Power Manager config entries to the V3 schema."""
+    """Upgrade to the single V4.0 policy without discarding device settings.
 
-    from .const import (
-        CONF_BATTERY_SOC_SCALE,
-        DEFAULT_BATTERY_SOC_SCALE,
-    )
+    Old battery/SOC controls, hybrid probing and global cooldown are no
+    longer meaningful. Only those abandoned keys are dropped. Battery
+    measurement entities remain as optional read-only telemetry.
+    """
+    from .const import CONF_BATTERY_SOC_SCALE, DEFAULT_BATTERY_SOC_SCALE
 
-    if entry.version > 4:
+    if entry.version > 5:
         _LOGGER.error(
-            "Cannot migrate Power Manager config entry from newer version %s",
+            "Cannot migrate Power Manager configuration from version %s",
             entry.version,
         )
         return False
+    if entry.version == 5:
+        return True
 
-    if entry.version < 4:
-        new_data = dict(entry.data)
-        new_data.setdefault(CONF_BATTERY_SOC_SCALE, DEFAULT_BATTERY_SOC_SCALE)
-        hass.config_entries.async_update_entry(
-            entry,
-            data=new_data,
-            version=4,
-            minor_version=0,
-        )
-        _LOGGER.info("Migrated Power Manager config entry to version 4")
-
+    retired = {
+        "surplus_min_battery_soc",
+        "battery_resume_hysteresis_soc",
+        "hybrid_probe_step_kw",
+        "hybrid_probe_settle_s",
+        "hybrid_probe_retry_s",
+        "hybrid_grid_tolerance_kw",
+        "grid_recovery_hold_s",
+        "feedback_tolerance_kw",
+    }
+    new_data = {key: val for key, val in entry.data.items() if key not in retired}
+    new_options = {key: val for key, val in entry.options.items() if key not in retired}
+    new_data.setdefault(CONF_BATTERY_SOC_SCALE, DEFAULT_BATTERY_SOC_SCALE)
+    hass.config_entries.async_update_entry(
+        entry,
+        data=new_data,
+        options=new_options,
+        version=5,
+        minor_version=0,
+    )
+    _LOGGER.info("Migrated Power Manager to clean V4.0 configuration")
     return True

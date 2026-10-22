@@ -2,7 +2,7 @@
 
 DOMAIN = "power_manager"
 NAME = "Power Manager"
-VERSION = "3.1.1"
+VERSION = "4.0.0"
 
 SUBENTRY_TYPE_LOAD = "load"
 
@@ -10,12 +10,15 @@ SUBENTRY_TYPE_LOAD = "load"
 CONF_GRID_POWER_ENTITY = "grid_power_entity"
 CONF_GRID_LIMIT_KW = "grid_limit_kw"
 CONF_GRID_RESERVE_KW = "grid_reserve_kw"
+CONF_GRID_GROWTH_MARGIN_KW = "grid_growth_margin_kw"
 CONF_GRID_SENSOR_TIMEOUT_S = "grid_sensor_timeout_s"
 CONF_PV_POWER_ENTITY = "pv_power_entity"
 CONF_BATTERY_POWER_ENTITY = "battery_power_entity"
 CONF_BATTERY_SOC_ENTITY = "battery_soc_entity"
 CONF_BATTERY_SOC_SCALE = "battery_soc_scale"
-CONF_SURPLUS_MIN_BATTERY_SOC = "surplus_min_battery_soc"
+CONF_PV_SENSOR_TIMEOUT_S = "pv_sensor_timeout_s"
+CONF_BATTERY_SENSOR_TIMEOUT_S = "battery_sensor_timeout_s"
+CONF_BATTERY_SOC_SENSOR_TIMEOUT_S = "battery_soc_sensor_timeout_s"
 CONF_INVERT_GRID_POWER = "invert_grid_power"
 CONF_INVERT_PV_POWER = "invert_pv_power"
 CONF_INVERT_BATTERY_POWER = "invert_battery_power"
@@ -27,6 +30,12 @@ CONF_PRIORITY = "priority"
 CONF_MIN_KW = "min_kw"
 CONF_MAX_KW = "max_kw"
 CONF_DEFAULT_REQUEST_KW = "default_request_kw"
+# Explicit demand selection. Legacy loads infer the mode from the request entity.
+CONF_DEMAND_MODE = "demand_mode"
+DEMAND_MODE_ALWAYS = "always"
+DEMAND_MODE_SENSOR = "sensor"
+DEMAND_MODE_DISABLED = "disabled"
+DEMAND_MODES = (DEMAND_MODE_ALWAYS, DEMAND_MODE_SENSOR, DEMAND_MODE_DISABLED)
 CONF_ACTUAL_POWER_ENTITY = "actual_power_entity"
 CONF_INVERT_ACTUAL_POWER = "invert_actual_power"
 CONF_ACTUAL_SENSOR_TIMEOUT_S = "actual_sensor_timeout_s"
@@ -36,6 +45,33 @@ CONF_OUTPUT_ENTITY = "output_entity"
 CONF_ENABLE_ENTITY = "enable_entity"
 CONF_OUTPUT_UNIT = "output_unit"
 CONF_SAFE_OUTPUT_VALUE = "safe_output_value"
+# Optional vendor-specific numeric command profiles; supported via
+# Home Assistant entity, MQTT or Modbus transport.
+CONF_OUTPUT_VALUE_MODE = "output_value_mode"
+CONF_OUTPUT_SCALE = "output_scale"
+CONF_OUTPUT_OFFSET = "output_offset"
+CONF_OUTPUT_FORBIDDEN_VALUE = "output_forbidden_value"
+CONF_EVSE_ZERO_UNLIMITED = "evse_zero_unlimited"
+CONF_OUTPUT_STEPS_JSON = "output_steps_json"
+CONF_OUTPUT_TRANSPORT = "output_transport"
+CONF_MODBUS_HOST = "modbus_host"
+CONF_MODBUS_PORT = "modbus_port"
+CONF_MODBUS_UNIT_ID = "modbus_unit_id"
+CONF_MODBUS_REGISTER = "modbus_register"
+CONF_MODBUS_DATA_TYPE = "modbus_data_type"
+CONF_MODBUS_BYTE_ORDER = "modbus_byte_order"
+CONF_MODBUS_FUNCTION = "modbus_function"
+CONF_MODBUS_TIMEOUT_S = "modbus_timeout_s"
+CONF_MQTT_TOPIC = "mqtt_topic"
+CONF_MQTT_QOS = "mqtt_qos"
+CONF_MQTT_RETAIN = "mqtt_retain"
+CONF_MQTT_PAYLOAD_TEMPLATE = "mqtt_payload_template"
+CONF_MQTT_ON_PAYLOAD = "mqtt_on_payload"
+CONF_MQTT_OFF_PAYLOAD = "mqtt_off_payload"
+CONF_SWITCH_ON_CODE = "switch_on_code"
+CONF_SWITCH_OFF_CODE = "switch_off_code"
+CONF_DEVICE_COMMANDS_CONFIRMED = "device_commands_confirmed"
+CONF_DIRECT_REFRESH_S = "direct_refresh_s"
 CONF_PEAK_SHAVING_ENABLED = "peak_shaving_enabled"
 CONF_SURPLUS_ENABLED = "surplus_enabled"
 CONF_START_MARGIN_KW = "start_margin_kw"
@@ -50,15 +86,41 @@ CONF_EVSE_VOLTAGE_V = "evse_voltage_v"
 CONF_EVSE_MIN_CURRENT_A = "evse_min_current_a"
 CONF_EVSE_MAX_CURRENT_A = "evse_max_current_a"
 CONF_EVSE_PAUSE_CURRENT_A = "evse_pause_current_a"
+# EVSE command format is independent of the transport and of the kW budget.
+CONF_EVSE_OUTPUT_FORMAT = "evse_output_format"
+CONF_EVSE_CURRENT_STEP_A = "evse_current_step_a"
+CONF_EVSE_POWER_STEP_W = "evse_power_step_w"
+CONF_EVSE_PAUSE_POWER_VALUE = "evse_pause_power_value"
 
 LOAD_TYPE_MODULATING = "modulating"
 LOAD_TYPE_SWITCH = "switch"
 LOAD_TYPE_EVSE = "evse"
+EVSE_OUTPUT_AUTO = "auto"
+EVSE_OUTPUT_AMPERE = "A"
+EVSE_OUTPUT_WATT = "W"
+EVSE_OUTPUT_KW = "kW"
+EVSE_OUTPUT_FORMATS = (
+    EVSE_OUTPUT_AUTO, EVSE_OUTPUT_AMPERE,
+    EVSE_OUTPUT_WATT, EVSE_OUTPUT_KW,
+)
 LOAD_TYPES = (
     LOAD_TYPE_MODULATING,
     LOAD_TYPE_SWITCH,
     LOAD_TYPE_EVSE,
 )
+
+OUTPUT_VALUE_MODE_POWER = "power"
+OUTPUT_VALUE_MODE_LINEAR = "linear"
+OUTPUT_VALUE_MODE_STEPS = "steps"
+OUTPUT_TRANSPORT_ENTITY = "entity"
+OUTPUT_TRANSPORT_MODBUS = "modbus_tcp"
+OUTPUT_TRANSPORT_MQTT = "mqtt"
+OUTPUT_TRANSPORTS = (
+    OUTPUT_TRANSPORT_ENTITY, OUTPUT_TRANSPORT_MODBUS, OUTPUT_TRANSPORT_MQTT,
+)
+MODBUS_DATA_TYPES = ("float32", "uint16", "int16", "uint32", "int32")
+MODBUS_BYTE_ORDERS = ("ABCD", "BADC", "CDAB", "DCBA")
+OUTPUT_VALUE_MODES = (OUTPUT_VALUE_MODE_POWER, OUTPUT_VALUE_MODE_LINEAR, OUTPUT_VALUE_MODE_STEPS)
 
 OUTPUT_UNIT_AUTO = "auto"
 OUTPUT_UNIT_W = "W"
@@ -79,7 +141,13 @@ BATTERY_SOC_SCALES = (
 )
 
 DEFAULT_GRID_RESERVE_KW = 0.0
+# Measurement margin is installation-dependent and configurable.
+# It applies to additional network load only.
+DEFAULT_GRID_GROWTH_MARGIN_KW = 0.3
 DEFAULT_GRID_SENSOR_TIMEOUT_S = 10.0
+DEFAULT_PV_SENSOR_TIMEOUT_S = 10.0
+DEFAULT_BATTERY_SENSOR_TIMEOUT_S = 10.0
+DEFAULT_BATTERY_SOC_SENSOR_TIMEOUT_S = 60.0
 DEFAULT_INVERT_GRID_POWER = False
 DEFAULT_INVERT_PV_POWER = False
 DEFAULT_INVERT_BATTERY_POWER = False
@@ -101,12 +169,38 @@ DEFAULT_MIN_OFF_TIME_S = 0.0
 DEFAULT_SETTLING_TIME_S = 0.0
 DEFAULT_OUTPUT_UNIT = OUTPUT_UNIT_AUTO
 DEFAULT_SAFE_OUTPUT_VALUE = 0.0
+DEFAULT_OUTPUT_VALUE_MODE = OUTPUT_VALUE_MODE_POWER
+DEFAULT_OUTPUT_SCALE = 1.0
+DEFAULT_OUTPUT_OFFSET = 0.0
+DEFAULT_OUTPUT_STEPS_JSON = "[]"
+DEFAULT_OUTPUT_TRANSPORT = OUTPUT_TRANSPORT_ENTITY
+DEFAULT_MODBUS_PORT = 502
+DEFAULT_MODBUS_UNIT_ID = 1
+DEFAULT_MODBUS_DATA_TYPE = "float32"
+DEFAULT_MODBUS_BYTE_ORDER = "ABCD"
+DEFAULT_MODBUS_FUNCTION = 16
+DEFAULT_MODBUS_TIMEOUT_S = 3.0
+DEFAULT_MQTT_QOS = 0
+DEFAULT_MQTT_RETAIN = False
+DEFAULT_MQTT_PAYLOAD_TEMPLATE = "{value}"
+DEFAULT_MQTT_ON_PAYLOAD = ""
+DEFAULT_MQTT_OFF_PAYLOAD = ""
+DEFAULT_SWITCH_ON_CODE = 1.0
+DEFAULT_SWITCH_OFF_CODE = 0.0
+DEFAULT_DEVICE_COMMANDS_CONFIRMED = False
+DEFAULT_DIRECT_REFRESH_S = 120.0
+DEFAULT_EVSE_ZERO_UNLIMITED = True
 
 DEFAULT_EVSE_PHASES = 3
 DEFAULT_EVSE_VOLTAGE_V = 230.0
 DEFAULT_EVSE_MIN_CURRENT_A = 6.0
 DEFAULT_EVSE_MAX_CURRENT_A = 16.0
 DEFAULT_EVSE_PAUSE_CURRENT_A = 0.01
+# Old EVSE configurations keep their explicit Ampere interpretation.
+DEFAULT_EVSE_OUTPUT_FORMAT = EVSE_OUTPUT_AMPERE
+DEFAULT_EVSE_CURRENT_STEP_A = 1.0
+DEFAULT_EVSE_POWER_STEP_W = 1000.0
+DEFAULT_EVSE_PAUSE_POWER_VALUE = 0.0
 
 # Technical adapter timings, not installation-specific power values.
 HEARTBEAT_INTERVAL_SECONDS = 5.0

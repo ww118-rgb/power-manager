@@ -11,9 +11,9 @@ def _json(relative: str):
     return json.loads((COMPONENT / relative).read_text(encoding="utf-8"))
 
 
-def test_manifest_and_runtime_version_match_v3():
+def test_manifest_and_runtime_version_match_v4():
     manifest = _json("manifest.json")
-    assert manifest["version"] == "3.1.1"
+    assert manifest["version"] == "4.0.0"
     assert VERSION == manifest["version"]
 
 
@@ -81,22 +81,25 @@ def test_coordinator_load_diagnostic_age_is_wired_to_diagnostic_not_core_model()
 
 def test_load_reconfigure_uses_parent_entry_accessor():
     source = (COMPONENT / "config_flow.py").read_text(encoding="utf-8")
-    reconfigure_block = source[source.index("async def async_step_reconfigure"):source.index("return self.async_show_form", source.index("async def async_step_reconfigure"))]
-    assert "self._get_entry()" in reconfigure_block
+    reconfigure_block = source[source.index("async def async_step_reconfigure"):source.index("async def async_step_load_basics", source.index("async def async_step_reconfigure"))]
+    review_block = source[source.index("async def async_step_load_review"):source.index("def _review_form", source.index("async def async_step_load_review"))]
+    assert "self._get_reconfigure_subentry()" in reconfigure_block
+    assert "self._get_entry()" in review_block
     assert "self._get_reconfigure_entry()" not in reconfigure_block
 
 
-def test_surplus_mode_auto_returns_to_normal_at_reserve_soc():
+def test_autonomous_battery_does_not_block_pv_mode():
     source = (COMPONENT / "coordinator.py").read_text(encoding="utf-8")
-    assert "battery_soc <= surplus_min_battery_soc" in source
-    assert "self.operating_mode = OperatingMode.NORMAL" in source
+    assert "hybrid_battery_assist_enabled=" not in source
+    assert "hybrid_probe_enabled=" not in source
+    assert "battery_kw=" not in source[source.index("inputs = ControllerInputs("):source.index("result = run_controller(")]
 
 
-def test_surplus_core_uses_pv_as_raw_budget():
+def test_surplus_core_uses_grid_export_and_existing_load_not_total_pv():
     source = (COMPONENT / "controller.py").read_text(encoding="utf-8")
-    surplus_block = source[source.index("# V3.0.6:"):source.index("battery_soc_blocking_surplus", source.index("# V3.0.6:"))]
-    assert "inputs.pv_kw" in surplus_block
-    assert "controlled_power_for_calculation_kw\n            - inputs.grid_kw" not in surplus_block
+    assert "export = max(0.0, -inputs.grid_kw)" in source
+    assert "controlled - inputs.grid_kw" in source
+    assert "battery_kw" not in source
 
 
 def test_manifest_classifies_power_manager_as_hub():
@@ -145,3 +148,29 @@ def test_dashboard_card_uses_container_responsive_layout():
     assert "container-type:inline-size" in source
     assert "@container (min-width:560px)" in source
     assert "@container (min-width:820px)" in source
+
+
+def test_v3_3_has_local_ha_brand_images_and_card_logo():
+    """Native brand files must travel with the installed integration."""
+    for name in ("icon.png", "icon@2x.png", "logo.png", "logo@2x.png"):
+        path = COMPONENT / "brand" / name
+        assert path.is_file(), f"Missing local HA brand asset: {name}"
+        assert path.read_bytes().startswith(bytes((137, 80, 78, 71, 13, 10, 26, 10)))
+    assert (COMPONENT / "frontend" / "power-manager-icon.png").is_file()
+
+
+def test_v3_3_compatible_config_schema_import():
+    source = (COMPONENT / "config_flow.py").read_text(encoding="utf-8")
+    assert "import voluptuous as probatio" in source
+    assert "import probatio\\n" not in source
+
+
+def test_v3_3_requirements_traceability_covers_all_v08_items():
+    """Never silently lose a v0.8 requirement while developing toward 4.0."""
+    import re
+    source = (COMPONENT.parent.parent / "docs" /
+              "anforderungen_v0_8_traceability.md").read_text(encoding="utf-8")
+    found = re.findall(r"^\| REQ-(\d{2}) \|", source, flags=re.MULTILINE)
+    assert found == [f"{i:02d}" for i in range(1, 87)]
+    assert "T01–T106" in source
+    assert "Offen" in source and "Teilweise" in source

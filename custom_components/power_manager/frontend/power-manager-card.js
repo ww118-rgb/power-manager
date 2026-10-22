@@ -1,4 +1,4 @@
-const POWER_MANAGER_CARD_VERSION = "3.1.1";
+const POWER_MANAGER_CARD_VERSION = "4.0.0";
 
 class PowerManagerCard extends HTMLElement {
   constructor() {
@@ -401,7 +401,7 @@ class PowerManagerCard extends HTMLElement {
       "ha-card{overflow:hidden;padding:0;background:var(--ha-card-background,var(--card-background-color,#fff));border-radius:var(--ha-card-border-radius,16px);container-type:inline-size}",
       ".wrap{padding:16px;min-width:0}",
       ".header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}",
-      ".title{display:flex;align-items:center;gap:10px;min-width:0}.title ha-icon{color:var(--primary-color);--mdc-icon-size:28px}.title h2{margin:0;font-size:22px;line-height:1.15}.version{font-size:11px;color:var(--secondary-text-color);margin-top:2px}",
+      ".title{display:flex;align-items:center;gap:10px;min-width:0}.title img.pm-brand{width:32px;height:32px;object-fit:contain;flex-shrink:0}.title h2{margin:0;font-size:22px;line-height:1.15}.version{font-size:11px;color:var(--secondary-text-color);margin-top:2px}",
       ".badge{border-radius:999px;padding:4px 9px;font-size:10px;font-weight:700;white-space:nowrap}.success{background:#d9f5df;color:#177c31}.warning{background:#fff1cc;color:#8b6200}.danger{background:#fde1df;color:#a92a22}.muted{background:var(--divider-color);color:var(--secondary-text-color)}.info{background:#dfeeff;color:#205d9b}",
       ".controls{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:10px}",
       ".control{border:1px solid var(--divider-color);border-radius:12px;padding:10px;min-width:0;background:var(--secondary-background-color)}",
@@ -517,7 +517,8 @@ class PowerManagerCard extends HTMLElement {
       '<div class="wrap">' +
       '<div class="header">' +
       '<div class="title">' +
-      this._icon("mdi:lightning-bolt-circle") +
+      '<img class="pm-brand" alt="" src="/power_manager_frontend/power-manager-icon.png?v=' +
+      POWER_MANAGER_CARD_VERSION + '">' +
       '<div><h2>Power Manager</h2><div class="version">Dashboard Card v' +
       POWER_MANAGER_CARD_VERSION +
       "</div></div></div>" +
@@ -558,7 +559,7 @@ class PowerManagerCard extends HTMLElement {
       '<div class="control"><span class="control-label">Batterie-SOC</span><strong>' +
       this._fmt(soc, "%", 1) +
       '</strong><div class="control-label">' +
-      (this._bool("battery_soc_blocking_surplus") ? "Reserve sperrt Überschuss" : "Reserve frei") +
+      (this._bool("battery_soc_blocking_surplus") ? "Batteriehilfe gesperrt" : "Reserve frei") +
       "</div></div>" +
       "</div>" +
 
@@ -576,7 +577,7 @@ class PowerManagerCard extends HTMLElement {
       '<div class="flow-arrow">↓</div>' +
       '<div class="manager"><strong>Power Manager</strong><small>' +
       (mode === "surplus"
-        ? "PV-Budget " + this._fmt(surplus, "kW", 2)
+        ? "Hybrid-Budget " + this._fmt(surplus, "kW", 2)
         : "Peak-Budget " + this._fmt(this._num("peak_budget"), "kW", 2)) +
       " · verfügbar " +
       this._fmt(available, "kW", 2) +
