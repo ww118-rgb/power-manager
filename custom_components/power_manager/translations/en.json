@@ -1814,7 +1814,7 @@
         },
         "load_review": {
           "title": "Finish – confirm safe setup",
-          "description": "Check device manual and a safe OFF command. Saving does NOT enable Live. Live requires a fresh actual-power reading and valid output.",
+          "description": "Check all commands against the device manual. Device: {device}; connection: {transport}. OFF / 0 kW → {off}. Minimum allowed → {min}. Maximum allowed → {max}. This is a calculated preview, not confirmed device behavior. Saving does NOT turn on live control.",
           "data": {
             "load_name": "Name",
             "load_type": "Load type",
