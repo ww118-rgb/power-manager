@@ -128,14 +128,14 @@ SENSORS: tuple[PowerManagerSensorDescription, ...] = (
     PowerManagerSensorDescription(
         key="battery_power",
         translation_key="battery_power",
-        value_fn=_input_value("battery_kw"),
+        value_fn=lambda data: data.battery_power_kw,
         required_config_key=CONF_BATTERY_POWER_ENTITY,
         **POWER_SENSOR_OPTIONS,
     ),
     PowerManagerSensorDescription(
         key="battery_soc",
         translation_key="battery_soc",
-        value_fn=_input_value("battery_soc"),
+        value_fn=lambda data: data.battery_soc_pct,
         required_config_key=CONF_BATTERY_SOC_ENTITY,
         device_class=SensorDeviceClass.BATTERY,
         native_unit_of_measurement=PERCENTAGE,
@@ -218,12 +218,6 @@ SENSORS: tuple[PowerManagerSensorDescription, ...] = (
         key="estimated_controlled_power",
         translation_key="estimated_controlled_power",
         value_fn=_result_value("estimated_controlled_power_kw"),
-        **POWER_SENSOR_OPTIONS,
-    ),
-    PowerManagerSensorDescription(
-        key="battery_discharge",
-        translation_key="battery_discharge",
-        value_fn=_result_value("battery_discharge_kw"),
         **POWER_SENSOR_OPTIONS,
     ),
     PowerManagerSensorDescription(
