@@ -66,6 +66,10 @@ def _known_power(
     measured = 0.0
     estimated = 0.0
     for load in loads:
+        # Unavailable devices are NOT controllable headroom. Their physical
+        # consumption remains part of the measured, non-controllable base.
+        if not load.available:
+            continue
         if load.actual_kw is not None:
             measured += load.actual_kw
         else:
