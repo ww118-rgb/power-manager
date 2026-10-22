@@ -236,7 +236,13 @@ def _sequence_load_changes(
         or inputs.grid_sample_s > last_sample + 0.05
     )
 
-    if not timer_ready or not meter_ready:
+    # An off/reduction command never needs fresh sensor confirmation to
+    # be issued, once its 5-second pacing interval has elapsed.
+    has_reduction = any(
+        targets.get(load.name, 0.0) < current[load.name] - EPSILON
+        for load in selected
+    )
+    if not timer_ready or (not meter_ready and not has_reduction):
         if safe(current):
             return current, last_action, last_sample
         # Sudden unmetered base change, PV loss or PMAX reduction is not
