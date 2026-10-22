@@ -14,7 +14,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - python: "3.13"
+          - python: "3.14"
             ha_min: "2026.8.0"
             ha_max: "2026.9.0"
           - python: "3.14"
