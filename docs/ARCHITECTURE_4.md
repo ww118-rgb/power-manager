@@ -22,3 +22,12 @@ Canonical HACS-Code: `custom_components/power_manager/{controller,allocator,mode
 ## Sicherheitsgrenzen
 
 Netzsensorzyklen, Geräteantwort und autonome Batterieregelung haben reale Verzögerungen. Softwarebasierte Begrenzung ist kein nullzeitiger Schutz gegen harte Netzanschlussüberlastung. Für harte PMAX-Garantien ist eine unabhängige Netz-/Anlagensicherung notwendig.
+
+## Sequenzieller 5-Sekunden-Schritt
+
+**Neu in RC2:** Nach dem unveränderten Prioritätsallocator und der einmaligen netzbasierten Freigabe steht ein kleiner Schrittwächter. Er führt pro normalem Regelintervall nur eine Verbraucheränderung aus: zuerst höchste Priorität für Erhöhungen, zuerst niedrigste Priorität bei nicht dringendem Absenken. Gleiche Prioritäten werden in stabiler Konfigurationsreihenfolge behandelt.
+
+Im Home-Assistant-Koordinator laufen weiterhin Zustandsereignisse und ein 5-Sekunden-Heartbeat. Der reine Controller speichert nur `last_switch_action_s` und `last_switch_grid_sample_s`; er hat **keine eigene Hintergrundschleife**. Bei `now_s >= last_action_s + 5` und einem nach der Aktion erfolgten Netzsensorbericht darf er eine weitere Erhöhung anordnen. Das schützt vor vorzeitigem Verteilen noch nicht physisch verfügbarer Leistung. Für geplante, unkritische Abschaltungen genügt der Ablauf des Timers.
+
+**Sicherheitsausnahme:** Unmittelbarer PMAX-Überzug, PV-Netzbezug bzw. eine rechnerisch nötige Netzentlastung müssen sofort abgeregelt werden. Die Software kann keinen Hardware-Schutz ersetzen. Wenn der Netzsensor zu langsam/stale ist, wird trotz Timerablauf **keine weitere Zuschaltung** freigegeben. Der 5-Sekunden-Takt garantiert daher nur bei frischen Messwerten eine neue Freigabeentscheidung.
+
