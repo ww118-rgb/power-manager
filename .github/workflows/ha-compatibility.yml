@@ -2,7 +2,7 @@ name: HA Core compatibility smoke test
 
 on:
   push:
-    branches: ["feature/v3.3.0-rc", "feature/v3.3.1-simple-wizard", "feature/v3.3.2-evse-output-fix"]
+    branches: ["feature/v3.3.0-rc", "feature/v3.3.1-simple-wizard", "feature/v3.3.2-evse-output-fix", "feature/v3.3.3-unified-output-units"]
   workflow_dispatch:
 
 jobs:
@@ -168,3 +168,7 @@ jobs:
           asyncio.run(verify_complete_modbus_wizard())
           asyncio.run(exercise_wizard())
           PY
+      - name: Validate real-HA actuator unit mapping (no real device writes)
+        run: |
+          python -m pip install pytest
+          python -m pytest -q test_v3_3_3_units.py test_v3_3_3_pure_units.py
