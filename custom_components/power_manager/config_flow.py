@@ -432,7 +432,7 @@ def _merge_global_basic(old: dict[str, Any], submitted: dict[str, Any]) -> dict[
     return result
 
 
-def _device_preview(draft: dict[str, Any]) -> dict[str, str]:
+def _device_preview(draft: dict[str, Any], hass: Any = None) -> dict[str, str]:
     """Explain device commands before saving, without touching hardware."""
     name = str(draft.get(CONF_LOAD_NAME, "Verbraucher"))
     transport = str(draft.get(CONF_OUTPUT_TRANSPORT, DEFAULT_OUTPUT_TRANSPORT))
@@ -460,8 +460,33 @@ def _device_preview(draft: dict[str, Any]) -> dict[str, str]:
             })
         return output
 
+    evse_fmt = str(draft.get(
+        CONF_EVSE_OUTPUT_FORMAT, DEFAULT_EVSE_OUTPUT_FORMAT,
+    ))
+    if load_type == LOAD_TYPE_EVSE and evse_fmt == EVSE_OUTPUT_AUTO:
+        entity = draft.get(CONF_OUTPUT_ENTITY)
+        state = hass.states.get(entity) if hass is not None and entity else None
+        unit = state.attributes.get("unit_of_measurement") if state else None
+        if unit not in (EVSE_OUTPUT_AMPERE, EVSE_OUTPUT_WATT, EVSE_OUTPUT_KW):
+            output.update({
+                "off": "Einheit A/W/kW im HA-Ausgang nicht erkennbar",
+                "min": "Ausgangseinheit prüfen",
+                "max": "Ausgangseinheit prüfen",
+            })
+            return output
+        evse_fmt = unit
     kwargs: dict[str, Any] = dict(
         load_type=load_type,
+        evse_output_format=evse_fmt,
+        evse_current_step_a=float(draft.get(
+            CONF_EVSE_CURRENT_STEP_A, DEFAULT_EVSE_CURRENT_STEP_A,
+        )),
+        evse_power_step_w=float(draft.get(
+            CONF_EVSE_POWER_STEP_W, DEFAULT_EVSE_POWER_STEP_W,
+        )),
+        evse_pause_power_value=float(draft.get(
+            CONF_EVSE_PAUSE_POWER_VALUE, DEFAULT_EVSE_PAUSE_POWER_VALUE,
+        )),
         safe_output_value=float(draft.get(CONF_SAFE_OUTPUT_VALUE, DEFAULT_SAFE_OUTPUT_VALUE)),
         evse_phases=int(draft.get(CONF_EVSE_PHASES, DEFAULT_EVSE_PHASES)),
         evse_voltage_v=float(draft.get(CONF_EVSE_VOLTAGE_V, DEFAULT_EVSE_VOLTAGE_V)),
@@ -1446,7 +1471,7 @@ class PowerManagerLoadSubentryFlow(ConfigSubentryFlow):
             step_id="load_review",
             data_schema=_load_wizard_schema(self._draft, fields, extra=extra),
             errors=errors or {},
-            description_placeholders=_device_preview(self._draft),
+            description_placeholders=_device_preview(self._draft, self.hass),
         )
 
     def _invalid_wizard_fields(
