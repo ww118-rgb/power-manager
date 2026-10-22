@@ -470,7 +470,8 @@ def validate_load_data(data: dict[str, Any]) -> dict[str, str]:
             errors[CONF_EVSE_PAUSE_CURRENT_A] = "evse_zero_means_unlimited"
         if forbidden is not None:
             if fmt in (EVSE_OUTPUT_AMPERE, EVSE_OUTPUT_AUTO):
-                if abs(pause_current_a - forbidden) <= 0.000001:
+                if (abs(pause_current_a - forbidden) <= 0.000001
+                        and CONF_EVSE_PAUSE_CURRENT_A not in errors):
                     errors[CONF_EVSE_PAUSE_CURRENT_A] = "forbidden_pause_code"
             elif abs(values[CONF_EVSE_PAUSE_POWER_VALUE] - forbidden) <= 0.000001:
                 errors[CONF_EVSE_PAUSE_POWER_VALUE] = "forbidden_pause_code"
