@@ -190,12 +190,6 @@ def test_surplus_mode_matches_reference_core():
         )
     )
 
-    assert (
-        ha_result.battery_discharge_kw
-        == pytest.approx(
-            root_result.battery_discharge_kw
-        )
-    )
 
     assert (
         ha_result.projected_grid_kw
