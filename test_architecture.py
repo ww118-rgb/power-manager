@@ -96,3 +96,41 @@ def test_optional_ist_sensor_not_required_for_peakshaving():
     inputs = ControllerInputs(grid_kw=139.0, grid_limit_kw=140)
     result = run_controller(inputs, [_ev("EV")])
     assert result.targets_kw["EV"] == 0.0  # Below EV minimum; safe pause.
+
+
+def test_unavailable_load_is_uncontrollable_house_base_not_free_headroom():
+    unavailable = ControllableLoad(
+        name="UnreachableHeat", priority=1, requested_kw=20,
+        min_kw=1, max_kw=20, actual_kw=10, available=False,
+    )
+    wallbox = ControllableLoad(
+        name="EV", priority=1, requested_kw=11,
+        min_kw=4.14, max_kw=11, actual_kw=None,
+    )
+    old = ControllerState(last_targets_kw={"EV": 5.0, "UnreachableHeat": 10})
+    answer = run_controller(
+        ControllerInputs(
+            grid_kw=139.0, grid_limit_kw=140,
+            grid_growth_margin_kw=0.3,
+        ), [unavailable, wallbox], old,
+    )
+    assert answer.controlled_power_for_calculation_kw == pytest.approx(5)
+    assert answer.base_load_kw == pytest.approx(134)
+    assert answer.targets_kw["EV"] <= 5.7 + 1e-6
+    assert answer.projected_grid_kw <= 140
+
+
+def test_unavailable_pv_load_does_not_create_fictitious_surplus():
+    unavailable = ControllableLoad(
+        name="OfflineHeater", priority=1, requested_kw=20,
+        min_kw=1, max_kw=20, actual_kw=10, available=False,
+    )
+    ev = _ev("EV")
+    result = run_controller(
+        ControllerInputs(
+            grid_kw=0.0, pv_kw=25, grid_limit_kw=140,
+            mode=OperatingMode.SURPLUS,
+        ), [unavailable, ev],
+    )
+    assert result.surplus_budget_kw == 0
+    assert result.targets_kw["EV"] == 0
