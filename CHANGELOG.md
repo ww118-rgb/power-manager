@@ -1,5 +1,17 @@
 # Changelog
 
+## 3.3.2 – Eindeutige EVSE-Ausgabe und sichere Rundung (HACS-Testkandidat)
+
+- Wallbox-Energiezuteilung bleibt in kW, Ausgabeformat pro Gerät als A, W, kW oder (bei HA-Zahlen-Entities) automatische Metadaten-Erkennung wählbar.
+- Ampere-Schrittweite individuell einstellbar (typisch 1 A), Leistungs-Schrittweite in W einstellbar (typisch 1.000 W); jeweils abwärts begrenzt, niemals unbegründete Leistungsfreigabe oberhalb PMAX.
+- Getrennte AUS-/Pausenwerte für Ampere und Watt/kW; Schutz vor 0-A-Vollfreigabe, 0 W nur bei bestätigter Gerätewirkung.
+- EVSE-Assistent zeigt nur die für das gewählte Kommandoformat relevanten Felder. Anschlussprotokoll und Einheitenwahl bleiben unabhängig.
+- Vorschau im Abschlussdialog prüft HA-Entity-Wertebereich und Schrittweite lesbar, ohne Befehle zu senden.
+- Bestehende Konfigurationen ohne neues Formatfeld behalten ihre Ampere-Bedeutung.
+- Tests für typische Mennekes 6–16 A und MQTT 0–11.000 W, 1.000-W-Stufen, untere Ladegrenze und sichere PMAX-Rundung.
+
+
+
 ## 3.3.1 – Einfache Einrichtung (HACS-Testkandidat)
 
 - Globale Grundeinrichtung auf Netz, PMAX, PV, Batterie, SOC und Reserve reduziert; Sensor-Timeouts, Vorzeichen-Sonderfälle und Hybridprüfung über optionalen Expertenweg.
