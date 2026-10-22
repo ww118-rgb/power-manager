@@ -4,7 +4,7 @@
     "step": {
       "user": {
         "title": "Grundeinrichtung: Energieanlage",
-        "description": "Nur die wichtigsten Werte: Netzleistung, PMAX und optionale PV-/Batteriesensoren. Technische Zeiten und Puffer bleiben automatisch voreingestellt.",
+        "description": "Einfache Regelung: Netzleistung und PMAX sind Pflicht, PV-Leistung optional für echten Überschuss. Die Batterie arbeitet ausschließlich autonom.",
         "data": {
           "grid_power_entity": "Netzleistungssensor",
           "grid_limit_kw": "PMAX",
@@ -40,9 +40,9 @@
           "invert_grid_power": "Aktivieren, wenn die Quelle Netzbezug negativ und Einspeisung positiv meldet.",
           "pv_power_entity": "Optionaler Sensor für die PV-Erzeugungsleistung.",
           "invert_pv_power": "Aktivieren, wenn PV-Erzeugung negativ gemeldet wird.",
-          "battery_power_entity": "Optionaler Batterieleistungssensor. Intern gilt positiv = Entladen, negativ = Laden.",
+          "battery_power_entity": "Optionaler Batterie-Leistungssensor nur für Diagnose; nicht Teil der Regelung.",
           "invert_battery_power": "Aktivieren, wenn die Quelle die entgegengesetzte Batterie-Vorzeichenkonvention nutzt.",
-          "battery_soc_entity": "Optionaler Batterie-SOC-Sensor.",
+          "battery_soc_entity": "Optionaler Batterie-SOC nur für Diagnose; keine Steuerungsbedingung.",
           "battery_soc_scale": "Prozent für Quellen 0..100 %, Anteil für einheitenlose Quellen 0..1.",
           "surplus_min_battery_soc": "Nur oberhalb dieser Reserve darf die Batterie flexible Verbraucher im Überschussbetrieb unterstützen. Der PV-Überschussbetrieb bleibt darunter aktiv.",
           "hybrid_probe_step_kw": "Maximale zusätzliche Last pro Prüfung. 0 deaktiviert aktive Versuche. Keine angenommene Batterie-Nennleistung.",
@@ -58,7 +58,7 @@
       },
       "global_expert": {
         "title": "Expertenwerte – optional",
-        "description": "Sensor-Zeitüberwachung, Vorzeichen und Hybrid-Prüfbedingungen. Standardwerte können unverändert bleiben.",
+        "description": "Optionale Netzmesswert-Details und Batterie-Sensoren nur zur Anzeige. Keine Batterie-/SOC-Regelung oder Hybridprüfungen.",
         "data": {
           "grid_power_entity": "Netzleistungssensor",
           "grid_limit_kw": "PMAX",
@@ -94,9 +94,9 @@
           "invert_grid_power": "Aktivieren, wenn die Quelle Netzbezug negativ und Einspeisung positiv meldet.",
           "pv_power_entity": "Optionaler Sensor für die PV-Erzeugungsleistung.",
           "invert_pv_power": "Aktivieren, wenn PV-Erzeugung negativ gemeldet wird.",
-          "battery_power_entity": "Optionaler Batterieleistungssensor. Intern gilt positiv = Entladen, negativ = Laden.",
+          "battery_power_entity": "Optionaler Batterie-Leistungssensor nur für Diagnose; nicht Teil der Regelung.",
           "invert_battery_power": "Aktivieren, wenn die Quelle die entgegengesetzte Batterie-Vorzeichenkonvention nutzt.",
-          "battery_soc_entity": "Optionaler Batterie-SOC-Sensor.",
+          "battery_soc_entity": "Optionaler Batterie-SOC nur für Diagnose; keine Steuerungsbedingung.",
           "battery_soc_scale": "Prozent für Quellen 0..100 %, Anteil für einheitenlose Quellen 0..1.",
           "surplus_min_battery_soc": "Nur oberhalb dieser Reserve darf die Batterie flexible Verbraucher im Überschussbetrieb unterstützen. Der PV-Überschussbetrieb bleibt darunter aktiv.",
           "hybrid_probe_step_kw": "Maximale zusätzliche Last pro Prüfung. 0 deaktiviert aktive Versuche. Keine angenommene Batterie-Nennleistung.",
@@ -124,7 +124,7 @@
     "step": {
       "init": {
         "title": "Grundeinrichtung: Energieanlage",
-        "description": "Nur die wichtigsten Werte: Netzleistung, PMAX und optionale PV-/Batteriesensoren. Technische Zeiten und Puffer bleiben automatisch voreingestellt.",
+        "description": "Einfache Regelung: Netzleistung und PMAX sind Pflicht, PV-Leistung optional für echten Überschuss. Die Batterie arbeitet ausschließlich autonom.",
         "data": {
           "grid_power_entity": "Netzleistungssensor",
           "grid_limit_kw": "PMAX",
@@ -160,9 +160,9 @@
           "invert_grid_power": "Aktivieren, wenn die Quelle Netzbezug negativ und Einspeisung positiv meldet.",
           "pv_power_entity": "Optionaler Sensor für die PV-Erzeugungsleistung.",
           "invert_pv_power": "Aktivieren, wenn PV-Erzeugung negativ gemeldet wird.",
-          "battery_power_entity": "Optionaler Batterieleistungssensor. Intern gilt positiv = Entladen, negativ = Laden.",
+          "battery_power_entity": "Optionaler Batterie-Leistungssensor nur für Diagnose; nicht Teil der Regelung.",
           "invert_battery_power": "Aktivieren, wenn die Quelle die entgegengesetzte Batterie-Vorzeichenkonvention nutzt.",
-          "battery_soc_entity": "Optionaler Batterie-SOC-Sensor.",
+          "battery_soc_entity": "Optionaler Batterie-SOC nur für Diagnose; keine Steuerungsbedingung.",
           "battery_soc_scale": "Prozent für Quellen 0..100 %, Anteil für einheitenlose Quellen 0..1.",
           "surplus_min_battery_soc": "Nur oberhalb dieser Reserve darf die Batterie flexible Verbraucher im Überschussbetrieb unterstützen. Der PV-Überschussbetrieb bleibt darunter aktiv.",
           "hybrid_probe_step_kw": "Maximale zusätzliche Last pro Prüfung. 0 deaktiviert aktive Versuche. Keine angenommene Batterie-Nennleistung.",
@@ -178,7 +178,7 @@
       },
       "global_expert": {
         "title": "Erweiterte Einstellungen",
-        "description": "Sensor-Zeitüberwachung, Vorzeichen und Hybrid-Prüfbedingungen. Standardwerte können unverändert bleiben.",
+        "description": "Optionale Netzmesswert-Details und Batterie-Sensoren nur zur Anzeige. Keine Batterie-/SOC-Regelung oder Hybridprüfungen.",
         "data": {
           "grid_power_entity": "Netzleistungssensor",
           "grid_limit_kw": "PMAX",
@@ -214,9 +214,9 @@
           "invert_grid_power": "Aktivieren, wenn die Quelle Netzbezug negativ und Einspeisung positiv meldet.",
           "pv_power_entity": "Optionaler Sensor für die PV-Erzeugungsleistung.",
           "invert_pv_power": "Aktivieren, wenn PV-Erzeugung negativ gemeldet wird.",
-          "battery_power_entity": "Optionaler Batterieleistungssensor. Intern gilt positiv = Entladen, negativ = Laden.",
+          "battery_power_entity": "Optionaler Batterie-Leistungssensor nur für Diagnose; nicht Teil der Regelung.",
           "invert_battery_power": "Aktivieren, wenn die Quelle die entgegengesetzte Batterie-Vorzeichenkonvention nutzt.",
-          "battery_soc_entity": "Optionaler Batterie-SOC-Sensor.",
+          "battery_soc_entity": "Optionaler Batterie-SOC nur für Diagnose; keine Steuerungsbedingung.",
           "battery_soc_scale": "Prozent für Quellen 0..100 %, Anteil für einheitenlose Quellen 0..1.",
           "surplus_min_battery_soc": "Nur oberhalb dieser Reserve darf die Batterie flexible Verbraucher im Überschussbetrieb unterstützen. Der PV-Überschussbetrieb bleibt darunter aktiv.",
           "hybrid_probe_step_kw": "Maximale zusätzliche Last pro Prüfung. 0 deaktiviert aktive Versuche. Keine angenommene Batterie-Nennleistung.",
