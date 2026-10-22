@@ -207,3 +207,65 @@ def test_normal_grid_noise_does_not_force_repeated_off_on():
         out.append(ans.targets_kw["Heat"])
     assert all(x >= 4 for x in out)
     assert max(out[5:])-min(out[5:]) < 0.5
+
+
+def test_equal_wallboxes_converge_when_pmax_is_full_without_grid_borrowing():
+    """Previous 6/6.5 kW should not remain uneven at exactly 140 kW import."""
+    evs = [
+        load("WB1", minimum=4.14, maximum=11, request=11, priority=1),
+        load("WB2", minimum=4.14, maximum=11, request=11, priority=1),
+    ]
+    result = run_controller(
+        data(grid=140, pmax=140),
+        evs, previous(WB1=6.0, WB2=6.5),
+    )
+    assert result.targets_kw == pytest.approx({"WB1": 6.0, "WB2": 6.0})
+    assert result.projected_grid_kw <= 140
+    # A reduction is not spent before it appears on the next grid reading.
+    second = run_controller(
+        data(grid=139.5, pmax=140, now=1), evs, result.state,
+    )
+    assert second.targets_kw["WB1"] == pytest.approx(second.targets_kw["WB2"])
+    assert second.projected_grid_kw <= 140
+
+
+def test_pv_equalizes_existing_wallboxes_without_fictitious_export():
+    evs = [
+        load("WB1", minimum=4.14, maximum=11, request=11, priority=1),
+        load("WB2", minimum=4.14, maximum=11, request=11, priority=99),
+    ]
+    current = previous(WB1=6.0, WB2=6.5)
+    first = run_controller(
+        data(grid=0, pv=20, mode=OperatingMode.SURPLUS), evs, current,
+    )
+    assert first.targets_kw == pytest.approx({"WB1": 6.0, "WB2": 6.0})
+    assert first.projected_grid_kw <= 0  # Never borrow from the grid to equalize.
+    # If the grid meter then confirms 0.5 kW of export, share it equally.
+    second = run_controller(
+        data(grid=-0.5, pv=20, mode=OperatingMode.SURPLUS, now=1),
+        evs, first.state,
+    )
+    assert second.targets_kw == pytest.approx({"WB1": 6.25, "WB2": 6.25})
+    assert second.projected_grid_kw <= 0
+
+
+def test_different_limits_are_not_rounded_to_artificial_equality():
+    evs = [
+        load("WB1", minimum=4.14, maximum=6, request=6, priority=1),
+        load("WB2", minimum=4.14, maximum=11, request=11, priority=1),
+    ]
+    result = run_controller(
+        data(grid=0, pv=20, mode=OperatingMode.SURPLUS),
+        evs, previous(WB1=6.0, WB2=6.5),
+    )
+    assert result.targets_kw["WB1"] == pytest.approx(6.0)
+    assert result.targets_kw["WB2"] > result.targets_kw["WB1"]
+
+
+def test_non_equivalent_wallboxes_keep_normal_priority():
+    evs = [
+        load("WB1", minimum=4.14, maximum=11, request=11, priority=1),
+        load("WB2", minimum=4.14, maximum=11, request=11, priority=2),
+    ]
+    result = run_controller(data(grid=139, pmax=140), evs)
+    assert result.targets_kw["WB1"] > result.targets_kw["WB2"]
