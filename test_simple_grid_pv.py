@@ -267,5 +267,5 @@ def test_non_equivalent_wallboxes_keep_normal_priority():
         load("WB1", minimum=4.14, maximum=11, request=11, priority=1),
         load("WB2", minimum=4.14, maximum=11, request=11, priority=2),
     ]
-    result = run_controller(data(grid=139, pmax=140), evs)
+    result = run_controller(data(grid=133, pmax=140), evs)
     assert result.targets_kw["WB1"] > result.targets_kw["WB2"]
