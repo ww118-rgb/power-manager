@@ -269,3 +269,24 @@ def test_non_equivalent_wallboxes_keep_normal_priority():
     ]
     result = run_controller(data(grid=133, pmax=140), evs)
     assert result.targets_kw["WB1"] > result.targets_kw["WB2"]
+
+
+def test_screenshot_139_17_kw_rebalances_equal_wallboxes_within_grid_limit():
+    """Same config, 6.0 vs 6.5 kW, PMAX 140 and 0.3 kW noise margin."""
+    evs = [
+        load("WB1", minimum=4.14, maximum=11, request=11),
+        load("WB2", minimum=4.14, maximum=11, request=11),
+    ]
+    result = run_controller(
+        data(grid=139.17, pmax=140),
+        evs, previous(WB1=6.0, WB2=6.5),
+    )
+    assert result.targets_kw["WB1"] == pytest.approx(
+        result.targets_kw["WB2"], abs=1e-5,
+    )
+    assert result.targets_kw["WB1"] >= 6.0
+    assert result.projected_grid_kw <= 139.7 + 1e-5
+    assert sum(
+        max(0.0, result.targets_kw[name] - previous_target)
+        for name, previous_target in (("WB1", 6.0), ("WB2", 6.5))
+    ) <= 140 - 139.17 - 0.3 + 1e-5
