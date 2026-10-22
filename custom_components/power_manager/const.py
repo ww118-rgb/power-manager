@@ -11,21 +11,14 @@ CONF_GRID_POWER_ENTITY = "grid_power_entity"
 CONF_GRID_LIMIT_KW = "grid_limit_kw"
 CONF_GRID_RESERVE_KW = "grid_reserve_kw"
 CONF_GRID_GROWTH_MARGIN_KW = "grid_growth_margin_kw"
-CONF_GRID_RECOVERY_HOLD_S = "grid_recovery_hold_s"
 CONF_GRID_SENSOR_TIMEOUT_S = "grid_sensor_timeout_s"
 CONF_PV_POWER_ENTITY = "pv_power_entity"
 CONF_BATTERY_POWER_ENTITY = "battery_power_entity"
 CONF_BATTERY_SOC_ENTITY = "battery_soc_entity"
 CONF_BATTERY_SOC_SCALE = "battery_soc_scale"
-CONF_SURPLUS_MIN_BATTERY_SOC = "surplus_min_battery_soc"
-CONF_BATTERY_RESUME_HYSTERESIS_SOC = "battery_resume_hysteresis_soc"
 CONF_PV_SENSOR_TIMEOUT_S = "pv_sensor_timeout_s"
 CONF_BATTERY_SENSOR_TIMEOUT_S = "battery_sensor_timeout_s"
 CONF_BATTERY_SOC_SENSOR_TIMEOUT_S = "battery_soc_sensor_timeout_s"
-CONF_HYBRID_PROBE_STEP_KW = "hybrid_probe_step_kw"
-CONF_HYBRID_PROBE_SETTLE_S = "hybrid_probe_settle_s"
-CONF_HYBRID_PROBE_RETRY_S = "hybrid_probe_retry_s"
-CONF_HYBRID_GRID_TOLERANCE_KW = "hybrid_grid_tolerance_kw"
 CONF_INVERT_GRID_POWER = "invert_grid_power"
 CONF_INVERT_PV_POWER = "invert_pv_power"
 CONF_INVERT_BATTERY_POWER = "invert_battery_power"
@@ -46,7 +39,6 @@ DEMAND_MODES = (DEMAND_MODE_ALWAYS, DEMAND_MODE_SENSOR, DEMAND_MODE_DISABLED)
 CONF_ACTUAL_POWER_ENTITY = "actual_power_entity"
 CONF_INVERT_ACTUAL_POWER = "invert_actual_power"
 CONF_ACTUAL_SENSOR_TIMEOUT_S = "actual_sensor_timeout_s"
-CONF_FEEDBACK_TOLERANCE_KW = "feedback_tolerance_kw"
 CONF_REQUEST_ENTITY = "request_entity"
 CONF_AVAILABILITY_ENTITY = "availability_entity"
 CONF_OUTPUT_ENTITY = "output_entity"
@@ -149,19 +141,13 @@ BATTERY_SOC_SCALES = (
 )
 
 DEFAULT_GRID_RESERVE_KW = 0.0
-# Defaults are independent of the installed PV/load/battery size, adjustable
-# per site. They reserve a small measurement-noise margin for NEW load only.
+# Measurement margin is installation-dependent and configurable.
+# It applies to additional network load only.
 DEFAULT_GRID_GROWTH_MARGIN_KW = 0.3
-DEFAULT_GRID_RECOVERY_HOLD_S = 15.0
 DEFAULT_GRID_SENSOR_TIMEOUT_S = 10.0
 DEFAULT_PV_SENSOR_TIMEOUT_S = 10.0
 DEFAULT_BATTERY_SENSOR_TIMEOUT_S = 10.0
 DEFAULT_BATTERY_SOC_SENSOR_TIMEOUT_S = 60.0
-DEFAULT_BATTERY_RESUME_HYSTERESIS_SOC = 2.0
-DEFAULT_HYBRID_PROBE_STEP_KW = 0.0
-DEFAULT_HYBRID_PROBE_SETTLE_S = 5.0
-DEFAULT_HYBRID_PROBE_RETRY_S = 30.0
-DEFAULT_HYBRID_GRID_TOLERANCE_KW = 0.1
 DEFAULT_INVERT_GRID_POWER = False
 DEFAULT_INVERT_PV_POWER = False
 DEFAULT_INVERT_BATTERY_POWER = False
@@ -174,7 +160,6 @@ DEFAULT_MAX_KW = 1.0
 DEFAULT_DEFAULT_REQUEST_KW = 0.0  # 0 means: use max_kw when no request entity exists.
 DEFAULT_INVERT_ACTUAL_POWER = False
 DEFAULT_ACTUAL_SENSOR_TIMEOUT_S = 10.0
-DEFAULT_FEEDBACK_TOLERANCE_KW = 0.25
 DEFAULT_PEAK_SHAVING_ENABLED = True
 DEFAULT_SURPLUS_ENABLED = True
 DEFAULT_START_MARGIN_KW = 0.0
