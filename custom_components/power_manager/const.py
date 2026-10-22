@@ -45,8 +45,8 @@ CONF_OUTPUT_ENTITY = "output_entity"
 CONF_ENABLE_ENTITY = "enable_entity"
 CONF_OUTPUT_UNIT = "output_unit"
 CONF_SAFE_OUTPUT_VALUE = "safe_output_value"
-# Optional vendor-specific numeric command profile; remains a Home Assistant
-# number entity output until a direct protocol adapter is implemented.
+# Optional vendor-specific numeric command profiles; supported via
+# Home Assistant entity, MQTT or Modbus transport.
 CONF_OUTPUT_VALUE_MODE = "output_value_mode"
 CONF_OUTPUT_SCALE = "output_scale"
 CONF_OUTPUT_OFFSET = "output_offset"

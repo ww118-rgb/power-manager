@@ -1,3 +1,5 @@
+> **Historische Anforderungsverfolgung (vor V4.0).** Diese Datei bleibt zur Nachvollziehbarkeit erhalten und definiert nicht mehr die aktive Architektur. Alte SOC-/Hybrid-Anforderungen werden von der neuen Batterie-autonomen V4.0-Regelung bewusst nicht umgesetzt. Für V4.0 gelten README.md, docs/ARCHITECTURE_4.md und SIMULATOR_TEST.md.
+
 # Power Manager – Anforderungsverfolgung v0.8 (V3.3.0 RC)
 
 Quellstand: `Power_Manager_Konzept_Anforderungen_Testplan_v0_8.docx` (86 Anforderungen, 106 Prüffälle). Diese Kurzbezeichnungen dienen der Verfolgung; **der genaue Wortlaut in v0.8 bleibt verbindlich**. Jede Codeänderung ist gegen ihn zu prüfen.
