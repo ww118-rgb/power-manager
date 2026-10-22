@@ -95,6 +95,7 @@ from .const import (
     DEFAULT_STOP_MARGIN_KW,
     DEFAULT_SURPLUS_ENABLED,
     HEARTBEAT_INTERVAL_SECONDS,
+    SEQUENTIAL_SWITCH_INTERVAL_SECONDS,
     LOAD_TYPE_SWITCH,
     NAME,
     REFRESH_DEBOUNCE_SECONDS,
@@ -849,6 +850,14 @@ class PowerManagerCoordinator(DataUpdateCoordinator[PowerManagerCoordinatorData]
         except MeasurementError:
             battery_soc = None
 
+        # Monotonic timestamp corresponding to the last actual grid report.
+        # A 5 s timer alone must never authorize a second load based on a
+        # pre-switch grid measurement.
+        cycle_now_s = monotonic()
+        grid_sample_s = (
+            cycle_now_s - max(0.0, grid_age_s)
+            if grid_age_s is not None else None
+        )
         try:
             inputs = ControllerInputs(
                 grid_kw=grid_kw,
@@ -859,7 +868,9 @@ class PowerManagerCoordinator(DataUpdateCoordinator[PowerManagerCoordinatorData]
                 )),
                 pv_kw=pv_kw,
                 mode=self.operating_mode,
-                now_s=monotonic(),
+                now_s=cycle_now_s,
+                switch_interval_s=SEQUENTIAL_SWITCH_INTERVAL_SECONDS,
+                grid_sample_s=grid_sample_s,
             )
 
             result = run_controller(
