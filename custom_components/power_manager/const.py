@@ -2,7 +2,7 @@
 
 DOMAIN = "power_manager"
 NAME = "Power Manager"
-VERSION = "4.0.0"
+VERSION = "4.0.0-rc.3"
 
 SUBENTRY_TYPE_LOAD = "load"
 
