@@ -118,5 +118,46 @@ jobs:
               page = await flow.async_step_load_review({"wizard_ack":False})
               assert page["step_id"] == "load_review"
               print("End-to-end EVSE installation wizard steps work with HA Core")
+          async def verify_complete_modbus_wizard():
+              from types import SimpleNamespace
+              flow = PowerManagerLoadSubentryFlow()
+              flow._get_entry = lambda: SimpleNamespace(subentries={})
+              page = await flow.async_step_user()
+              page = await flow.async_step_load_basics({
+                  CONF_LOAD_NAME:"Pump",CONF_LOAD_TYPE:"modulating",
+                  CONF_PRIORITY:2,CONF_MAX_KW:8.0,"wizard_expert":False,
+              })
+              page = await flow.async_step_load_usage({
+                  "demand_mode":"disabled",
+                  "peak_shaving_enabled":True,"surplus_enabled":True,
+                  "min_kw":0.5,"actual_power_entity":"sensor.pump_power",
+              })
+              page = await flow.async_step_load_connection({
+                  "output_transport":"modbus_tcp","output_value_mode":"linear",
+              })
+              assert page["step_id"] == "load_connection_details"
+              page = await flow.async_step_load_connection_details({
+                  "modbus_host":"192.168.1.37","modbus_port":5027,
+                  "modbus_unit_id":6,"modbus_register":770,
+                  "modbus_data_type":"float32",
+                  "modbus_byte_order":"ABCD","modbus_function":16,
+              })
+              assert page["step_id"] == "load_commands"
+              page = await flow.async_step_load_commands({
+                  "output_scale":1.0,"output_offset":0.0,
+                  "safe_output_value":0.01,"output_forbidden_value":0.0,
+              })
+              assert page["step_id"] == "load_review"
+              page = await flow.async_step_load_review({
+                  "wizard_ack":True,"device_commands_confirmed":True,
+              })
+              assert str(page["type"]) in (
+                  "FlowResultType.CREATE_ENTRY", "create_entry",
+              ), page
+              assert page["data"]["demand_mode"] == "disabled"
+              assert page["data"]["modbus_register"] == 770
+              assert page["data"]["safe_output_value"] == 0.01
+              print("Modbus direct-load wizard creates valid entry on HA Core")
+          asyncio.run(verify_complete_modbus_wizard())
           asyncio.run(exercise_wizard())
           PY
