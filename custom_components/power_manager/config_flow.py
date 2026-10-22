@@ -904,7 +904,7 @@ def _duplicate_load_name(
 class PowerManagerConfigFlow(ConfigFlow, domain=DOMAIN):
     """Configure essential plant values, optionally show expert tuning."""
 
-    VERSION = 4
+    VERSION = 5
     MINOR_VERSION = 0
 
     async def async_step_user(
