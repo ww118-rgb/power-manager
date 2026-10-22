@@ -2284,14 +2284,6 @@
         "sensor": "Only on request from an entity",
         "disabled": "Disabled for now"
       }
-    },
-    "evse_output_format": {
-      "options": {
-        "auto": "Read unit from HA entity (A/W/kW)",
-        "A": "Ampere (e.g. 6–16 A)",
-        "W": "Watts (e.g. 0–11000 W)",
-        "kW": "Kilowatts (e.g. 0–11 kW)"
-      }
     }
   }
 }
