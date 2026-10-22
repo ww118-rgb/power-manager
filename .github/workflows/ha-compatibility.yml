@@ -60,13 +60,15 @@ jobs:
           from custom_components.power_manager.const import (
               CONF_LOAD_NAME, CONF_LOAD_TYPE, CONF_PRIORITY, CONF_MAX_KW,
               CONF_MODBUS_HOST, CONF_MODBUS_REGISTER, CONF_MQTT_TOPIC,
+              CONF_HOUSE_POWER_ENTITY,
           )
           basics = _global_simple_schema({})
           assert len(basics.schema) <= 9, len(basics.schema)
           expert = _global_expert_schema({})
-          assert len(expert.schema) >= 7
+          assert len(expert.schema) >= 5
           def names(schema):
               return {getattr(k, "schema", k) for k in schema.schema}
+          assert CONF_HOUSE_POWER_ENTITY in names(basics)
           basic_load = _load_wizard_schema({}, (
               CONF_LOAD_NAME, CONF_LOAD_TYPE, CONF_PRIORITY, CONF_MAX_KW,
           ))
