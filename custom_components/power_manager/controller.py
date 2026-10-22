@@ -524,8 +524,12 @@ def _equalize_equivalent_loads(
             )
             for load in peers
         ]
-        if min(previous) <= EPSILON:
-            continue  # Normal minimum/start admission rules take precedence.
+        if min(previous) <= EPSILON and any(
+            targets.get(load.name, 0.0) <= EPSILON for load in peers
+        ):
+            # Do not cancel a legitimately admitted single starter just
+            # because there is not enough power to start all its peers.
+            continue
         admitted_increase = sum(
             max(0.0, targets.get(load.name, 0.0) - earlier)
             for load, earlier in zip(peers, previous)
