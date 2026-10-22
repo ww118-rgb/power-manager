@@ -53,12 +53,21 @@ class ControllerInputs:
     grid_growth_margin_kw: float = 0.0
     mode: OperatingMode = OperatingMode.NORMAL
     now_s: float = 0.0
+    # Optional pure-core pacing: HA enables 5 s, historical standalone
+    # callers default to no pacing to preserve the 3.1.1 allocator API.
+    switch_interval_s: float = 0.0
+    # Monotonic time corresponding to the grid sensor's latest real report.
+    # None is accepted for callers without a timestamp; HA always supplies it.
+    grid_sample_s: float | None = None
 
 
 @dataclass
 class ControllerState:
     last_targets_kw: dict[str, float] = field(default_factory=dict)
     load_states: dict[str, LoadRuntimeState] = field(default_factory=dict)
+    # One non-emergency consumer change per step, independently of refreshes.
+    last_switch_action_s: float | None = None
+    last_switch_grid_sample_s: float | None = None
 
 
 @dataclass
