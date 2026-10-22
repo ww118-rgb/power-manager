@@ -1,5 +1,17 @@
 # Changelog
 
+## 3.3.5 – Einfaches PMAX und PV-Überschuss ohne Batterie-Regelung (Simulator-Testkandidat)
+
+- NORMAL: Regelgröße ist ausschließlich der frische Netzmesswert am Anschlusspunkt; PMAX, konfigurierbare Netzreserve, tatsächlich gemessene/bei Bedarf geschätzte flexible Verbraucherleistung, Min/Max und Priorität. Keine Batterie-Korrektur, SOC-Hysterese oder Hybridfreigabe.
+- PV-ÜBERSCHUSS: zusätzliche Leistung nur aus **tatsächlicher Netzeinspeisung**, bereits laufende flexible PV-Lasten werden berücksichtigt, um Schalten bei Netzeinspeisung 0 kW zu vermeiden. Geeignete PV-Verbraucher werden gleichmäßig innerhalb ihrer Min/Max begrenzt, technische Mindestleistungen gelten weiterhin.
+- Keine globale 15-s-Wiederanlaufsperre, keine Erhöhungssperre durch optionale Verbraucher-Istsensoren und keine aktiven Batterieversuche. Erhöhungen sind weiterhin auf aktuelle freie Netzleistung bzw. tatsächliche Netzeinspeisung begrenzt; angeordnete, aber noch nicht vom Netzsensor bestätigte Reduktionen sind nicht sofort neu verteilbar.
+- Netzleistungsmessung bleibt Pflicht; Verbraucher-Istwerte bleiben optional. Nach Geräte-Stufen abgerundete kW-Befehle werden für Schätzwerte verwendet.
+- Einrichtung zeigt im Grunddialog nur Netzsensor, PMAX und optionalen PV-Sensor; Batterie-Messwerte nur optional als **reine Diagnose** in Experteneinstellungen. Alte Batterie-/Hybrid-Parameter werden für Bestandskonfigurationen toleriert, aber von der Regelung ignoriert.
+- Python-Regressionen für 140-kW-Betrieb, andere PMAX-Werte, Batterieunabhängigkeit, Modulation, faire PV-Zuteilung, Startgrenzen und sensorlosen Betrieb.
+- **Wichtig:** Ohne physische Quellenmessung lässt sich bei bereits laufenden Lasten nicht beweisen, ob Energie aus PV oder unbemerkt aus der autonomen Batterie stammt; echte Netzeinspeisung ist das einzige sichere Signal für **zusätzliche** PV-Freigabe. Ein plötzlicher Batterieausfall kann vor der nächsten Reaktion PMAX überschreiten. Hardwareseitige Anschlussgrenzsicherung bleibt erforderlich, wenn eine harte Garantie benötigt wird.
+- Änderungen nur im Entwicklungszweig; Simulator-/Geräteabnahme weiterhin offen.
+
+
 ## 3.3.4 – Netzorientiertes PMAX und stabile Verbraucherfreigabe ohne Istleistungspflicht (Simulator-Testkandidat)
 
 - NORMAL / Peakshaving regelt nach dem **gemessenen Netzbezug** und der konfigurierten Netzgrenze; die aktuelle Batterieentladung wird nicht mehr pauschal vom verfügbaren Budget abgezogen (Fehlpendeln aus V3.3.3).
