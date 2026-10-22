@@ -1,5 +1,16 @@
 # Changelog
 
+## 3.3.4 – Netzorientiertes PMAX und stabile Verbraucherfreigabe ohne Istleistungspflicht (Simulator-Testkandidat)
+
+- NORMAL / Peakshaving regelt nach dem **gemessenen Netzbezug** und der konfigurierten Netzgrenze; die aktuelle Batterieentladung wird nicht mehr pauschal vom verfügbaren Budget abgezogen (Fehlpendeln aus V3.3.3).
+- Zusätzliche Verbraucherfreigaben sind durch den **aktuell gemessenen** freien Netzspielraum begrenzt; eine bloß angeordnete Reduzierung anderer Verbraucher gilt nicht sofort als verfügbare Leistung.
+- Konfigurierbare Netz-Freigabereserve (Default 0,3 kW) und Beruhigungszeit nach jedem Stellbefehl (Default 15 s) über globale Expertenwerte; nötige Sicherheitsreduktionen bleiben sofort erlaubt.
+- Verbraucher-Istleistung ist wieder **optional**; ein frischer Netzsensor bleibt Pflicht. Ein gültiger Istsensor kann die Schätzung und Rückmeldung verbessern, aber fehlende Werte sperren nicht mehr automatisch Live.
+- Der Rückkopplungszustand merkt sich bei fehlendem Istsensor den **physikalisch ausgegebenen, auf Geräte-/HA-Stufen abgerundeten** kW-Befehlswert statt des ungerundeten Reglerwunsches. Hersteller-Sondercodes werden nicht als physikalische Leistung geraten.
+- Zusätzliche Tests für den 140-kW-Simulatorfall, unterschiedliche Grenzwerte, fluktuierende Netzsensorwerte, PMAX-Sofortreduktion, EVSE-Mindestleistung, Verteilungsverhalten und Ausgangsstufen. Prüfprotokoll: `docs/GRID_FIRST_PMAX_FIX.md`.
+- **Grenze:** Ein plötzliches Wegfallen autonomer Batterieentladung kann das reale PMAX vor der nächsten Software-Reaktion überschreiten; harte Netzschutzgarantien brauchen geeignete Hardware-/Anlagengrenzen beziehungsweise eine explizite Netzreserve. Physische Simulatorabnahme weiter offen.
+
+
 ## 3.3.3 – Interne kW-Normalform und korrekte HA-Ausgabeeinheiten (HACS-Vorabversion)
 
 - Einheitenkorrektur für **alle** modulierenden Verbraucher und EVSE: interne kW, Geräteprofil, HA-Entity-eigene W/kW/MW-Einheit, native Grenz- und Schrittweitenprüfung.
