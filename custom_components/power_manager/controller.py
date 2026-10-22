@@ -216,6 +216,8 @@ def _validate_configuration(
         "grid_reserve_kw": (
             inputs.grid_reserve_kw
         ),
+        "grid_growth_margin_kw": inputs.grid_growth_margin_kw,
+        "grid_recovery_hold_s": inputs.grid_recovery_hold_s,
         "now_s": (
             inputs.now_s
         ),
@@ -287,6 +289,9 @@ def _validate_configuration(
         raise ValueError(
             "grid_limit_kw muss größer als 0 sein."
         )
+
+    if inputs.grid_growth_margin_kw < 0.0 or inputs.grid_recovery_hold_s < 0.0:
+        raise ValueError("Netz-Freigabereserve und Beruhigungszeit duerfen nicht negativ sein.")
 
     if inputs.grid_reserve_kw < 0.0:
 
@@ -686,12 +691,16 @@ def run_controller(
             + max(0.0, inputs.battery_kw)
         )
     else:
-        # PMAX is independent of battery availability in NORMAL, too:
-        # a currently discharging battery may stop at any moment.
+        # NORMAL uses the actual net meter as the primary feedback signal.
+        # Do not subtract optional battery discharge from usable headroom:
+        # doing so made a 140-kW connection oscillate at ~130 kW while
+        # the inverter was autonomously discharging. Sudden battery loss
+        # cannot be prevented by a software-only grid controller; detect
+        # rising grid import on the following measurement, shed immediately,
+        # and rely on hardware/installation reserve for a hard guarantee.
         base_load_kw = (
             inputs.grid_kw
             - controlled_power_for_calculation_kw
-            + max(0.0, inputs.battery_kw)
         )
 
     # ------------------------------------------------------
@@ -1001,6 +1010,39 @@ def run_controller(
         now_s=inputs.now_s,
     )
 
+    # NORMAL: never authorize MORE net load than the currently measured
+    # import headroom (after the configurable noise margin). Estimated
+    # previous commands are useful for budgeting, but NOT proof of real
+    # device power. Reductions elsewhere cannot be spent on an increase
+    # until the net meter observes the released headroom on a later cycle.
+    # A global settling/cooldown interval allows devices and the grid
+    # measurement to catch up; it never blocks safety reductions.
+    if inputs.mode == OperatingMode.NORMAL:
+        increase_headroom_kw = max(
+            0.0,
+            effective_grid_limit_kw - inputs.grid_kw
+            - inputs.grid_growth_margin_kw,
+        )
+        if inputs.now_s < state.grid_growth_block_until_s:
+            increase_headroom_kw = 0.0
+        for load in sorted(controlled_loads, key=lambda item: item.priority):
+            previous_kw = max(0.0, state.last_targets_kw.get(load.name, 0.0))
+            proposed_kw = targets_kw.get(load.name, 0.0)
+            if proposed_kw <= previous_kw + EPSILON:
+                continue  # Safety reductions and holding always remain allowed.
+            permitted_kw = min(proposed_kw, previous_kw + increase_headroom_kw)
+            if previous_kw <= EPSILON:
+                # A new load must be admitted atomically at its technical
+                # minimum. Never issue an under-minimum partial switch-on.
+                if (permitted_kw + EPSILON < load.min_kw
+                        or (not load.can_modulate
+                            and permitted_kw + EPSILON < proposed_kw)):
+                    permitted_kw = 0.0
+            targets_kw[load.name] = permitted_kw
+            increase_headroom_kw = max(
+                0.0, increase_headroom_kw - max(0.0, permitted_kw - previous_kw)
+            )
+
     total_target_kw = sum(
         targets_kw.values()
     )
@@ -1076,6 +1118,18 @@ def run_controller(
 
         now_s=inputs.now_s,
     )
+    # Preserve the global hold through immutable pure-core state transitions.
+    # Both increasing and decreasing a command need time for the plant to
+    # settle before the next optional increase. Further reductions bypass it.
+    next_state.grid_growth_block_until_s = state.grid_growth_block_until_s
+    if inputs.mode == OperatingMode.NORMAL and any(
+        abs(targets_kw.get(load.name, 0.0)
+            - state.last_targets_kw.get(load.name, 0.0)) > EPSILON
+        for load in controlled_loads
+    ):
+        next_state.grid_growth_block_until_s = (
+            inputs.now_s + inputs.grid_recovery_hold_s
+        )
     next_state.hybrid_probe_until_s = probe_until_s
     next_state.hybrid_probe_target_kw = probe_target_kw
     next_state.hybrid_probe_increment_kw = probe_increment_kw
