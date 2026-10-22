@@ -490,16 +490,16 @@ def _equalize_equivalent_loads(
     loads: list[ControllableLoad],
     ideal: dict[str, float],
     targets: dict[str, float],
+    state: ControllerState,
     mode: OperatingMode,
 ) -> None:
-    """Keep interchangeable active loads equally loaded without borrowing power.
+    """Fairly share only the INCREASE already admitted for identical peers.
 
-    When the grid allows no further increase, the per-device admission check
-    can retain a historical imbalance even though the fair allocator requested
-    identical targets. Reduce the higher targets to the lower safe target now;
-    subsequently observed grid export/headroom permits both to rise together.
-    Never override different requirements, limits, priorities in NORMAL,
-    shutdowns or technical minimums. This function never increases power.
+    Do not spend another device's reduction before it appears on the grid.
+    Reassigning a permitted increase within an equal peer group is safe: the
+    total sum of all positive individual increases never grows. With zero
+    headroom the higher peer is reduced to the lower one; on the next
+    physically confirmed export/headroom both peers can grow together.
     """
     groups: dict[tuple[float, float, float, int], list[ControllableLoad]] = {}
     for load in loads:
@@ -512,18 +512,43 @@ def _equalize_equivalent_loads(
     for peers in groups.values():
         if len(peers) < 2:
             continue
-        # Only equalize loads that the fair allocator wanted to run equally.
-        desired = [ideal.get(load.name, 0.0) for load in peers]
-        if min(desired) <= EPSILON or max(desired) - min(desired) > EPSILON:
+        fair = [ideal.get(load.name, 0.0) for load in peers]
+        # A switched-off/blocked consumer must not shut down its neighbors.
+        if min(fair) <= EPSILON or max(fair) - min(fair) > EPSILON:
             continue
-        current = [targets.get(load.name, 0.0) for load in peers]
-        if min(current) <= EPSILON:
-            continue  # Do not curtail running devices to an off/blocked peer.
-        common = min(current)
+        previous = [
+            max(
+                0.0,
+                state.last_targets_kw.get(load.name, 0.0),
+                load.actual_kw if load.actual_kw is not None else 0.0,
+            )
+            for load in peers
+        ]
+        if min(previous) <= EPSILON:
+            continue  # Normal minimum/start admission rules take precedence.
+        admitted_increase = sum(
+            max(0.0, targets.get(load.name, 0.0) - earlier)
+            for load, earlier in zip(peers, previous)
+        )
+        # Identical fair output in this group, bounded by the already
+        # admitted *positive* increase (no credit for commanded shedding).
+        desired = min(fair)
+        if desired <= min(previous):
+            common = desired  # Pure reductions always allowed.
+        else:
+            low, high = min(previous), desired
+            for _ in range(35):
+                mid = (low + high) / 2
+                increase_needed = sum(max(0.0, mid - p) for p in previous)
+                if increase_needed <= admitted_increase:
+                    low = mid
+                else:
+                    high = mid
+            common = low
         if common + EPSILON < peers[0].min_kw:
             continue
         for load in peers:
-            targets[load.name] = min(targets[load.name], common)
+            targets[load.name] = common
 
 
 def run_controller(
@@ -621,7 +646,7 @@ def run_controller(
 
     # Bring identical peers together promptly without assuming that a
     # commanded reduction has already created measurable network headroom.
-    _equalize_equivalent_loads(selected, fair_targets, targets, inputs.mode)
+    _equalize_equivalent_loads(selected, fair_targets, targets, state, inputs.mode)
 
     total_kw = sum(targets.values())
     projected_grid_kw = base_kw + total_kw
