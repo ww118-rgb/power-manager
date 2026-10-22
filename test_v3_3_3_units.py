@@ -6,7 +6,8 @@ import pytest
 pytest.importorskip("homeassistant", reason="HA adapter integration tests run in HA-Core matrix")
 
 from custom_components.power_manager.actuator import (
-    ActuatorError, _entity_output_plan, validate_actuator,
+    ActuatorError, _entity_output_plan, _effective_command_kw,
+    validate_actuator,
 )
 
 
@@ -139,3 +140,37 @@ def test_no_silent_unit_guess_without_entity_unit_when_value_out_of_range():
         _entity_output_plan(
             hass, load(output_unit="W"), 11, hass._state,
         )
+
+
+def test_sensorless_command_estimate_reflects_native_step_not_raw_request():
+    hass = FakeHA(unit="kW", step=0.1, maximum=20)
+    config = load(output_unit="W", max_kw=20)
+    plan = _entity_output_plan(hass, config, 9.6685, hass._state)
+    assert plan.numeric_value == pytest.approx(9.6)
+    assert _effective_command_kw(plan, config, 9.6685) == pytest.approx(9.6)
+
+
+def test_sensorless_evse_estimate_uses_quantized_ampere_power():
+    hass = FakeHA(unit="A", step=1, minimum=0, maximum=16)
+    config = load("evse", evse_output_format="A",
+                  evse_zero_unlimited=False, evse_pause_current_a=0.01)
+    plan = _entity_output_plan(hass, config, 7.2, hass._state)
+    assert plan.numeric_unit == "A"
+    effective = _effective_command_kw(plan, config, 7.2)
+    assert effective is not None
+    assert 0 < effective <= 7.2
+
+
+def test_physical_pause_is_zero_estimated_power():
+    hass = FakeHA(unit="kW", step=1, maximum=20)
+    config = load(output_unit="W", min_kw=4, max_kw=20)
+    plan = _entity_output_plan(hass, config, 2, hass._state)
+    assert plan.enabled is False
+    assert _effective_command_kw(plan, config, 2) == 0.0
+
+
+def test_manufacturer_code_is_not_reinterpreted_as_measured_kw():
+    hass = FakeHA(unit=None, step=1, maximum=100)
+    config = load(output_value_mode="linear", output_scale=1, output_offset=0)
+    plan = _entity_output_plan(hass, config, 7, hass._state)
+    assert _effective_command_kw(plan, config, 7) is None
