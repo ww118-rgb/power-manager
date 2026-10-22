@@ -1,8 +1,7 @@
 """Pure data contracts for the Power Manager 4.0 controller.
 
-The battery is deliberately absent: it operates autonomously and is never
-an input into power allocation. Optional battery entities belong to HA
-telemetry only, not this model.
+Energy storage is not a control input. The grid meter, PV production and an
+optional independent household base-load sensor determine power budgets.
 """
 from dataclasses import dataclass, field
 from enum import Enum
@@ -48,6 +47,9 @@ class ControllerInputs:
     grid_kw: float
     grid_limit_kw: float
     pv_kw: float = 0.0
+    # Optional separately measured NON-controllable house/base load.
+    # Without it PV mode conservatively admits only measured grid export.
+    house_kw: float | None = None
     grid_reserve_kw: float = 0.0
     # Optional noise margin for NEW increases only. Not an additional PMAX.
     grid_growth_margin_kw: float = 0.0
