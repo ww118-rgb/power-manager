@@ -42,11 +42,11 @@ def test_nonfinite_actual_does_not_confirm_device():
     ) == "failed"
 
 
-def test_live_control_requires_actual_sensor_and_shutdown_feedback():
+def test_live_control_requires_grid_not_per_load_actual_sensor():
     from pathlib import Path
     source = (Path(__file__).parent / "custom_components" /
               "power_manager" / "coordinator.py").read_text(encoding="utf-8")
-    assert "Live-Regelung benötigt eine echte Istleistungs-Entity" in source
-    assert "Istleistung fehlt oder ist veraltet" in source
+    assert "Live-Regelung benötigt eine echte Istleistungs-Entity" not in source
+    assert "Actual-power sensors are optional" in source
     assert "self._pending_reductions" in source
     assert "Leistungsreduzierung auf" in source
