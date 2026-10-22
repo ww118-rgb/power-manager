@@ -4,7 +4,7 @@ on:
   push:
     branches: ["fix/v3.3.5-simple-grid-and-pv"]
     paths:
-      - ".github/workflows/publish-hacs-v3-3-4.yml"
+      - ".github/workflows/publish-hacs-v3-3-5.yml"
 
 permissions:
   contents: write
@@ -33,7 +33,7 @@ jobs:
           assert "battery_assist_allowed" not in source
           assert "hybrid_probe_until_s = probe_until_s" not in source
           assert "export_kw = max(0.0, -inputs.grid_kw)" in source
-          assert Path("docs/RELEASE_NOTES_V3_3_4.md").is_file()
+          assert Path("docs/RELEASE_NOTES_V3_3_5.md").is_file()
           PY
       - name: Automated controller and packaging regression checks
         run: |
@@ -54,6 +54,6 @@ jobs:
             --repo "$GITHUB_REPOSITORY" \
             --target "$GITHUB_SHA" \
             --title 'Power Manager v3.3.5 – Netz-PMAX und PV-Überschuss (Simulator-Test)' \
-            --notes-file docs/RELEASE_NOTES_V3_3_4.md \
+            --notes-file docs/RELEASE_NOTES_V3_3_5.md \
             --prerelease
           gh release view v3.3.5 --repo "$GITHUB_REPOSITORY" --json tagName,isPrerelease,url,targetCommitish
