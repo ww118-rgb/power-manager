@@ -2,7 +2,7 @@
 
 DOMAIN = "power_manager"
 NAME = "Power Manager"
-VERSION = "3.3.0"
+VERSION = "3.3.1"
 
 SUBENTRY_TYPE_LOAD = "load"
 
@@ -35,6 +35,12 @@ CONF_PRIORITY = "priority"
 CONF_MIN_KW = "min_kw"
 CONF_MAX_KW = "max_kw"
 CONF_DEFAULT_REQUEST_KW = "default_request_kw"
+# Explicit demand selection. Legacy loads infer the mode from the request entity.
+CONF_DEMAND_MODE = "demand_mode"
+DEMAND_MODE_ALWAYS = "always"
+DEMAND_MODE_SENSOR = "sensor"
+DEMAND_MODE_DISABLED = "disabled"
+DEMAND_MODES = (DEMAND_MODE_ALWAYS, DEMAND_MODE_SENSOR, DEMAND_MODE_DISABLED)
 CONF_ACTUAL_POWER_ENTITY = "actual_power_entity"
 CONF_INVERT_ACTUAL_POWER = "invert_actual_power"
 CONF_ACTUAL_SENSOR_TIMEOUT_S = "actual_sensor_timeout_s"
