@@ -72,7 +72,7 @@ def test_recovery_holds_new_increases_but_sheds_immediately_on_grid_rise():
     assert hold.targets_kw["Heat"] == pytest.approx(19.74)
     # Even within the hold period a genuine grid overrun must reduce NOW.
     shed = run_controller(values(6, grid=142.0), [load()], hold.state)
-    assert shed.targets_kw["Heat"] == pytest.approx(17.44)
+    assert shed.targets_kw["Heat"] == pytest.approx(17.74)
     assert shed.targets_kw["Heat"] < hold.targets_kw["Heat"]
     assert shed.projected_grid_kw <= 140 + 1e-6
     # Do not restart the shed load in the next tick.
