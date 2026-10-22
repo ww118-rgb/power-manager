@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import json
-from math import isfinite
+from math import floor, isfinite
 
 from .allocator import EPSILON
 from .const import (
@@ -18,6 +18,7 @@ from .const import (
     OUTPUT_UNIT_KW,
     OUTPUT_UNIT_MW,
     OUTPUT_UNIT_W,
+    EVSE_OUTPUT_AMPERE, EVSE_OUTPUT_WATT, EVSE_OUTPUT_KW,
 )
 
 
@@ -58,6 +59,7 @@ def evse_target_to_current_a(
     min_current_a: float,
     max_current_a: float,
     pause_current_a: float,
+    step_current_a: float = 1.0,
 ) -> float:
     """Convert an EVSE power target to amps without exceeding the target."""
 
@@ -69,6 +71,8 @@ def evse_target_to_current_a(
         raise OutputConversionError("Invalid EVSE current range")
     if pause_current_a < 0.0 or pause_current_a >= min_current_a:
         raise OutputConversionError("Invalid EVSE pause current")
+    if not isfinite(step_current_a) or step_current_a <= 0.0:
+        raise OutputConversionError("Invalid EVSE ampere command step")
 
     if target_kw <= EPSILON:
         return pause_current_a
@@ -85,7 +89,13 @@ def evse_target_to_current_a(
             "EVSE target requires more than the configured maximum current"
         )
 
-    return min(current_a, max_current_a)
+    # Never send fractional currents when device demands whole ampere
+    # commands. Always round DOWN; rounding up can violate the power budget.
+    current_a = floor((min(current_a, max_current_a) + 1e-9)
+                      / step_current_a) * step_current_a
+    if current_a + 1e-9 < min_current_a:
+        return pause_current_a
+    return current_a
 
 
 def build_output_plan(
@@ -99,6 +109,10 @@ def build_output_plan(
     evse_min_current_a: float = 6.0,
     evse_max_current_a: float = 16.0,
     evse_pause_current_a: float = 0.01,
+    evse_output_format: str = EVSE_OUTPUT_AMPERE,
+    evse_current_step_a: float = 1.0,
+    evse_power_step_w: float = 1000.0,
+    evse_pause_power_value: float = 0.0,
     output_value_mode: str = DEFAULT_OUTPUT_VALUE_MODE,
     output_scale: float = 1.0,
     output_offset: float = 0.0,
@@ -127,25 +141,57 @@ def build_output_plan(
         return OutputPlan(enabled=enabled)
 
     if load_type == LOAD_TYPE_EVSE:
-        if evse_zero_unlimited and abs(evse_pause_current_a) <= EPSILON:
-            raise OutputConversionError(
-                "0 A releases the EVSE current limit; use a non-zero safe pause command"
+        if evse_output_format not in (EVSE_OUTPUT_AMPERE, EVSE_OUTPUT_WATT, EVSE_OUTPUT_KW):
+            raise OutputConversionError("Choose EVSE command format A, W or kW")
+        if (evse_phases <= 0 or not isfinite(evse_voltage_v)
+                or evse_voltage_v <= 0 or
+                not isfinite(evse_min_current_a) or evse_min_current_a <= 0 or
+                not isfinite(evse_max_current_a) or
+                evse_max_current_a < evse_min_current_a):
+            raise OutputConversionError("Invalid EVSE electrical parameters")
+        if evse_output_format == EVSE_OUTPUT_AMPERE:
+            if evse_zero_unlimited and abs(evse_pause_current_a) <= EPSILON:
+                raise OutputConversionError(
+                    "0 A releases the EVSE limit; require verified nonzero pause"
+                )
+            numeric_value = evse_target_to_current_a(
+                target_kw, phases=evse_phases, voltage_v=evse_voltage_v,
+                min_current_a=evse_min_current_a,
+                max_current_a=evse_max_current_a,
+                pause_current_a=evse_pause_current_a,
+                step_current_a=evse_current_step_a,
             )
-        current_a = evse_target_to_current_a(
-            target_kw,
-            phases=evse_phases,
-            voltage_v=evse_voltage_v,
-            min_current_a=evse_min_current_a,
-            max_current_a=evse_max_current_a,
-            pause_current_a=evse_pause_current_a,
-        )
-        if forbidden_value is not None and abs(current_a - forbidden_value) <= EPSILON:
+            enabled = numeric_value + EPSILON >= evse_min_current_a
+            unit = EVSE_OUTPUT_AMPERE
+        else:
+            # Power-controlled charging uses *physical* minimum and maximum
+            # dictated by phases and amps, but sends watts or kW to the device.
+            if (not isfinite(evse_power_step_w) or evse_power_step_w <= 0
+                    or not isfinite(evse_pause_power_value)
+                    or evse_pause_power_value < 0):
+                raise OutputConversionError("Invalid EVSE power step or pause code")
+            min_w = evse_phases * evse_voltage_v * evse_min_current_a
+            max_w = evse_phases * evse_voltage_v * evse_max_current_a
+            target_w = target_kw * 1000.0
+            if target_w > max_w + 1e-6:
+                raise OutputConversionError("EVSE target exceeds current-derived cap")
+            command_w = (
+                floor((target_w + 1e-6) / evse_power_step_w)
+                * evse_power_step_w
+                if target_w >= min_w - 1e-6 else 0.0
+            )
+            enabled = command_w >= min_w - 1e-6
+            numeric_value = (
+                command_w if evse_output_format == EVSE_OUTPUT_WATT
+                else command_w / 1000.0
+            ) if enabled else evse_pause_power_value
+            unit = evse_output_format
+        if forbidden_value is not None and abs(numeric_value - forbidden_value) <= EPSILON:
             raise OutputConversionError("EVSE output maps to a forbidden device command")
-        evse_enabled = current_a + EPSILON >= evse_min_current_a
         return OutputPlan(
-            numeric_value=current_a,
-            numeric_unit="A",
-            enabled=evse_enabled,
+            numeric_value=numeric_value,
+            numeric_unit=unit,
+            enabled=enabled,
         )
 
     if load_type == LOAD_TYPE_MODULATING:
