@@ -210,7 +210,7 @@ class PowerManagerCoordinator(DataUpdateCoordinator[PowerManagerCoordinatorData]
         self._tracking_started = False
         self._last_output_error: str | None = None
         self._pending_reductions: dict[str, PendingReduction] = {}
-        self._direct_last_command: dict[str, tuple[float, float]] = {}
+        self._direct_last_command: dict[str, tuple[float, float, float]] = {}
 
     @property
     def settings(self) -> dict[str, Any]:
@@ -681,7 +681,10 @@ class PowerManagerCoordinator(DataUpdateCoordinator[PowerManagerCoordinatorData]
     ) -> None:
         """Store output command information in one diagnostic record."""
 
-        diagnostic.commanded_target_kw = commanded_target_kw
+        diagnostic.commanded_target_kw = (
+            command.effective_target_kw
+            if command.effective_target_kw is not None else commanded_target_kw
+        )
         diagnostic.command_value = command.numeric_value
         diagnostic.command_unit = command.numeric_unit
         diagnostic.command_enabled = command.enabled
@@ -747,7 +750,7 @@ class PowerManagerCoordinator(DataUpdateCoordinator[PowerManagerCoordinatorData]
                         and abs(previous_direct[0] - requested_kw) <= EPSILON
                         and monotonic() - previous_direct[1] < refresh_s
                     ):
-                        diagnostic.commanded_target_kw = requested_kw
+                        diagnostic.commanded_target_kw = previous_direct[2]
                         continue
                 command = await async_apply_target(
                     self.hass,
@@ -756,7 +759,11 @@ class PowerManagerCoordinator(DataUpdateCoordinator[PowerManagerCoordinatorData]
                 )
                 if transport != OUTPUT_TRANSPORT_ENTITY:
                     self._direct_last_command[subentry_id] = (
-                        diagnostic.calculated_target_kw, monotonic(),
+                        diagnostic.calculated_target_kw,
+                        monotonic(),
+                        command.effective_target_kw
+                        if command.effective_target_kw is not None
+                        else diagnostic.calculated_target_kw,
                     )
                 if (
                     diagnostic.calculated_target_kw + EPSILON < previous_kw
@@ -1068,6 +1075,25 @@ class PowerManagerCoordinator(DataUpdateCoordinator[PowerManagerCoordinatorData]
                     last_output_error=output_error,
                     loads=diagnostics,
                 )
+
+        # For devices lacking an Istleistung sensor, use the PHYSICAL command
+        # accepted by the output adapter (after W/kW/A step rounding) as the
+        # next-cycle estimate. Keep it distinct from the calculated request.
+        # A command is not an actual-power measurement; only the grid meter
+        # confirms the net effect in the following cycles.
+        if self.live_control_enabled:
+            for diagnostic in diagnostics.values():
+                actual_command_kw = diagnostic.commanded_target_kw
+                if actual_command_kw is None:
+                    continue
+                result.state.last_targets_kw[diagnostic.name] = actual_command_kw
+                runtime = result.state.load_states.get(diagnostic.name)
+                if runtime is not None:
+                    physical_on = actual_command_kw > EPSILON
+                    if runtime.is_on != physical_on:
+                        runtime.last_switch_s = inputs.now_s
+                    runtime.is_on = physical_on
+                    runtime.last_target_kw = actual_command_kw
 
         # Controller state advances only after all measurements and calculations
         # were valid. In live mode it also requires successful output commands.
