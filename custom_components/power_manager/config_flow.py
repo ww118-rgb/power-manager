@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+
 from math import isfinite
 from typing import Any
 
@@ -77,6 +79,11 @@ from .const import (
     CONF_BATTERY_SOC_ENTITY,
     CONF_BATTERY_SOC_SCALE,
     CONF_DEFAULT_REQUEST_KW,
+    CONF_DEMAND_MODE, DEMAND_MODE_ALWAYS, DEMAND_MODE_SENSOR,
+    DEMAND_MODE_DISABLED, DEMAND_MODES,
+    LOAD_TYPE_MODULATING, LOAD_TYPE_EVSE, LOAD_TYPE_SWITCH,
+    OUTPUT_VALUE_MODE_STEPS, OUTPUT_VALUE_MODE_LINEAR,
+    OUTPUT_TRANSPORT_ENTITY, OUTPUT_TRANSPORT_MODBUS, OUTPUT_TRANSPORT_MQTT,
     CONF_ENABLE_ENTITY,
     CONF_EVSE_MAX_CURRENT_A,
     CONF_EVSE_MIN_CURRENT_A,
@@ -341,6 +348,81 @@ def _build_global_schema(values: dict[str, Any] | None = None) -> probatio.Schem
             ): _power_number_selector(),
         }
     )
+
+
+# Reuse canonical selectors: only reveal fields relevant to this step.
+_WIZARD_EXPERT = "wizard_expert"
+_WIZARD_ACK = "wizard_ack"
+_WIZARD_STAGE_COUNT = "wizard_stage_count"
+_GLOBAL_BASIC_KEYS = (
+    CONF_GRID_POWER_ENTITY, CONF_GRID_LIMIT_KW, CONF_PV_POWER_ENTITY,
+    CONF_BATTERY_POWER_ENTITY, CONF_BATTERY_SOC_ENTITY,
+    CONF_BATTERY_SOC_SCALE, CONF_SURPLUS_MIN_BATTERY_SOC,
+    CONF_INVERT_GRID_POWER,
+)
+_GLOBAL_ADVANCED_KEYS = (
+    CONF_GRID_RESERVE_KW, CONF_GRID_SENSOR_TIMEOUT_S,
+    CONF_INVERT_PV_POWER, CONF_INVERT_BATTERY_POWER,
+    CONF_PV_SENSOR_TIMEOUT_S, CONF_BATTERY_SENSOR_TIMEOUT_S,
+    CONF_BATTERY_SOC_SENSOR_TIMEOUT_S,
+    CONF_BATTERY_RESUME_HYSTERESIS_SOC,
+    CONF_HYBRID_PROBE_STEP_KW, CONF_HYBRID_PROBE_SETTLE_S,
+    CONF_HYBRID_PROBE_RETRY_S, CONF_HYBRID_GRID_TOLERANCE_KW,
+)
+_GLOBAL_DEFAULTS = {
+    CONF_GRID_RESERVE_KW: DEFAULT_GRID_RESERVE_KW,
+    CONF_GRID_SENSOR_TIMEOUT_S: DEFAULT_GRID_SENSOR_TIMEOUT_S,
+    CONF_INVERT_PV_POWER: DEFAULT_INVERT_PV_POWER,
+    CONF_INVERT_BATTERY_POWER: DEFAULT_INVERT_BATTERY_POWER,
+    CONF_PV_SENSOR_TIMEOUT_S: DEFAULT_PV_SENSOR_TIMEOUT_S,
+    CONF_BATTERY_SENSOR_TIMEOUT_S: DEFAULT_BATTERY_SENSOR_TIMEOUT_S,
+    CONF_BATTERY_SOC_SENSOR_TIMEOUT_S: DEFAULT_BATTERY_SOC_SENSOR_TIMEOUT_S,
+    CONF_BATTERY_RESUME_HYSTERESIS_SOC: DEFAULT_BATTERY_RESUME_HYSTERESIS_SOC,
+    CONF_HYBRID_PROBE_STEP_KW: DEFAULT_HYBRID_PROBE_STEP_KW,
+    CONF_HYBRID_PROBE_SETTLE_S: DEFAULT_HYBRID_PROBE_SETTLE_S,
+    CONF_HYBRID_PROBE_RETRY_S: DEFAULT_HYBRID_PROBE_RETRY_S,
+    CONF_HYBRID_GRID_TOLERANCE_KW: DEFAULT_HYBRID_GRID_TOLERANCE_KW,
+}
+
+def _subset_schema(
+    full_schema: probatio.Schema, fields: tuple[str, ...] | list[str],
+) -> probatio.Schema:
+    """Retain existing HA selectors, defaults and validation types."""
+    allowed = set(fields)
+    result = {
+        marker: validator
+        for marker, validator in full_schema.schema.items()
+        if getattr(marker, "schema", marker) in allowed
+    }
+    if len(result) != len(allowed):
+        present = {getattr(key, "schema", key) for key in result}
+        raise ValueError(f"Unknown setup fields: {sorted(allowed - present)}")
+    return probatio.Schema(result)
+
+
+def _global_simple_schema(values: dict[str, Any]) -> probatio.Schema:
+    fields = dict(
+        _subset_schema(_build_global_schema(values), _GLOBAL_BASIC_KEYS).schema
+    )
+    fields[_required_marker(_WIZARD_EXPERT, values, False)] = BooleanSelector()
+    return probatio.Schema(fields)
+
+
+def _global_expert_schema(values: dict[str, Any]) -> probatio.Schema:
+    return _subset_schema(_build_global_schema(values), _GLOBAL_ADVANCED_KEYS)
+
+
+def _merge_global_basic(old: dict[str, Any], submitted: dict[str, Any]) -> dict[str, Any]:
+    """Preserve hidden expert choices, allow clearing optional sensors."""
+    result = {**_GLOBAL_DEFAULTS, **old, **submitted}
+    for key in (
+        CONF_PV_POWER_ENTITY, CONF_BATTERY_POWER_ENTITY,
+        CONF_BATTERY_SOC_ENTITY, CONF_SURPLUS_MIN_BATTERY_SOC,
+    ):
+        if key not in submitted:
+            result[key] = None
+    result.pop(_WIZARD_EXPERT, None)
+    return result
 
 
 def _normalize_global_configuration(user_input: dict[str, Any]) -> dict[str, Any]:
@@ -718,81 +800,98 @@ def _duplicate_load_name(
 
 
 class PowerManagerConfigFlow(ConfigFlow, domain=DOMAIN):
-    """Handle the Power Manager config flow."""
+    """Configure essential plant values, optionally show expert tuning."""
 
     VERSION = 4
-    MINOR_VERSION = 0
+    MINOR_VERSION = 1
 
     async def async_step_user(
-        self,
-        user_input: dict[str, Any] | None = None,
+        self, user_input: dict[str, Any] | None = None,
     ) -> ConfigFlowResult:
-        """Configure global settings."""
-
         errors: dict[str, str] = {}
-
         if user_input is not None:
-            errors = _validate_global_configuration(user_input)
+            self._global_values = _merge_global_basic({}, user_input)
+            if user_input.get(_WIZARD_EXPERT):
+                return await self.async_step_global_expert()
+            errors = _validate_global_configuration(self._global_values)
             if not errors:
                 return self.async_create_entry(
-                    title=NAME,
-                    data=_normalize_global_configuration(user_input),
+                    title=NAME, data=_normalize_global_configuration(self._global_values)
                 )
-
+        values = {**getattr(self, "_global_values", {}), **(user_input or {})}
         return self.async_show_form(
-            step_id="user",
-            data_schema=_build_global_schema(user_input),
-            errors=errors,
+            step_id="user", data_schema=_global_simple_schema(values), errors=errors,
+        )
+
+    async def async_step_global_expert(
+        self, user_input: dict[str, Any] | None = None,
+    ) -> ConfigFlowResult:
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            self._global_values.update(user_input)
+            errors = _validate_global_configuration(self._global_values)
+            if not errors:
+                return self.async_create_entry(
+                    title=NAME, data=_normalize_global_configuration(self._global_values)
+                )
+        return self.async_show_form(
+            step_id="global_expert",
+            data_schema=_global_expert_schema(
+                {**getattr(self, "_global_values", {}), **(user_input or {})}
+            ), errors=errors,
         )
 
     @classmethod
     @callback
     def async_get_supported_subentry_types(
-        cls,
-        config_entry: ConfigEntry,
+        cls, config_entry: ConfigEntry,
     ) -> dict[str, type[ConfigSubentryFlow]]:
-        """Return supported load subentry types."""
-
         return {SUBENTRY_TYPE_LOAD: PowerManagerLoadSubentryFlow}
 
     @staticmethod
     @callback
     def async_get_options_flow(config_entry: ConfigEntry) -> PowerManagerOptionsFlow:
-        """Return global options flow."""
-
         return PowerManagerOptionsFlow()
 
 
 class PowerManagerOptionsFlow(OptionsFlow):
-    """Edit global Power Manager settings."""
+    """Edit core sensors and PMAX with optional expert controls."""
 
     async def async_step_init(
-        self,
-        user_input: dict[str, Any] | None = None,
+        self, user_input: dict[str, Any] | None = None,
     ) -> ConfigFlowResult:
-        """Edit global settings."""
-
+        stored = {**self.config_entry.data, **self.config_entry.options}
         errors: dict[str, str] = {}
-
         if user_input is not None:
-            errors = _validate_global_configuration(user_input)
+            self._global_values = _merge_global_basic(stored, user_input)
+            if user_input.get(_WIZARD_EXPERT):
+                return await self.async_step_global_expert()
+            errors = _validate_global_configuration(self._global_values)
             if not errors:
                 return self.async_create_entry(
-                    title="",
-                    data=_normalize_global_configuration(user_input),
+                    title="", data=_normalize_global_configuration(self._global_values)
                 )
-
-        current_values = {
-            **self.config_entry.data,
-            **self.config_entry.options,
-        }
-        if user_input is not None:
-            current_values.update(user_input)
-
+        values = {**stored, **(user_input or {})}
         return self.async_show_form(
-            step_id="init",
-            data_schema=_build_global_schema(current_values),
-            errors=errors,
+            step_id="init", data_schema=_global_simple_schema(values), errors=errors,
+        )
+
+    async def async_step_global_expert(
+        self, user_input: dict[str, Any] | None = None,
+    ) -> ConfigFlowResult:
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            self._global_values.update(user_input)
+            errors = _validate_global_configuration(self._global_values)
+            if not errors:
+                return self.async_create_entry(
+                    title="", data=_normalize_global_configuration(self._global_values)
+                )
+        return self.async_show_form(
+            step_id="global_expert",
+            data_schema=_global_expert_schema(
+                {**getattr(self, "_global_values", {}), **(user_input or {})}
+            ), errors=errors,
         )
 
 
