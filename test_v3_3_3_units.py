@@ -3,6 +3,8 @@ from types import SimpleNamespace
 
 import pytest
 
+pytest.importorskip("homeassistant", reason="HA adapter integration tests run in HA-Core matrix")
+
 from custom_components.power_manager.actuator import (
     ActuatorError, _entity_output_plan, validate_actuator,
 )
