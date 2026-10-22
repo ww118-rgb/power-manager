@@ -121,6 +121,8 @@ jobs:
           async def verify_complete_modbus_wizard():
               from types import SimpleNamespace
               flow = PowerManagerLoadSubentryFlow()
+              # The HA flow manager normally injects this metadata.
+              flow.context = {"source": "user"}
               flow._get_entry = lambda: SimpleNamespace(subentries={})
               page = await flow.async_step_user()
               page = await flow.async_step_load_basics({
