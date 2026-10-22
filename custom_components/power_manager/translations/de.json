@@ -2046,7 +2046,7 @@
         "name": "Echter PV-Überschuss nach Grundlast"
       },
       "surplus_budget": {
-        "name": "Beobachtetes Hybridbudget"
+        "name": "Berechnetes PV-Budget"
       },
       "available_budget": {
         "name": "Verfügbares Lastbudget"
