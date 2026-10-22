@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
-from decimal import Decimal, ROUND_FLOOR
 from math import isfinite
 from typing import Any
 
@@ -100,6 +99,7 @@ from .const import (
 from .outputs import OutputConversionError, OutputPlan, build_output_plan
 from .protocols import TransportError, async_modbus_write, async_mqtt_publish
 from .load_config import validate_load_data
+from .device_units import convert_power_unit, quantize_down
 
 
 class ActuatorError(RuntimeError):
@@ -197,45 +197,27 @@ def _numeric_in_range(value: float, state: State) -> bool:
 
 
 def _convert_power_unit(value: float, source: str, target: str) -> float:
-    """Power-only conversion. Do not treat A or manufacturer codes as kW."""
-    factors = {OUTPUT_UNIT_W: 0.001, OUTPUT_UNIT_KW: 1.0,
-               OUTPUT_UNIT_MW: 1000.0}
-    if source not in factors or target not in factors:
-        raise ActuatorError(
-            f"Ausgangseinheit {source!r} ist nicht mit {target!r} kompatibel."
-        )
-    return value * factors[source] / factors[target]
+    """Unit-only adapter, never interpret raw device codes as power."""
+    try:
+        return convert_power_unit(value, source, target)
+    except ValueError as err:
+        raise ActuatorError(str(err)) from err
 
 
 def _quantize_down(value: float, state: State) -> float:
-    """Round to the next valid HA-number step, never above the requested value."""
+    """Respect the number entity's bounds and its physical command step."""
     minimum, maximum = _numeric_limits(state)
-    if not isfinite(value):
-        raise ActuatorError("Ungültiger nicht-endlicher Ausgangswert.")
-    if maximum is not None and value > maximum + 1e-8:
-        raise ActuatorError(
-            f"Sollwert {value:g} liegt oberhalb der Entity-Obergrenze {maximum:g}."
-        )
-    if minimum is not None and value < minimum - 1e-8:
-        raise ActuatorError(
-            f"Sollwert {value:g} liegt unterhalb der Entity-Untergrenze {minimum:g}."
-        )
     raw_step = state.attributes.get("step")
-    if raw_step is None:
-        return value
     try:
-        step = Decimal(str(raw_step))
-        origin = Decimal(str(minimum if minimum is not None else 0.0))
-        val = Decimal(str(value))
-    except (TypeError, ValueError, ArithmeticError) as err:
-        raise ActuatorError("Ungültige Entity-Schrittweite.") from err
-    if not step.is_finite() or step <= 0:
-        raise ActuatorError("Entity-Schrittweite muss positiv sein.")
-    count = ((val - origin) / step).to_integral_value(rounding=ROUND_FLOOR)
-    quantized = float(origin + count * step)
-    if minimum is not None and quantized < minimum - 1e-8:
-        raise ActuatorError("Kein erlaubter Stellwert innerhalb der Entity-Grenzen.")
-    return quantized
+        return quantize_down(
+            value, minimum=minimum, maximum=maximum,
+            step=float(raw_step) if raw_step is not None else None,
+        )
+    except (ValueError, TypeError) as err:
+        raise ActuatorError(
+            f"Gerätesollwert {value:g} passt nicht zur Entity: "
+            f"Bereich [{minimum}, {maximum}], Schrittweite {raw_step}: {err}"
+        ) from err
 
 
 def _effective_power_kw(
