@@ -1,5 +1,20 @@
 # Changelog
 
+## 3.3.1 – Einfache Einrichtung (HACS-Testkandidat)
+
+- Globale Grundeinrichtung auf Netz, PMAX, PV, Batterie, SOC und Reserve reduziert; Sensor-Timeouts, Vorzeichen-Sonderfälle und Hybridprüfung über optionalen Expertenweg.
+- Verbraucherassistent statt eines 60-Felder-Formulars: Grunddaten, expliziter Bedarf, Anbindung, passende Gerätebefehle, optionale Expertenwerte und Sicherheitsabschluss.
+- Verbindungsspezifische Felder: HA-Entity, Modbus-TCP-Registerdaten oder MQTT-Topic statt aller Protokolle gleichzeitig.
+- Gerätespezifische Eingaben nur für passende Profile: EVSE-Ladestrom und sichere Pause, lineare Gerätecodes, Schaltcodes oder diskrete Stufen ohne JSON-Handarbeit.
+- Eindeutige Bedarfsarten `always`, `sensor`, `disabled`. Keine versteckte 0-kW-Auslegung mehr in der neuen Bedienung; Bestandsinstallationen bleiben kompatibel.
+- Physische EVSE-Mindestleistung aus Phasenzahl, Phasenspannung und Mindeststrom berechnet.
+- Neuer Gerätebefehls-Vorschautext auf der Abschlussseite (rein rechnerisch; keine Hardwarewirkung bewiesen).
+- Bei Neukonfiguration direkter Ausgänge erneute ausdrückliche Sicherheitsbestätigung; Speicherung startet keine Live-Regelung.
+- Fehlende Übersetzungsvariable in MQTT-Texten korrigiert und alle Assistentenseiten deutsch/englisch beschriftet.
+- CI: Python-Regressionen sowie reale HA-Core-Import-/Einrichtungswege für unterstützte Prüfstände; Simulator-Abnahme steht aus.
+
+
+
 ## 3.3.0 – Physische Rückmeldeüberwachung (Teststand)
 
 - Frische Verbraucher-Istleistungsmessung für jeden Lastkanal als Voraussetzung der Live-Aktivierung.
