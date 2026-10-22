@@ -16,11 +16,8 @@ def consumer(actual=5.0, desired=10.0):
 def readings(now, *, grid=0, pv=10, battery=0, soc=0, limit=10, reserve=0):
     return ControllerInputs(
         grid_kw=grid, grid_limit_kw=limit, pv_kw=pv,
-        grid_reserve_kw=reserve, battery_kw=battery,
-        battery_soc=soc, surplus_min_battery_soc=30,
+        grid_reserve_kw=reserve,
         now_s=now, mode=OperatingMode.SURPLUS,
-        hybrid_battery_assist_enabled=True,
-        hybrid_probe_enabled=False,
     )
 
 
