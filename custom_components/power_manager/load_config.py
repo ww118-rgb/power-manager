@@ -61,6 +61,9 @@ from .const import (
     CONF_EVSE_MAX_CURRENT_A,
     CONF_EVSE_MIN_CURRENT_A,
     CONF_EVSE_PAUSE_CURRENT_A,
+    CONF_EVSE_OUTPUT_FORMAT, CONF_EVSE_CURRENT_STEP_A,
+    CONF_EVSE_POWER_STEP_W, CONF_EVSE_PAUSE_POWER_VALUE,
+    EVSE_OUTPUT_FORMATS, EVSE_OUTPUT_AUTO, EVSE_OUTPUT_AMPERE,
     CONF_EVSE_PHASES,
     CONF_EVSE_VOLTAGE_V,
     CONF_LOAD_NAME,
@@ -84,6 +87,8 @@ from .const import (
     DEFAULT_EVSE_MAX_CURRENT_A,
     DEFAULT_EVSE_MIN_CURRENT_A,
     DEFAULT_EVSE_PAUSE_CURRENT_A,
+    DEFAULT_EVSE_OUTPUT_FORMAT, DEFAULT_EVSE_CURRENT_STEP_A,
+    DEFAULT_EVSE_POWER_STEP_W, DEFAULT_EVSE_PAUSE_POWER_VALUE,
     DEFAULT_EVSE_PHASES,
     DEFAULT_EVSE_VOLTAGE_V,
     DEFAULT_LOAD_TYPE,
@@ -257,10 +262,17 @@ def normalize_load_data(data: dict[str, Any]) -> dict[str, Any]:
         DEFAULT_EVSE_MAX_CURRENT_A,
     )
     normalized[CONF_EVSE_PAUSE_CURRENT_A] = _float_value(
-        normalized,
-        CONF_EVSE_PAUSE_CURRENT_A,
-        DEFAULT_EVSE_PAUSE_CURRENT_A,
+        normalized, CONF_EVSE_PAUSE_CURRENT_A, DEFAULT_EVSE_PAUSE_CURRENT_A,
     )
+    normalized[CONF_EVSE_OUTPUT_FORMAT] = str(normalized.get(
+        CONF_EVSE_OUTPUT_FORMAT, DEFAULT_EVSE_OUTPUT_FORMAT,
+    ))
+    for field, default in (
+        (CONF_EVSE_CURRENT_STEP_A, DEFAULT_EVSE_CURRENT_STEP_A),
+        (CONF_EVSE_POWER_STEP_W, DEFAULT_EVSE_POWER_STEP_W),
+        (CONF_EVSE_PAUSE_POWER_VALUE, DEFAULT_EVSE_PAUSE_POWER_VALUE),
+    ):
+        normalized[field] = _float_value(normalized, field, default)
 
     # A switchable load cannot physically modulate. Its technical minimum is
     # therefore identical to its rated / maximum power.
@@ -436,11 +448,32 @@ def validate_load_data(data: dict[str, Any]) -> dict[str, str]:
             errors["base"] = "invalid_current_range"
         if pause_current_a < 0.0 or pause_current_a >= min_current_a:
             errors[CONF_EVSE_PAUSE_CURRENT_A] = "invalid_pause_current"
-        if values[CONF_EVSE_ZERO_UNLIMITED] and pause_current_a <= 0.0:
+        fmt = values[CONF_EVSE_OUTPUT_FORMAT]
+        if fmt not in EVSE_OUTPUT_FORMATS:
+            errors[CONF_EVSE_OUTPUT_FORMAT] = "invalid_evse_output_format"
+        if fmt == EVSE_OUTPUT_AUTO and transport != OUTPUT_TRANSPORT_ENTITY:
+            errors[CONF_EVSE_OUTPUT_FORMAT] = "evse_auto_requires_entity"
+        if (
+            values[CONF_EVSE_CURRENT_STEP_A] <= 0.0
+            or values[CONF_EVSE_POWER_STEP_W] <= 0.0
+        ):
+            errors[CONF_EVSE_CURRENT_STEP_A] = "invalid_evse_step"
+        if values[CONF_EVSE_PAUSE_POWER_VALUE] < 0:
+            errors[CONF_EVSE_PAUSE_POWER_VALUE] = "invalid_pause_current"
+        # 0 means unlimited only for an *Ampere* current limit, never for
+        # a documented 0 W/0 kW power command.
+        if (
+            fmt in (EVSE_OUTPUT_AMPERE, EVSE_OUTPUT_AUTO)
+            and values[CONF_EVSE_ZERO_UNLIMITED]
+            and pause_current_a <= 0.0
+        ):
             errors[CONF_EVSE_PAUSE_CURRENT_A] = "evse_zero_means_unlimited"
-        if (forbidden is not None and abs(pause_current_a - forbidden) <= 0.000001
-                and not (values[CONF_EVSE_ZERO_UNLIMITED] and pause_current_a <= 0.0)):
-            errors[CONF_EVSE_PAUSE_CURRENT_A] = "forbidden_pause_code"
+        if forbidden is not None:
+            if fmt in (EVSE_OUTPUT_AMPERE, EVSE_OUTPUT_AUTO):
+                if abs(pause_current_a - forbidden) <= 0.000001:
+                    errors[CONF_EVSE_PAUSE_CURRENT_A] = "forbidden_pause_code"
+            elif abs(values[CONF_EVSE_PAUSE_POWER_VALUE] - forbidden) <= 0.000001:
+                errors[CONF_EVSE_PAUSE_POWER_VALUE] = "forbidden_pause_code"
 
         min_power_kw = phases * voltage_v * min_current_a / 1000.0
         max_power_kw = phases * voltage_v * max_current_a / 1000.0
