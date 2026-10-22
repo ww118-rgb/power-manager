@@ -203,7 +203,6 @@ def test_controller_130_kw_grid_140_kw_limit():
         inputs=ControllerInputs(
             grid_kw=130.0,
             grid_limit_kw=140.0,
-            battery_soc=70.0,
         ),
         loads=loads,
     )
@@ -276,7 +275,6 @@ def test_controller_uses_actual_power_measurements():
         inputs=ControllerInputs(
             grid_kw=135.0,
             grid_limit_kw=140.0,
-            battery_soc=70.0,
         ),
         loads=loads,
     )
@@ -520,7 +518,6 @@ def test_surplus_uses_pv_remaining_after_house_demand():
             grid_kw=-15.0,
             grid_limit_kw=140.0,
             pv_kw=30.0,
-            battery_soc=70.0,
             mode=OperatingMode.SURPLUS,
         ),
         loads=[load],
@@ -542,98 +539,6 @@ def test_surplus_uses_pv_remaining_after_house_demand():
     )
 
 
-def test_surplus_never_spends_autonomous_battery_charging():
-    loads = [
-        ControllableLoad(
-            name="Wärmepumpe",
-            priority=1,
-            requested_kw=20.0,
-            actual_kw=0.0,
-            min_kw=0.0,
-            max_kw=20.0,
-        ),
-        ControllableLoad(
-            name="Wallbox 1",
-            priority=2,
-            requested_kw=11.0,
-            actual_kw=4.45,
-            min_kw=0.0,
-            max_kw=11.0,
-        ),
-    ]
-
-    result = run_controller(
-        inputs=ControllerInputs(
-            grid_kw=0.0,
-            grid_limit_kw=140.0,
-            pv_kw=14.42,
-            battery_soc=71.7,
-            battery_kw=-9.93,
-            mode=OperatingMode.SURPLUS,
-        ),
-        loads=loads,
-    )
-
-    assert (
-        result.base_load_kw
-        == pytest.approx(-4.45)
-    )
-
-    assert (
-        result.available_budget_kw
-        == pytest.approx(4.45)
-    )
-
-    # With zero real grid export, a new load is NOT started by
-    # assuming autonomous battery charging is interruptible. Existing
-    # PV load is tapered toward an equal share; the next export reading
-    # can be reallocated immediately without a global delay.
-    assert result.targets_kw["Wärmepumpe"] == 0.0
-    assert result.targets_kw["Wallbox 1"] == pytest.approx(2.225)
-    assert result.projected_grid_kw <= 0.0
-
-
-def test_surplus_requires_actual_pv_remainder_not_just_battery_discharge():
-    load = ControllableLoad(
-        name="Wallbox",
-        priority=1,
-        requested_kw=20.0,
-        actual_kw=0.0,
-        min_kw=0.0,
-        max_kw=20.0,
-    )
-
-    result = run_controller(
-        inputs=ControllerInputs(
-            grid_kw=0.0,
-            grid_limit_kw=140.0,
-            pv_kw=10.0,
-            battery_soc=70.0,
-            battery_kw=10.0,
-            mode=OperatingMode.SURPLUS,
-        ),
-        loads=[load],
-    )
-
-    # Battery power is not a regulator input or a controller budget.
-    assert result.battery_discharge_kw == 0.0
-
-    assert (
-        result.raw_surplus_budget_kw
-        == pytest.approx(0.0)
-    )
-
-    assert (
-        result.surplus_budget_kw
-        == pytest.approx(0.0)
-    )
-
-    assert (
-        result.targets_kw["Wallbox"]
-        == pytest.approx(0.0)
-    )
-
-
 def test_surplus_pmax_still_caps_pv_budget():
     load = ControllableLoad(
         name="Verbraucher",
@@ -649,8 +554,6 @@ def test_surplus_pmax_still_caps_pv_budget():
             grid_kw=130.0,
             grid_limit_kw=140.0,
             pv_kw=30.0,
-            battery_soc=70.0,
-            battery_kw=0.0,
             mode=OperatingMode.SURPLUS,
         ),
         loads=[load],
@@ -1226,172 +1129,6 @@ def test_uncontrollable_base_load_over_pmax_is_reported():
 
 # ============================================================
 # V1.5 - BATTERIE-SOC
-# ============================================================
-
-
-def test_surplus_retains_pv_only_budget_at_or_below_battery_reserve():
-    load = ControllableLoad(
-        name="Überschusslast",
-        priority=1,
-        requested_kw=20.0,
-        actual_kw=0.0,
-        min_kw=2.0,
-        max_kw=20.0,
-    )
-
-    for battery_soc in (39.9, 40.0):
-        result = run_controller(
-            inputs=ControllerInputs(
-                grid_kw=-12.0,
-                grid_limit_kw=100.0,
-                pv_kw=12.0,
-                battery_soc=battery_soc,
-                surplus_min_battery_soc=40.0,
-                mode=OperatingMode.SURPLUS,
-            ),
-            loads=[load],
-        )
-
-        assert (
-            result.raw_surplus_budget_kw
-            == pytest.approx(12.0)
-        )
-
-        assert (
-            result.surplus_budget_kw
-            == pytest.approx(12.0)
-        )
-
-        assert result.battery_soc_gate_enabled is False
-        assert result.battery_soc_blocking_surplus is False
-
-        assert (
-            result.targets_kw["Überschusslast"]
-            == pytest.approx(12.0)
-        )
-
-
-def test_surplus_is_allowed_above_configured_battery_soc():
-    load = ControllableLoad(
-        name="Überschusslast",
-        priority=1,
-        requested_kw=20.0,
-        actual_kw=0.0,
-        min_kw=2.0,
-        max_kw=20.0,
-    )
-
-    result = run_controller(
-        inputs=ControllerInputs(
-            grid_kw=-12.0,
-            grid_limit_kw=100.0,
-            pv_kw=12.0,
-            battery_soc=40.1,
-            surplus_min_battery_soc=40.0,
-            mode=OperatingMode.SURPLUS,
-        ),
-        loads=[load],
-    )
-
-    assert (
-        result.battery_soc_blocking_surplus
-        is False
-    )
-
-    assert (
-        result.surplus_budget_kw
-        == pytest.approx(12.0)
-    )
-
-    assert (
-        result.targets_kw["Überschusslast"]
-        == pytest.approx(12.0)
-    )
-
-
-def test_normal_mode_ignores_surplus_soc_gate():
-    load = ControllableLoad(
-        name="Normallast",
-        priority=1,
-        requested_kw=10.0,
-        actual_kw=0.0,
-        min_kw=2.0,
-        max_kw=10.0,
-    )
-
-    result = run_controller(
-        inputs=ControllerInputs(
-            grid_kw=80.0,
-            grid_limit_kw=100.0,
-            battery_soc=10.0,
-            surplus_min_battery_soc=40.0,
-            mode=OperatingMode.NORMAL,
-        ),
-        loads=[load],
-    )
-
-    assert result.battery_soc_gate_enabled is False
-
-    assert (
-        result.battery_soc_blocking_surplus
-        is False
-    )
-
-    assert (
-        result.targets_kw["Normallast"]
-        == pytest.approx(10.0)
-    )
-
-
-def test_legacy_soc_limit_does_not_block_real_pv_surplus():
-    load = ControllableLoad(
-        name="Last", priority=1, requested_kw=10, min_kw=1, max_kw=10,
-    )
-    result = run_controller(
-        inputs=ControllerInputs(
-            grid_kw=-5, pv_kw=10, grid_limit_kw=100,
-            battery_soc=None, surplus_min_battery_soc=40,
-            mode=OperatingMode.SURPLUS,
-        ),
-        loads=[load],
-    )
-    assert result.targets_kw["Last"] == pytest.approx(5)
-    assert not result.battery_soc_gate_enabled
-
-
-def test_controller_works_without_battery_when_soc_gate_disabled():
-    load = ControllableLoad(
-        name="Last",
-        priority=1,
-        requested_kw=5.0,
-        actual_kw=0.0,
-        min_kw=1.0,
-        max_kw=5.0,
-    )
-
-    result = run_controller(
-        inputs=ControllerInputs(
-            grid_kw=50.0,
-            grid_limit_kw=60.0,
-            battery_soc=None,
-            battery_kw=0.0,
-        ),
-        loads=[load],
-    )
-
-    assert (
-        result.targets_kw["Last"]
-        == pytest.approx(5.0)
-    )
-
-    assert (
-        result.battery_soc_gate_enabled
-        is False
-    )
-
-
-# ============================================================
-# V1.5 - DIAGNOSE
 # ============================================================
 
 
