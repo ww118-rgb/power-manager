@@ -6,7 +6,7 @@ performs device-unit conversion AFTER this pure controller.
 
 Grid meter = sole authoritative control measurement. Optional individual
 power measurements improve the baseline; no device sensor is mandatory.
-Autonomous battery has NO connection to this module.
+Storage state is not part of this controller; no SOC or storage power inputs.
 """
 from __future__ import annotations
 
@@ -28,6 +28,10 @@ def _validate(inputs: ControllerInputs, loads: list[ControllableLoad]) -> None:
     for name in ("grid_kw", "grid_limit_kw", "pv_kw",
                  "grid_reserve_kw", "grid_growth_margin_kw", "now_s"):
         _finite(name, getattr(inputs, name))
+    if inputs.house_kw is not None:
+        _finite("house_kw", inputs.house_kw)
+        if inputs.house_kw < 0:
+            raise ValueError("Hausgrundverbrauch darf nicht negativ sein.")
     if inputs.grid_limit_kw <= 0:
         raise ValueError("PMAX muss positiv sein.")
     if not 0 <= inputs.grid_reserve_kw < inputs.grid_limit_kw:
@@ -335,7 +339,7 @@ def run_controller(
 
     measured, estimated = _known_power(selected, state)
     controlled = measured + estimated
-    # Same proven base-load identity as 3.1.1 NORMAL. Battery is excluded.
+    # Measured grid import minus currently known controlled loads.
     base = inputs.grid_kw - controlled
     limit = inputs.grid_limit_kw - inputs.grid_reserve_kw
     peak_budget = max(0.0, limit - base)
@@ -350,15 +354,31 @@ def run_controller(
         )
         candidates = selected
     else:
-        # PV generation alone is not free power. Only metered grid export
-        # PLUS the existing PV consumer power can form the PV budget.
-        # This avoids oscillating to OFF whenever existing loads reduce
-        # grid export to exactly zero. Autonomous battery stays untouched.
+        # Two *explicit* modes of evidence, never inferred from storage.
+        # (1) With a separate household base-load meter, PV production minus
+        #     non-controllable house consumption is available to PV loads,
+        #     including when another autonomous appliance absorbs export.
+        # (2) Without that meter, use only physical grid export and the
+        #     already-running controlled loads, never assume base consumption.
         pv_present = inputs.pv_kw > EPSILON
         export = max(0.0, -inputs.grid_kw) if pv_present else 0.0
-        surplus_budget = max(0.0, controlled - inputs.grid_kw) if pv_present else 0.0
+        grid_backed_kw = max(0.0, controlled - inputs.grid_kw)
+        if not pv_present:
+            surplus_budget = 0.0
+            growth_room = 0.0
+        elif inputs.house_kw is None:
+            surplus_budget = grid_backed_kw
+            growth_room = export
+        else:
+            pv_after_house_kw = max(0.0, inputs.pv_kw - inputs.house_kw)
+            # Once *actual grid import* appears, correct immediately and
+            # never continue increasing on an optimistic PV estimate.
+            surplus_budget = (
+                min(pv_after_house_kw, grid_backed_kw)
+                if inputs.grid_kw > EPSILON else pv_after_house_kw
+            )
+            growth_room = max(0.0, surplus_budget - controlled)
         budget = min(peak_budget, surplus_budget)
-        growth_room = export
         # Fair in SURPLUS regardless of NORMAL priority; preserve all other
         # technical bounds/timing parameters from the original load.
         from dataclasses import replace
