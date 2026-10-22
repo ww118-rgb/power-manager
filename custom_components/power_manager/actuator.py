@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
+from decimal import Decimal, ROUND_FLOOR
 from math import isfinite
 from typing import Any
 
@@ -85,7 +86,12 @@ from .const import (
     DEFAULT_OUTPUT_UNIT,
     DEFAULT_SAFE_OUTPUT_VALUE,
     LOAD_TYPE_EVSE,
+    LOAD_TYPE_MODULATING,
     LOAD_TYPE_SWITCH,
+    OUTPUT_VALUE_MODE_POWER,
+    OUTPUT_UNIT_W,
+    OUTPUT_UNIT_KW,
+    OUTPUT_UNIT_MW,
     OUTPUT_UNIT_AUTO,
     SUPPORTED_NUMBER_DOMAINS,
     SUPPORTED_OUTPUT_POWER_UNITS,
@@ -188,6 +194,146 @@ def _numeric_in_range(value: float, state: State) -> bool:
         if abs(steps - round(steps)) > 1e-6:
             return False
     return True
+
+
+def _convert_power_unit(value: float, source: str, target: str) -> float:
+    """Power-only conversion. Do not treat A or manufacturer codes as kW."""
+    factors = {OUTPUT_UNIT_W: 0.001, OUTPUT_UNIT_KW: 1.0,
+               OUTPUT_UNIT_MW: 1000.0}
+    if source not in factors or target not in factors:
+        raise ActuatorError(
+            f"Ausgangseinheit {source!r} ist nicht mit {target!r} kompatibel."
+        )
+    return value * factors[source] / factors[target]
+
+
+def _quantize_down(value: float, state: State) -> float:
+    """Round to the next valid HA-number step, never above the requested value."""
+    minimum, maximum = _numeric_limits(state)
+    if not isfinite(value):
+        raise ActuatorError("Ungültiger nicht-endlicher Ausgangswert.")
+    if maximum is not None and value > maximum + 1e-8:
+        raise ActuatorError(
+            f"Sollwert {value:g} liegt oberhalb der Entity-Obergrenze {maximum:g}."
+        )
+    if minimum is not None and value < minimum - 1e-8:
+        raise ActuatorError(
+            f"Sollwert {value:g} liegt unterhalb der Entity-Untergrenze {minimum:g}."
+        )
+    raw_step = state.attributes.get("step")
+    if raw_step is None:
+        return value
+    try:
+        step = Decimal(str(raw_step))
+        origin = Decimal(str(minimum if minimum is not None else 0.0))
+        val = Decimal(str(value))
+    except (TypeError, ValueError, ArithmeticError) as err:
+        raise ActuatorError("Ungültige Entity-Schrittweite.") from err
+    if not step.is_finite() or step <= 0:
+        raise ActuatorError("Entity-Schrittweite muss positiv sein.")
+    count = ((val - origin) / step).to_integral_value(rounding=ROUND_FLOOR)
+    quantized = float(origin + count * step)
+    if minimum is not None and quantized < minimum - 1e-8:
+        raise ActuatorError("Kein erlaubter Stellwert innerhalb der Entity-Grenzen.")
+    return quantized
+
+
+def _effective_power_kw(
+    command: float,
+    unit: str,
+    load_data: dict[str, Any],
+) -> float:
+    """Infer the maximum physical output that the translated command permits."""
+    if unit == EVSE_OUTPUT_AMPERE:
+        return (
+            command * int(load_data.get(CONF_EVSE_PHASES, DEFAULT_EVSE_PHASES))
+            * float(load_data.get(CONF_EVSE_VOLTAGE_V, DEFAULT_EVSE_VOLTAGE_V))
+            / 1000.0
+        )
+    return _convert_power_unit(command, unit, OUTPUT_UNIT_KW)
+
+
+def _entity_output_plan(
+    hass: HomeAssistant,
+    load_data: dict[str, Any],
+    target_kw: float,
+    state: State,
+) -> OutputPlan:
+    """Translate kW -> device command -> HA entity unit -> legal numeric step.
+
+    The HA entity's physical unit is authoritative. Only physical power
+    commands (W/kW/MW) can be converted to other physical power units.
+    Never reinterpret raw device codes or Ampere as power without an EVSE
+    electrical profile. Never round a command *up* to satisfy a step.
+    """
+    plan = _build_plan(hass, load_data, target_kw)
+    if plan.numeric_value is None:
+        return plan
+    command = float(plan.numeric_value)
+    unit = plan.numeric_unit
+    actual_unit = state.attributes.get(ATTR_UNIT_OF_MEASUREMENT)
+    source_power = unit in SUPPORTED_OUTPUT_POWER_UNITS
+    target_power = actual_unit in SUPPORTED_OUTPUT_POWER_UNITS
+    if source_power and target_power and unit != actual_unit:
+        if plan.enabled is False and abs(command) > 1e-9:
+            raise ActuatorError(
+                "Nicht-null-Pausencode besitzt eigene Gerätebedeutung; "
+                "automatische Einheitenumrechnung ist dafür nicht sicher."
+            )
+        command = _convert_power_unit(command, str(unit), str(actual_unit))
+        unit = str(actual_unit)
+    elif actual_unit is not None and unit not in (actual_unit, None):
+        if unit == "device" and actual_unit not in SUPPORTED_OUTPUT_POWER_UNITS:
+            pass  # Explicit manufacturer code in a unitless/custom entity.
+        elif unit in SUPPORTED_OUTPUT_POWER_UNITS or actual_unit in SUPPORTED_OUTPUT_POWER_UNITS:
+            raise ActuatorError(
+                f"Ausgangseinheiten unvereinbar: Gerätebefehl {unit!r}, "
+                f"HA-Entity {actual_unit!r}. Wähle die passende A/W/kW-Einheit."
+            )
+
+    if not plan.enabled:
+        # Pause/special codes must be representable *exactly*: never round them.
+        if not _numeric_in_range(command, state):
+            return replace(plan, numeric_value=command, numeric_unit=unit)
+        return replace(plan, numeric_value=command, numeric_unit=unit)
+
+    if unit not in SUPPORTED_OUTPUT_POWER_UNITS and unit != EVSE_OUTPUT_AMPERE:
+        # Opaque register code: step quantization changes device meaning.
+        if not _numeric_in_range(command, state):
+            raise ActuatorError(
+                "Gerätecode liegt außerhalb des erlaubten Entity-Schrittrasters. "
+                "Bitte das Geräteprofil prüfen."
+            )
+        return replace(plan, numeric_value=command, numeric_unit=unit)
+
+    rounded = _quantize_down(command, state)
+    effective_kw = _effective_power_kw(rounded, str(unit), load_data)
+    if effective_kw > target_kw + 1e-6:
+        raise ActuatorError("Rundung würde die vom Regler erlaubte Leistung überschreiten.")
+    physical_min_kw = float(load_data.get(CONF_MIN_KW, DEFAULT_MIN_KW))
+    if load_data.get(CONF_LOAD_TYPE) == LOAD_TYPE_EVSE:
+        physical_min_kw = max(
+            physical_min_kw,
+            int(load_data.get(CONF_EVSE_PHASES, DEFAULT_EVSE_PHASES))
+            * float(load_data.get(CONF_EVSE_VOLTAGE_V, DEFAULT_EVSE_VOLTAGE_V))
+            * float(load_data.get(CONF_EVSE_MIN_CURRENT_A, DEFAULT_EVSE_MIN_CURRENT_A))
+            / 1000.0,
+        )
+    if rounded <= 1e-9 or effective_kw + 1e-6 < physical_min_kw:
+        pause = _build_plan(hass, load_data, 0.0)
+        if pause.numeric_value is None:
+            raise ActuatorError("Sicherer Pausenbefehl fehlt.")
+        pause_value = float(pause.numeric_value)
+        pause_unit = pause.numeric_unit
+        if pause_unit in SUPPORTED_OUTPUT_POWER_UNITS and target_power and pause_unit != actual_unit:
+            if abs(pause_value) > 1e-9:
+                raise ActuatorError(
+                    "Nicht-null-Pausenbefehl kann nicht sicher umgerechnet werden."
+                )
+            pause_value = _convert_power_unit(pause_value, str(pause_unit), str(actual_unit))
+            pause_unit = str(actual_unit)
+        return replace(pause, numeric_value=pause_value, numeric_unit=pause_unit)
+    return replace(plan, numeric_value=rounded, numeric_unit=unit)
 
 
 def _numeric_equal(state: State, value: float) -> bool:
@@ -405,12 +551,11 @@ async def _async_write_direct(
 
 
 def validate_actuator(hass: HomeAssistant, load_data: dict[str, Any]) -> None:
-    """Validate one configured output before live control is armed.
+    """Validate physical kW targets against legal device units and steps.
 
-    A positive controller target is never silently rounded up, rounded down,
-    clamped or converted to off. Such a mismatch would make the controller's
-    stored target differ from the command actually sent to the device and can
-    invalidate the PMAX estimate when no actual-power sensor is available.
+    Live use requires fresh measured feedback. Power commands may be rounded
+    down safely to the nearest accepted step, but never rounded upward.
+    Opaque manufacturer codes and special off values are never quantized.
     """
 
     transport = str(load_data.get(CONF_OUTPUT_TRANSPORT, DEFAULT_OUTPUT_TRANSPORT))
@@ -481,7 +626,7 @@ def validate_actuator(hass: HomeAssistant, load_data: dict[str, Any]) -> None:
     # Verify that every positive technical boundary is representable without
     # modifying the controller's target behind its back.
     if min_kw > 0.0:
-        first_plan = _build_plan(hass, load_data, min_kw)
+        first_plan = _entity_output_plan(hass, load_data, min_kw, output_state)
         if first_plan.enabled is True:
             _validate_positive_plan_range(
                 first_plan, output_state, label="Mindestleistung",
@@ -506,12 +651,12 @@ def validate_actuator(hass: HomeAssistant, load_data: dict[str, Any]) -> None:
             )
 
     _validate_positive_plan_range(
-        _build_plan(hass, load_data, max_kw),
+        _entity_output_plan(hass, load_data, max_kw, output_state),
         output_state,
         label="Maximalleistung",
     )
 
-    zero_plan = _build_plan(hass, load_data, 0.0)
+    zero_plan = _entity_output_plan(hass, load_data, 0.0, output_state)
     if zero_plan.numeric_value is None:
         raise ActuatorError("Für den sicheren Zustand wurde kein Zahlenwert berechnet.")
 
@@ -593,6 +738,7 @@ async def async_apply_target(
         )
 
     output_state = _state_or_error(hass, output_entity, "Numerischer Ausgang")
+    plan = _entity_output_plan(hass, load_data, target_kw, output_state)
     desired_numeric = plan.numeric_value
     if desired_numeric is None:
         raise ActuatorError("Numerischer Verbraucher hat keinen berechneten Ausgangswert.")
