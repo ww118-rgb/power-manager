@@ -51,7 +51,8 @@ def test_140_kw_site_uses_measured_grid_not_current_battery_discharge():
     assert result.peak_budget_kw == pytest.approx(20.04)
     assert result.targets_kw["Heat"] == pytest.approx(19.74)
     assert result.projected_grid_kw == pytest.approx(139.70)
-    assert result.state.grid_growth_block_until_s == pytest.approx(15)
+    # No global 15-second hold: next fresh grid reading can be used immediately.
+    assert result.state.grid_growth_block_until_s == 0
     assert result.targets_kw["Heat"] > 9.6
 
 
@@ -65,7 +66,7 @@ def test_no_load_meter_uses_last_command_only_as_estimate():
     assert result.total_target_kw - 9.6 <= 140 - 129.56 - 0.3 + 1e-6
 
 
-def test_recovery_holds_new_increases_but_sheds_immediately_on_grid_rise():
+def test_next_grid_cycle_can_recover_without_15_second_wait():
     first = run_controller(values(0), [load()], previous_target("Heat", 9.6))
     assert first.targets_kw["Heat"] == pytest.approx(19.74)
     hold = run_controller(values(5, grid=139.70), [load()], first.state)
@@ -75,9 +76,10 @@ def test_recovery_holds_new_increases_but_sheds_immediately_on_grid_rise():
     assert shed.targets_kw["Heat"] == pytest.approx(17.74)
     assert shed.targets_kw["Heat"] < hold.targets_kw["Heat"]
     assert shed.projected_grid_kw <= 140 + 1e-6
-    # Do not restart the shed load in the next tick.
+    # Net power has dropped and can be reallocated on the next reading.
     rebound = run_controller(values(7, grid=138.0), [load()], shed.state)
-    assert rebound.targets_kw["Heat"] <= shed.targets_kw["Heat"] + 1e-6
+    assert rebound.targets_kw["Heat"] > shed.targets_kw["Heat"]
+    assert rebound.projected_grid_kw <= 140
 
 
 def test_small_grid_noise_does_not_toggle_consumer():
@@ -100,10 +102,9 @@ def test_no_same_tick_reallocation_from_unconfirmed_shed_without_ist():
     assert first.targets_kw["Old"] == 0
     assert first.targets_kw["New"] == 0  # Do not spend assumed 10 kW reduction.
     second = run_controller(values(5, grid=129.5), [old, new], first.state)
-    assert second.targets_kw["New"] == 0  # Global settling hold.
-    third = run_controller(values(16, grid=129.5), [old, new], second.state)
-    assert third.targets_kw["New"] >= 4.14
-    assert third.projected_grid_kw <= 140
+    # Once the grid meter physically shows 10 kW freed, reuse it NOW.
+    assert second.targets_kw["New"] >= 4.14
+    assert second.projected_grid_kw <= 140
 
 
 @pytest.mark.parametrize("pmax,grid", [(10, 4), (25, 19), (140, 134), (250, 244)])
@@ -134,5 +135,6 @@ def test_missing_ist_and_battery_sensor_is_normal():
 def test_anti_oscillation_settings_are_validated():
     with pytest.raises(ValueError):
         run_controller(replace(values(0), grid_growth_margin_kw=-0.1), [load()])
-    with pytest.raises(ValueError):
-        run_controller(replace(values(0), grid_recovery_hold_s=-1), [load()])
+    # Legacy recovery_hold setting no longer enters the simplified regulator.
+    result = run_controller(replace(values(0), grid_recovery_hold_s=-1), [load()])
+    assert result.total_target_kw >= 0
