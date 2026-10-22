@@ -17,13 +17,10 @@ def load(name, *, minimum=0.0, maximum=11.0, request=11.0,
 
 
 def data(*, grid, pv=0, pmax=140, mode=OperatingMode.NORMAL, now=0,
-         battery=0, soc=None, growth=0.3):
+         growth=0.3):
     return ControllerInputs(
         grid_kw=grid, pv_kw=pv, grid_limit_kw=pmax,
         mode=mode, now_s=now, grid_growth_margin_kw=growth,
-        battery_kw=battery, battery_soc=soc,
-        hybrid_probe_enabled=True, hybrid_battery_assist_enabled=True,
-        hybrid_probe_step_kw=10,
     )
 
 
@@ -37,20 +34,9 @@ def previous(**targets):
     )
 
 
-@pytest.mark.parametrize("battery,soc", [
-    (-30.0, 0.0), (-10, 99), (0, None), (20, 0), (30, 100),
-])
-def test_battery_never_changes_grid_or_pv_targets(battery, soc):
-    normal = data(grid=129.56, pmax=140, battery=battery, soc=soc)
-    solar = data(grid=-10, pv=25, pmax=140, mode=OperatingMode.SURPLUS,
-                 battery=battery, soc=soc)
-    loads = [load("EV1", minimum=4.14), load("EV2", minimum=4.14)]
-    normal_result = run_controller(normal, loads)
-    pv_result = run_controller(solar, loads)
-    assert normal_result.total_target_kw == pytest.approx(10.14)
-    assert pv_result.targets_kw == pytest.approx({"EV1": 5, "EV2": 5})
-    assert not pv_result.battery_soc_gate_enabled
-    assert not pv_result.battery_soc_blocking_surplus
+def test_no_battery_in_v4_controller_interface():
+    assert "battery_kw" not in ControllerInputs.__dataclass_fields__
+    assert "battery_soc" not in ControllerInputs.__dataclass_fields__
 
 
 def test_simple_140_kw_peak_shaving_with_no_device_sensor():
@@ -86,11 +72,11 @@ def test_normal_load_admission_respects_actual_meter_headroom():
 def test_normal_can_adjust_on_next_measurement_without_global_hold():
     heat = load("Heat", minimum=1, maximum=20, request=20)
     first = run_controller(
-        replace(data(grid=130), grid_recovery_hold_s=999),
+        data(grid=130),
         [heat],
     )
     second = run_controller(
-        replace(data(grid=125, now=1), grid_recovery_hold_s=999),
+        data(grid=125, now=1),
         [heat], first.state,
     )
     assert second.targets_kw["Heat"] > first.targets_kw["Heat"]
