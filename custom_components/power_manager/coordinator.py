@@ -41,6 +41,8 @@ from .const import (
     CONF_BATTERY_SOC_ENTITY,
     CONF_BATTERY_SOC_SCALE,
     CONF_DEFAULT_REQUEST_KW,
+    CONF_DEMAND_MODE, DEMAND_MODE_ALWAYS, DEMAND_MODE_SENSOR,
+    DEMAND_MODE_DISABLED,
     CONF_ENABLE_ENTITY,
     CONF_GRID_LIMIT_KW,
     CONF_GRID_POWER_ENTITY,
@@ -495,7 +497,15 @@ class PowerManagerCoordinator(DataUpdateCoordinator[PowerManagerCoordinatorData]
                     input_errors.append(str(err))
 
             requested_kw = 0.0
-            request_entity = data.get(CONF_REQUEST_ENTITY)
+            demand_mode = data.get(
+                CONF_DEMAND_MODE,
+                DEMAND_MODE_SENSOR if data.get(CONF_REQUEST_ENTITY)
+                else DEMAND_MODE_ALWAYS,
+            )
+            request_entity = (
+                data.get(CONF_REQUEST_ENTITY)
+                if demand_mode == DEMAND_MODE_SENSOR else None
+            )
             try:
                 raw_request, request_unit = self._read_optional_source_state(
                     str(request_entity) if request_entity else None,
@@ -514,6 +524,11 @@ class PowerManagerCoordinator(DataUpdateCoordinator[PowerManagerCoordinatorData]
                 # Unknown demand must never cause a load to be turned on.
                 requested_kw = 0.0
                 input_errors.append(str(err))
+            if demand_mode == DEMAND_MODE_DISABLED:
+                requested_kw = 0.0
+            elif demand_mode == DEMAND_MODE_SENSOR and not request_entity:
+                requested_kw = 0.0
+                input_errors.append("Bedarfssensor fehlt.")
 
             actual_kw: float | None = None
             actual_age_s: float | None = None
