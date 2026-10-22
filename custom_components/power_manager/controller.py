@@ -1026,7 +1026,14 @@ def run_controller(
         if inputs.now_s < state.grid_growth_block_until_s:
             increase_headroom_kw = 0.0
         for load in sorted(controlled_loads, key=lambda item: item.priority):
-            previous_kw = max(0.0, state.last_targets_kw.get(load.name, 0.0))
+            # An already physically measured running consumer does not
+            # consume NEW net headroom merely because this is the first
+            # command after a restart. Optional actual power can only add
+            # information; without it, use the last accepted target.
+            previous_kw = max(
+                0.0, state.last_targets_kw.get(load.name, 0.0),
+                load.actual_kw if load.actual_kw is not None else 0.0,
+            )
             proposed_kw = targets_kw.get(load.name, 0.0)
             if proposed_kw <= previous_kw + EPSILON:
                 continue  # Safety reductions and holding always remain allowed.
