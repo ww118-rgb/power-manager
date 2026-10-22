@@ -128,8 +128,6 @@ OUTPUT_UNITS = (
     OUTPUT_UNIT_MW,
 )
 
-)
-
 DEFAULT_GRID_RESERVE_KW = 0.0
 # Measurement margin is installation-dependent and configurable.
 # It applies to additional network load only.
