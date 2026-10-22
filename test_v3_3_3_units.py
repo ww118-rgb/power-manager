@@ -135,7 +135,7 @@ def test_custom_device_code_is_not_quantized_into_another_device_code():
 
 def test_no_silent_unit_guess_without_entity_unit_when_value_out_of_range():
     hass = FakeHA(unit=None, maximum=11, step=0.1)
-    with pytest.raises(ActuatorError, match="Obergrenze"):
+    with pytest.raises(ActuatorError, match="passt nicht zur Entity"):
         _entity_output_plan(
             hass, load(output_unit="W"), 11, hass._state,
         )
