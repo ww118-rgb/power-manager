@@ -147,6 +147,10 @@ class ControllerInputs:
     battery_kw: float = 0.0
 
     grid_reserve_kw: float = 0.0
+    # Independent of the plant size. Limits growth and waits after shedding
+    # in NORMAL mode; grid power remains the authoritative safety signal.
+    grid_growth_margin_kw: float = 0.0
+    grid_recovery_hold_s: float = 0.0
 
     mode: OperatingMode = OperatingMode.NORMAL
 
@@ -189,6 +193,8 @@ class ControllerState:
     hybrid_probe_increment_kw: float = 0.0
     hybrid_next_probe_s: float = 0.0
     battery_bonus_blocked: bool = False
+    # Monotonic timestamp: no new optional grid load before this time.
+    grid_growth_block_until_s: float = 0.0
 
 
 @dataclass
