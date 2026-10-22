@@ -12,7 +12,7 @@ from homeassistant.components.sensor import (
     SensorStateClass,
 )
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import PERCENTAGE, EntityCategory, UnitOfPower, UnitOfTime
+from homeassistant.const import EntityCategory, UnitOfPower, UnitOfTime
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
@@ -20,8 +20,6 @@ from homeassistant.helpers.typing import StateType
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import (
-    CONF_BATTERY_POWER_ENTITY,
-    CONF_BATTERY_SOC_ENTITY,
     CONF_LOAD_NAME,
     CONF_LOAD_TYPE,
     CONF_MAX_KW,
@@ -29,6 +27,7 @@ from .const import (
     CONF_PEAK_SHAVING_ENABLED,
     CONF_PRIORITY,
     CONF_PV_POWER_ENTITY,
+    CONF_HOUSE_POWER_ENTITY,
     CONF_SURPLUS_ENABLED,
     DEFAULT_MAX_KW,
     DEFAULT_MIN_KW,
@@ -126,21 +125,11 @@ SENSORS: tuple[PowerManagerSensorDescription, ...] = (
         **POWER_SENSOR_OPTIONS,
     ),
     PowerManagerSensorDescription(
-        key="battery_power",
-        translation_key="battery_power",
-        value_fn=lambda data: data.battery_power_kw,
-        required_config_key=CONF_BATTERY_POWER_ENTITY,
+        key="house_power",
+        translation_key="house_power",
+        value_fn=_input_value("house_kw"),
+        required_config_key=CONF_HOUSE_POWER_ENTITY,
         **POWER_SENSOR_OPTIONS,
-    ),
-    PowerManagerSensorDescription(
-        key="battery_soc",
-        translation_key="battery_soc",
-        value_fn=lambda data: data.battery_soc_pct,
-        required_config_key=CONF_BATTERY_SOC_ENTITY,
-        device_class=SensorDeviceClass.BATTERY,
-        native_unit_of_measurement=PERCENTAGE,
-        state_class=SensorStateClass.MEASUREMENT,
-        entity_category=EntityCategory.DIAGNOSTIC,
     ),
     PowerManagerSensorDescription(
         key="effective_grid_limit",
