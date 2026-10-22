@@ -30,8 +30,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           if gh release view v3.3.0 --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            echo "Release v3.3.0 already exists; refusing to overwrite published bytes."
-            exit 1
+            echo "Release v3.3.0 already exists; verifying pre-release without moving tag."
+            gh release view v3.3.0 --repo "$GITHUB_REPOSITORY" --json tagName,isPrerelease,url,targetCommitish
+            exit 0
           fi
           gh release create v3.3.0 \
             --repo "$GITHUB_REPOSITORY" \
@@ -39,4 +40,4 @@ jobs:
             --title 'Power Manager v3.3.0 – HACS-Testversion' \
             --notes-file docs/RELEASE_NOTES_V3_3_0_TEST.md \
             --prerelease
-          gh release view v3.3.0 --repo "$GITHUB_REPOSITORY" --json tagName,isPrerelease,htmlUrl,targetCommitish
+          gh release view v3.3.0 --repo "$GITHUB_REPOSITORY" --json tagName,isPrerelease,url,targetCommitish
