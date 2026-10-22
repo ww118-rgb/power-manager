@@ -2046,7 +2046,7 @@
         "name": "Actual PV surplus after house load"
       },
       "surplus_budget": {
-        "name": "Observed hybrid power budget"
+        "name": "Calculated PV budget"
       },
       "available_budget": {
         "name": "Available load budget"
