@@ -48,5 +48,7 @@ def test_live_control_requires_grid_not_per_load_actual_sensor():
               "power_manager" / "coordinator.py").read_text(encoding="utf-8")
     assert "Live-Regelung benötigt eine echte Istleistungs-Entity" not in source
     assert "Actual-power sensors are optional" in source
-    assert "self._pending_reductions" in source
-    assert "Leistungsreduzierung auf" in source
+    # No extra per-load reduction confirmation lock or wait interval:
+    # the mandatory net meter is the only feedback gate.
+    assert "self._pending_reductions" not in source
+    assert "not data.grid_measurement_healthy" in source
