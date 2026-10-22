@@ -1,5 +1,12 @@
 # Changelog
 
+## 3.3.6 – Konsolidierte einfache Regelung und verständliche Einrichtung (HACS-Simulator-Vorabversion)
+
+- Identische Netz-/PV-Regelalgorithmen wie V3.3.5, einschließlich Batterieunabhängigkeit, fairer PV-Verteilung, Wegfall globaler Freigabesperren und optionaler Verbraucher-Istwerte.
+- Dialogtexte deutsch/englisch vereinheitlicht: Batterie kann optional nur als Diagnose angezeigt werden; keine SOC-/Hybrid-Regelung. Grunddialog auf Netz, PMAX und optional PV reduziert.
+- Installationshinweise: `docs/RELEASE_NOTES_V3_3_6.md`. Tests und Simulator-Abnahme erforderlich; keine Freigabe für produktive Netzgrenzgarantien.
+
+
 ## 3.3.5 – Einfaches PMAX und PV-Überschuss ohne Batterie-Regelung (Simulator-Testkandidat)
 
 - NORMAL: Regelgröße ist ausschließlich der frische Netzmesswert am Anschlusspunkt; PMAX, konfigurierbare Netzreserve, tatsächlich gemessene/bei Bedarf geschätzte flexible Verbraucherleistung, Min/Max und Priorität. Keine Batterie-Korrektur, SOC-Hysterese oder Hybridfreigabe.
