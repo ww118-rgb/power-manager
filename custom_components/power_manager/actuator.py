@@ -111,6 +111,8 @@ class AppliedCommand:
     """Result of applying one load target."""
 
     target_kw: float
+    # Physical command power after HA device-step rounding (NOT measured power).
+    effective_target_kw: float | None = None
     numeric_value: float | None = None
     numeric_unit: str | None = None
     enabled: bool | None = None
@@ -233,6 +235,21 @@ def _effective_power_kw(
             / 1000.0
         )
     return _convert_power_unit(command, unit, OUTPUT_UNIT_KW)
+
+
+def _effective_command_kw(
+    plan: OutputPlan, load_data: dict[str, Any], target_kw: float,
+) -> float | None:
+    """Physical commanded kW after quantization; None for opaque device codes."""
+    if plan.enabled is False:
+        return 0.0
+    if plan.numeric_value is None:
+        return target_kw if plan.enabled else None  # binary on/off output
+    if plan.numeric_unit in (*SUPPORTED_OUTPUT_POWER_UNITS, EVSE_OUTPUT_AMPERE):
+        return max(0.0, min(target_kw, _effective_power_kw(
+            float(plan.numeric_value), str(plan.numeric_unit), load_data,
+        )))
+    return None
 
 
 def _entity_output_plan(
@@ -693,7 +710,9 @@ async def async_apply_target(
         if enabled and enable_entity:
             wrote_enable = await _async_set_switch(hass, enable_entity, True)
         return AppliedCommand(
-            target_kw=target_kw, numeric_value=code,
+            target_kw=target_kw,
+            effective_target_kw=_effective_command_kw(plan, load_data, target_kw),
+            numeric_value=code,
             numeric_unit=plan.numeric_unit or "device",
             enabled=enabled, wrote_numeric=True,
             wrote_enable=wrote_enable,
@@ -715,6 +734,7 @@ async def async_apply_target(
         wrote_enable = await _async_set_switch(hass, output_entity, plan.enabled)
         return AppliedCommand(
             target_kw=target_kw,
+            effective_target_kw=(target_kw if plan.enabled else 0.0),
             enabled=plan.enabled,
             wrote_enable=wrote_enable,
         )
@@ -742,6 +762,7 @@ async def async_apply_target(
 
         return AppliedCommand(
             target_kw=target_kw,
+            effective_target_kw=0.0,
             numeric_value=(desired_numeric if _numeric_in_range(desired_numeric, output_state) else None),
             numeric_unit=plan.numeric_unit,
             enabled=False,
@@ -765,6 +786,7 @@ async def async_apply_target(
 
     return AppliedCommand(
         target_kw=target_kw,
+        effective_target_kw=_effective_command_kw(plan, load_data, target_kw),
         numeric_value=desired_numeric,
         numeric_unit=plan.numeric_unit,
         enabled=True,
