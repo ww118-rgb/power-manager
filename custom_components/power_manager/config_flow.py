@@ -1546,6 +1546,34 @@ class PowerManagerLoadSubentryFlow(ConfigSubentryFlow):
                 else (CONF_OUTPUT_TRANSPORT,),
                 errors=errors,
             )
+        if key == CONF_EVSE_OUTPUT_FORMAT:
+            transport = self._draft.get(
+                CONF_OUTPUT_TRANSPORT, DEFAULT_OUTPUT_TRANSPORT,
+            )
+            choices = (
+                list(EVSE_OUTPUT_FORMATS)
+                if transport == OUTPUT_TRANSPORT_ENTITY
+                else [EVSE_OUTPUT_AMPERE, EVSE_OUTPUT_WATT, EVSE_OUTPUT_KW]
+            )
+            return self._form(
+                "load_evse_format", [],
+                extra={
+                    _required_marker(
+                        CONF_EVSE_OUTPUT_FORMAT, self._draft,
+                        DEFAULT_EVSE_OUTPUT_FORMAT,
+                    ): SelectSelector(SelectSelectorConfig(
+                        options=[
+                            SelectOptionDict(value=x, label={
+                                EVSE_OUTPUT_AUTO: "Auto (HA)",
+                                EVSE_OUTPUT_AMPERE: "Ampere (A)",
+                                EVSE_OUTPUT_WATT: "Watt (W)",
+                                EVSE_OUTPUT_KW: "Kilowatt (kW)",
+                            }[x]) for x in choices
+                        ],
+                    )),
+                },
+                errors=errors,
+            )
         # Return to the relevant specific setup step; it will render only
         # that protocol's fields.
         if key in self._connection_fields():
