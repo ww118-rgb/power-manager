@@ -2,7 +2,7 @@ name: Publish HACS v3.3.6 simple grid and PV surplus simulator test
 
 on:
   push:
-    branches: ["fix/v3.3.6-simple-grid-and-pv"]
+    branches: ["fix/v3.3.5-simple-grid-and-pv"]
     paths:
       - ".github/workflows/publish-hacs-v3-3-6.yml"
 
@@ -20,7 +20,7 @@ jobs:
           python-version: "3.13"
       - name: Verify isolated simulator release and coherent version
         run: |
-          test "$GITHUB_REF_NAME" = "fix/v3.3.6-simple-grid-and-pv"
+          test "$GITHUB_REF_NAME" = "fix/v3.3.5-simple-grid-and-pv"
           python - <<'PY'
           import json
           from pathlib import Path
@@ -28,12 +28,12 @@ jobs:
           assert json.loads((base/"manifest.json").read_text())["version"] == "3.3.6"
           assert 'VERSION = "3.3.6"' in (base/"const.py").read_text()
           assert '"3.3.6"' in (base/"frontend"/"power-manager-card.js").read_text()
-          assert Path("docs/RELEASE_NOTES_V3_3_5.md").is_file()
+          assert Path("docs/RELEASE_NOTES_V3_3_6.md").is_file()
           source = (base/"controller.py").read_text()
           assert "battery_assist_allowed" not in source
           assert "hybrid_probe_until_s = probe_until_s" not in source
           assert "export_kw = max(0.0, -inputs.grid_kw)" in source
-          assert Path("docs/RELEASE_NOTES_V3_3_5.md").is_file()
+          assert Path("docs/RELEASE_NOTES_V3_3_6.md").is_file()
           PY
       - name: Automated controller and packaging regression checks
         run: |
@@ -54,6 +54,6 @@ jobs:
             --repo "$GITHUB_REPOSITORY" \
             --target "$GITHUB_SHA" \
             --title 'Power Manager v3.3.6 – Netz-PMAX und PV-Überschuss (Simulator-Test)' \
-            --notes-file docs/RELEASE_NOTES_V3_3_5.md \
+            --notes-file docs/RELEASE_NOTES_V3_3_6.md \
             --prerelease
           gh release view v3.3.6 --repo "$GITHUB_REPOSITORY" --json tagName,isPrerelease,url,targetCommitish
