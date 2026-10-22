@@ -13,7 +13,7 @@
 | PV mit 3 kW Einspeisung, Mindeststart 4,14 kW | Kein illegaler Teilstart |
 | PV mit 0 kW Export und bereits laufenden PV-Lasten | Keine automatische AUS/EIN-Schleife nur durch den Export null; bestehende Leistung wird budgetiert |
 | PV mit +5 kW Netzbezug statt Export | Lasten reduzieren; keine zusätzliche Freigabe aus bloßer PV-Produktion |
-| Batterie lädt / entlädt / SOC 0 / Sensor fehlt | Gleiche Regelentscheidung bei identischen Netz-/PV-Daten – Speicher wird nicht gesteuert |
+| Unterschiedlicher Speicherzustand bei identischen Netz-/PV-/Haus-Messwerten | Exakt gleiche Zielwerte; kein Speicherwert wird abgefragt |
 | W/kW/A-Ausgabe und gültige Gerätetakte | Werte ausschließlich auf zulässige Stufen abwärts runden, niemals verbotenen AUS-/Unbegrenzt-Code senden |
 | Netzsensor veraltet oder ungültig | Live aus, sichere Ausgänge / Fail-Safe |
 | 100+ Regelzyklen mit Netzrauschen und sprunghafter Last | Keine dauerhafte EIN/AUS-Oszillation, keine unerklärten Leistungsfreigaben |
@@ -30,3 +30,12 @@
 
 **PV:** Zwei technisch identische Wallboxen mit 10 kW realem Export: zuerst nur eine mit 5 kW, nach 5 Sekunden und neu gemeldeten 5 kW Export die zweite mit 5 kW. Danach möglichst ausgeglichen; keine dauernde EIN/AUS-Schleife.
 
+
+## RC3 – PV-Nutzleistung ohne Netzeinspeisung
+
+1. **Originalfall:** 38,60 kW PV, 0,05 kW eigenständig gemessener Hausgrundverbrauch, 0,00 kW Netz, keine laufenden regelbaren Verbraucher → PV-Budget 38,55 kW, zuerst Verbraucher mit Priorität 1 starten, nächsten nach 5 Sekunden **und neuer Netzsensor-Rückmeldung**.
+2. **Keine Hausmessung:** PV 38,60 kW und Netz 0,00 kW → konservativ kein Neu-Start. Diagnose zeigt, dass der Hausgrundverbrauchssensor fehlt; niemals 0 kW Grundverbrauch erfinden.
+3. **Hauslast größer als PV:** Keine neue PV-Freigabe.
+4. **Nach dem Start +5 kW Netzbezug:** Unverzügliche Reduktion nach neuem Netzsensorwert, auch wenn 5 Sekunden noch nicht abgelaufen sind.
+5. **Ungültiger/veralteter Hauslastwert:** Wieder auf echte Netzeinspeisungsberechnung wechseln.
+6. **Konfigurationsmigration:** Altgeräte und Ausgangsprofile bleiben; SOC-/Batterie-Entities, Sensor-Timeouts und Hybridwerte fehlen anschließend vollständig in den neuen Einstellungen.
