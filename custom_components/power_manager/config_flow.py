@@ -172,6 +172,7 @@ from .const import (
     SUBENTRY_TYPE_LOAD,
 )
 from .load_config import normalize_load_data, validate_load_data
+from .outputs import build_output_plan, OutputConversionError
 
 
 def _optional_marker(key: str, values: dict[str, Any]) -> probatio.Optional:
@@ -423,6 +424,99 @@ def _merge_global_basic(old: dict[str, Any], submitted: dict[str, Any]) -> dict[
             result[key] = None
     result.pop(_WIZARD_EXPERT, None)
     return result
+
+
+def _device_preview(draft: dict[str, Any]) -> dict[str, str]:
+    """Explain device commands before saving, without touching hardware."""
+    name = str(draft.get(CONF_LOAD_NAME, "Verbraucher"))
+    transport = str(draft.get(CONF_OUTPUT_TRANSPORT, DEFAULT_OUTPUT_TRANSPORT))
+    load_type = str(draft.get(CONF_LOAD_TYPE, DEFAULT_LOAD_TYPE))
+    output = {
+        "device": name, "transport": transport,
+        "off": "nicht überprüft", "min": "nicht überprüft",
+        "max": "nicht überprüft",
+    }
+    if load_type == LOAD_TYPE_SWITCH:
+        if transport == OUTPUT_TRANSPORT_ENTITY:
+            output.update({"off": "Schalter AUS", "min": "Schalter EIN",
+                           "max": "Schalter EIN"})
+        elif transport == OUTPUT_TRANSPORT_MQTT and draft.get(CONF_MQTT_ON_PAYLOAD) and draft.get(CONF_MQTT_OFF_PAYLOAD):
+            output.update({
+                "off": str(draft[CONF_MQTT_OFF_PAYLOAD]),
+                "min": str(draft[CONF_MQTT_ON_PAYLOAD]),
+                "max": str(draft[CONF_MQTT_ON_PAYLOAD]),
+            })
+        else:
+            output.update({
+                "off": str(draft.get(CONF_SWITCH_OFF_CODE, DEFAULT_SWITCH_OFF_CODE)),
+                "min": str(draft.get(CONF_SWITCH_ON_CODE, DEFAULT_SWITCH_ON_CODE)),
+                "max": str(draft.get(CONF_SWITCH_ON_CODE, DEFAULT_SWITCH_ON_CODE)),
+            })
+        return output
+
+    kwargs: dict[str, Any] = dict(
+        load_type=load_type,
+        safe_output_value=float(draft.get(CONF_SAFE_OUTPUT_VALUE, DEFAULT_SAFE_OUTPUT_VALUE)),
+        evse_phases=int(draft.get(CONF_EVSE_PHASES, DEFAULT_EVSE_PHASES)),
+        evse_voltage_v=float(draft.get(CONF_EVSE_VOLTAGE_V, DEFAULT_EVSE_VOLTAGE_V)),
+        evse_min_current_a=float(draft.get(
+            CONF_EVSE_MIN_CURRENT_A, DEFAULT_EVSE_MIN_CURRENT_A,
+        )),
+        evse_max_current_a=float(draft.get(
+            CONF_EVSE_MAX_CURRENT_A, DEFAULT_EVSE_MAX_CURRENT_A,
+        )),
+        evse_pause_current_a=float(draft.get(
+            CONF_EVSE_PAUSE_CURRENT_A, DEFAULT_EVSE_PAUSE_CURRENT_A,
+        )),
+        evse_zero_unlimited=bool(draft.get(
+            CONF_EVSE_ZERO_UNLIMITED, DEFAULT_EVSE_ZERO_UNLIMITED,
+        )),
+        output_value_mode=str(draft.get(
+            CONF_OUTPUT_VALUE_MODE, DEFAULT_OUTPUT_VALUE_MODE,
+        )),
+        output_scale=float(draft.get(CONF_OUTPUT_SCALE, DEFAULT_OUTPUT_SCALE)),
+        output_offset=float(draft.get(CONF_OUTPUT_OFFSET, DEFAULT_OUTPUT_OFFSET)),
+        output_steps_json=str(draft.get(
+            CONF_OUTPUT_STEPS_JSON, DEFAULT_OUTPUT_STEPS_JSON,
+        )),
+        forbidden_value=(
+            float(draft[CONF_OUTPUT_FORBIDDEN_VALUE])
+            if draft.get(CONF_OUTPUT_FORBIDDEN_VALUE) is not None else None
+        ),
+        power_unit=str(draft.get(CONF_OUTPUT_UNIT, DEFAULT_OUTPUT_UNIT)),
+    )
+    if (
+        load_type == LOAD_TYPE_MODULATING
+        and kwargs["output_value_mode"] == DEFAULT_OUTPUT_VALUE_MODE
+        and kwargs["power_unit"] == DEFAULT_OUTPUT_UNIT
+    ):
+        kwargs["power_unit"] = "kW"
+        suffix = " (Einheit automatisch über HA-Entity)"
+    else:
+        suffix = ""
+    min_kw = float(draft.get(CONF_MIN_KW, DEFAULT_MIN_KW))
+    max_kw = float(draft.get(CONF_MAX_KW, DEFAULT_MAX_KW))
+    if load_type == LOAD_TYPE_EVSE:
+        min_kw = (
+            kwargs["evse_phases"] * kwargs["evse_voltage_v"]
+            * kwargs["evse_min_current_a"] / 1000.0
+        )
+    if min_kw <= 0.0:
+        min_kw = max_kw
+    try:
+        for target, key in ((0.0, "off"), (min_kw, "min"), (max_kw, "max")):
+            result = build_output_plan(target_kw=target, **kwargs)
+            output[key] = (
+                f"{result.numeric_value:g} {result.numeric_unit or 'Code'}"
+                if result.numeric_value is not None else (
+                    "EIN" if result.enabled else "AUS"
+                )
+            ) + suffix
+    except (ValueError, TypeError, OverflowError, OutputConversionError):
+        output["off"] = "Gerätewert prüfen!"
+        output["min"] = "Gerätewert prüfen!"
+        output["max"] = "Gerätewert prüfen!"
+    return output
 
 
 def _normalize_global_configuration(user_input: dict[str, Any]) -> dict[str, Any]:
@@ -1270,12 +1364,17 @@ class PowerManagerLoadSubentryFlow(ConfigSubentryFlow):
         extra = {
             probatio.Required(_WIZARD_ACK, default=False): BooleanSelector(),
         }
-        if self._load_draft().get(CONF_OUTPUT_TRANSPORT) != OUTPUT_TRANSPORT_ENTITY:
-            return self._form(
-                "load_review", (CONF_DEVICE_COMMANDS_CONFIRMED,),
-                extra=extra, errors=errors,
-            )
-        return self._form("load_review", [], extra=extra, errors=errors)
+        fields = (
+            (CONF_DEVICE_COMMANDS_CONFIRMED,)
+            if self._load_draft().get(CONF_OUTPUT_TRANSPORT)
+                != OUTPUT_TRANSPORT_ENTITY else ()
+        )
+        return self.async_show_form(
+            step_id="load_review",
+            data_schema=_load_wizard_schema(self._draft, fields, extra=extra),
+            errors=errors or {},
+            description_placeholders=_device_preview(self._draft),
+        )
 
     def _invalid_wizard_fields(
         self, errors: dict[str, str],
