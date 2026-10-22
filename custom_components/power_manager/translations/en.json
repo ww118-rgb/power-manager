@@ -311,7 +311,11 @@
             "stage_11_kw": "Stage 11: power (kW)",
             "stage_11_code": "Stage 11: device code",
             "stage_12_kw": "Stage 12: power (kW)",
-            "stage_12_code": "Stage 12: device code"
+            "stage_12_code": "Stage 12: device code",
+            "evse_output_format": "What numeric value does the charger accept?",
+            "evse_current_step_a": "Charge current increment (A)",
+            "evse_power_step_w": "Power command increment (W)",
+            "evse_pause_power_value": "Verified safe pause value for W/kW"
           },
           "data_description": {
             "load_name": "Unique name used by the controller.",
@@ -369,7 +373,11 @@
             "demand_mode": "Always available requests up to maximum (PMAX/PV still applies); use sensor for real demand, or disable requests.",
             "wizard_expert": "Normally unnecessary; advanced device timings on an optional page.",
             "wizard_ack": "The setup wizard sends no commands. Check safe OFF/pause and dry-run before enabling Live.",
-            "wizard_stage_count": "Enter how many physical power stages are documented, then enter each kW and code."
+            "wizard_stage_count": "Enter how many physical power stages are documented, then enter each kW and code.",
+            "evse_output_format": "Choose the actual device command unit independently of transport. Auto reads the HA entity unit. The regulator always calculates in kW.",
+            "evse_current_step_a": "Whole amps: 1 A. Intermediate values always round down for PMAX safety.",
+            "evse_power_step_w": "Often 1000 W for MQTT power outputs (5000, 6000, 7000). Values always round down.",
+            "evse_pause_power_value": "Usually 0 W/0 kW, only if device documentation proves safe pause. 0 A is a different command."
           }
         },
         "reconfigure": {
@@ -455,7 +463,11 @@
             "stage_11_kw": "Stage 11: power (kW)",
             "stage_11_code": "Stage 11: device code",
             "stage_12_kw": "Stage 12: power (kW)",
-            "stage_12_code": "Stage 12: device code"
+            "stage_12_code": "Stage 12: device code",
+            "evse_output_format": "What numeric value does the charger accept?",
+            "evse_current_step_a": "Charge current increment (A)",
+            "evse_power_step_w": "Power command increment (W)",
+            "evse_pause_power_value": "Verified safe pause value for W/kW"
           },
           "data_description": {
             "load_name": "Unique name used by the controller.",
@@ -513,7 +525,11 @@
             "demand_mode": "Always available requests up to maximum (PMAX/PV still applies); use sensor for real demand, or disable requests.",
             "wizard_expert": "Normally unnecessary; advanced device timings on an optional page.",
             "wizard_ack": "The setup wizard sends no commands. Check safe OFF/pause and dry-run before enabling Live.",
-            "wizard_stage_count": "Enter how many physical power stages are documented, then enter each kW and code."
+            "wizard_stage_count": "Enter how many physical power stages are documented, then enter each kW and code.",
+            "evse_output_format": "Choose the actual device command unit independently of transport. Auto reads the HA entity unit. The regulator always calculates in kW.",
+            "evse_current_step_a": "Whole amps: 1 A. Intermediate values always round down for PMAX safety.",
+            "evse_power_step_w": "Often 1000 W for MQTT power outputs (5000, 6000, 7000). Values always round down.",
+            "evse_pause_power_value": "Usually 0 W/0 kW, only if device documentation proves safe pause. 0 A is a different command."
           }
         },
         "load_basics": {
@@ -599,7 +615,11 @@
             "stage_11_kw": "Stage 11: power (kW)",
             "stage_11_code": "Stage 11: device code",
             "stage_12_kw": "Stage 12: power (kW)",
-            "stage_12_code": "Stage 12: device code"
+            "stage_12_code": "Stage 12: device code",
+            "evse_output_format": "What numeric value does the charger accept?",
+            "evse_current_step_a": "Charge current increment (A)",
+            "evse_power_step_w": "Power command increment (W)",
+            "evse_pause_power_value": "Verified safe pause value for W/kW"
           },
           "data_description": {
             "load_name": "Unique name used by the controller.",
@@ -657,7 +677,11 @@
             "demand_mode": "Always available requests up to maximum (PMAX/PV still applies); use sensor for real demand, or disable requests.",
             "wizard_expert": "Normally unnecessary; advanced device timings on an optional page.",
             "wizard_ack": "The setup wizard sends no commands. Check safe OFF/pause and dry-run before enabling Live.",
-            "wizard_stage_count": "Enter how many physical power stages are documented, then enter each kW and code."
+            "wizard_stage_count": "Enter how many physical power stages are documented, then enter each kW and code.",
+            "evse_output_format": "Choose the actual device command unit independently of transport. Auto reads the HA entity unit. The regulator always calculates in kW.",
+            "evse_current_step_a": "Whole amps: 1 A. Intermediate values always round down for PMAX safety.",
+            "evse_power_step_w": "Often 1000 W for MQTT power outputs (5000, 6000, 7000). Values always round down.",
+            "evse_pause_power_value": "Usually 0 W/0 kW, only if device documentation proves safe pause. 0 A is a different command."
           }
         },
         "load_usage": {
@@ -743,7 +767,11 @@
             "stage_11_kw": "Stage 11: power (kW)",
             "stage_11_code": "Stage 11: device code",
             "stage_12_kw": "Stage 12: power (kW)",
-            "stage_12_code": "Stage 12: device code"
+            "stage_12_code": "Stage 12: device code",
+            "evse_output_format": "What numeric value does the charger accept?",
+            "evse_current_step_a": "Charge current increment (A)",
+            "evse_power_step_w": "Power command increment (W)",
+            "evse_pause_power_value": "Verified safe pause value for W/kW"
           },
           "data_description": {
             "load_name": "Unique name used by the controller.",
@@ -801,7 +829,11 @@
             "demand_mode": "Always available requests up to maximum (PMAX/PV still applies); use sensor for real demand, or disable requests.",
             "wizard_expert": "Normally unnecessary; advanced device timings on an optional page.",
             "wizard_ack": "The setup wizard sends no commands. Check safe OFF/pause and dry-run before enabling Live.",
-            "wizard_stage_count": "Enter how many physical power stages are documented, then enter each kW and code."
+            "wizard_stage_count": "Enter how many physical power stages are documented, then enter each kW and code.",
+            "evse_output_format": "Choose the actual device command unit independently of transport. Auto reads the HA entity unit. The regulator always calculates in kW.",
+            "evse_current_step_a": "Whole amps: 1 A. Intermediate values always round down for PMAX safety.",
+            "evse_power_step_w": "Often 1000 W for MQTT power outputs (5000, 6000, 7000). Values always round down.",
+            "evse_pause_power_value": "Usually 0 W/0 kW, only if device documentation proves safe pause. 0 A is a different command."
           }
         },
         "load_request": {
@@ -887,7 +919,11 @@
             "stage_11_kw": "Stage 11: power (kW)",
             "stage_11_code": "Stage 11: device code",
             "stage_12_kw": "Stage 12: power (kW)",
-            "stage_12_code": "Stage 12: device code"
+            "stage_12_code": "Stage 12: device code",
+            "evse_output_format": "What numeric value does the charger accept?",
+            "evse_current_step_a": "Charge current increment (A)",
+            "evse_power_step_w": "Power command increment (W)",
+            "evse_pause_power_value": "Verified safe pause value for W/kW"
           },
           "data_description": {
             "load_name": "Unique name used by the controller.",
@@ -945,7 +981,11 @@
             "demand_mode": "Always available requests up to maximum (PMAX/PV still applies); use sensor for real demand, or disable requests.",
             "wizard_expert": "Normally unnecessary; advanced device timings on an optional page.",
             "wizard_ack": "The setup wizard sends no commands. Check safe OFF/pause and dry-run before enabling Live.",
-            "wizard_stage_count": "Enter how many physical power stages are documented, then enter each kW and code."
+            "wizard_stage_count": "Enter how many physical power stages are documented, then enter each kW and code.",
+            "evse_output_format": "Choose the actual device command unit independently of transport. Auto reads the HA entity unit. The regulator always calculates in kW.",
+            "evse_current_step_a": "Whole amps: 1 A. Intermediate values always round down for PMAX safety.",
+            "evse_power_step_w": "Often 1000 W for MQTT power outputs (5000, 6000, 7000). Values always round down.",
+            "evse_pause_power_value": "Usually 0 W/0 kW, only if device documentation proves safe pause. 0 A is a different command."
           }
         },
         "load_connection": {
@@ -1031,7 +1071,11 @@
             "stage_11_kw": "Stage 11: power (kW)",
             "stage_11_code": "Stage 11: device code",
             "stage_12_kw": "Stage 12: power (kW)",
-            "stage_12_code": "Stage 12: device code"
+            "stage_12_code": "Stage 12: device code",
+            "evse_output_format": "What numeric value does the charger accept?",
+            "evse_current_step_a": "Charge current increment (A)",
+            "evse_power_step_w": "Power command increment (W)",
+            "evse_pause_power_value": "Verified safe pause value for W/kW"
           },
           "data_description": {
             "load_name": "Unique name used by the controller.",
@@ -1089,7 +1133,11 @@
             "demand_mode": "Always available requests up to maximum (PMAX/PV still applies); use sensor for real demand, or disable requests.",
             "wizard_expert": "Normally unnecessary; advanced device timings on an optional page.",
             "wizard_ack": "The setup wizard sends no commands. Check safe OFF/pause and dry-run before enabling Live.",
-            "wizard_stage_count": "Enter how many physical power stages are documented, then enter each kW and code."
+            "wizard_stage_count": "Enter how many physical power stages are documented, then enter each kW and code.",
+            "evse_output_format": "Choose the actual device command unit independently of transport. Auto reads the HA entity unit. The regulator always calculates in kW.",
+            "evse_current_step_a": "Whole amps: 1 A. Intermediate values always round down for PMAX safety.",
+            "evse_power_step_w": "Often 1000 W for MQTT power outputs (5000, 6000, 7000). Values always round down.",
+            "evse_pause_power_value": "Usually 0 W/0 kW, only if device documentation proves safe pause. 0 A is a different command."
           }
         },
         "load_connection_details": {
@@ -1175,7 +1223,11 @@
             "stage_11_kw": "Stage 11: power (kW)",
             "stage_11_code": "Stage 11: device code",
             "stage_12_kw": "Stage 12: power (kW)",
-            "stage_12_code": "Stage 12: device code"
+            "stage_12_code": "Stage 12: device code",
+            "evse_output_format": "What numeric value does the charger accept?",
+            "evse_current_step_a": "Charge current increment (A)",
+            "evse_power_step_w": "Power command increment (W)",
+            "evse_pause_power_value": "Verified safe pause value for W/kW"
           },
           "data_description": {
             "load_name": "Unique name used by the controller.",
@@ -1233,7 +1285,11 @@
             "demand_mode": "Always available requests up to maximum (PMAX/PV still applies); use sensor for real demand, or disable requests.",
             "wizard_expert": "Normally unnecessary; advanced device timings on an optional page.",
             "wizard_ack": "The setup wizard sends no commands. Check safe OFF/pause and dry-run before enabling Live.",
-            "wizard_stage_count": "Enter how many physical power stages are documented, then enter each kW and code."
+            "wizard_stage_count": "Enter how many physical power stages are documented, then enter each kW and code.",
+            "evse_output_format": "Choose the actual device command unit independently of transport. Auto reads the HA entity unit. The regulator always calculates in kW.",
+            "evse_current_step_a": "Whole amps: 1 A. Intermediate values always round down for PMAX safety.",
+            "evse_power_step_w": "Often 1000 W for MQTT power outputs (5000, 6000, 7000). Values always round down.",
+            "evse_pause_power_value": "Usually 0 W/0 kW, only if device documentation proves safe pause. 0 A is a different command."
           }
         },
         "load_commands": {
@@ -1319,7 +1375,11 @@
             "stage_11_kw": "Stage 11: power (kW)",
             "stage_11_code": "Stage 11: device code",
             "stage_12_kw": "Stage 12: power (kW)",
-            "stage_12_code": "Stage 12: device code"
+            "stage_12_code": "Stage 12: device code",
+            "evse_output_format": "What numeric value does the charger accept?",
+            "evse_current_step_a": "Charge current increment (A)",
+            "evse_power_step_w": "Power command increment (W)",
+            "evse_pause_power_value": "Verified safe pause value for W/kW"
           },
           "data_description": {
             "load_name": "Unique name used by the controller.",
@@ -1377,7 +1437,11 @@
             "demand_mode": "Always available requests up to maximum (PMAX/PV still applies); use sensor for real demand, or disable requests.",
             "wizard_expert": "Normally unnecessary; advanced device timings on an optional page.",
             "wizard_ack": "The setup wizard sends no commands. Check safe OFF/pause and dry-run before enabling Live.",
-            "wizard_stage_count": "Enter how many physical power stages are documented, then enter each kW and code."
+            "wizard_stage_count": "Enter how many physical power stages are documented, then enter each kW and code.",
+            "evse_output_format": "Choose the actual device command unit independently of transport. Auto reads the HA entity unit. The regulator always calculates in kW.",
+            "evse_current_step_a": "Whole amps: 1 A. Intermediate values always round down for PMAX safety.",
+            "evse_power_step_w": "Often 1000 W for MQTT power outputs (5000, 6000, 7000). Values always round down.",
+            "evse_pause_power_value": "Usually 0 W/0 kW, only if device documentation proves safe pause. 0 A is a different command."
           }
         },
         "load_stage_count": {
@@ -1463,7 +1527,11 @@
             "stage_11_kw": "Stage 11: power (kW)",
             "stage_11_code": "Stage 11: device code",
             "stage_12_kw": "Stage 12: power (kW)",
-            "stage_12_code": "Stage 12: device code"
+            "stage_12_code": "Stage 12: device code",
+            "evse_output_format": "What numeric value does the charger accept?",
+            "evse_current_step_a": "Charge current increment (A)",
+            "evse_power_step_w": "Power command increment (W)",
+            "evse_pause_power_value": "Verified safe pause value for W/kW"
           },
           "data_description": {
             "load_name": "Unique name used by the controller.",
@@ -1521,7 +1589,11 @@
             "demand_mode": "Always available requests up to maximum (PMAX/PV still applies); use sensor for real demand, or disable requests.",
             "wizard_expert": "Normally unnecessary; advanced device timings on an optional page.",
             "wizard_ack": "The setup wizard sends no commands. Check safe OFF/pause and dry-run before enabling Live.",
-            "wizard_stage_count": "Enter how many physical power stages are documented, then enter each kW and code."
+            "wizard_stage_count": "Enter how many physical power stages are documented, then enter each kW and code.",
+            "evse_output_format": "Choose the actual device command unit independently of transport. Auto reads the HA entity unit. The regulator always calculates in kW.",
+            "evse_current_step_a": "Whole amps: 1 A. Intermediate values always round down for PMAX safety.",
+            "evse_power_step_w": "Often 1000 W for MQTT power outputs (5000, 6000, 7000). Values always round down.",
+            "evse_pause_power_value": "Usually 0 W/0 kW, only if device documentation proves safe pause. 0 A is a different command."
           }
         },
         "load_stages": {
@@ -1607,7 +1679,11 @@
             "stage_11_kw": "Stage 11: power (kW)",
             "stage_11_code": "Stage 11: device code",
             "stage_12_kw": "Stage 12: power (kW)",
-            "stage_12_code": "Stage 12: device code"
+            "stage_12_code": "Stage 12: device code",
+            "evse_output_format": "What numeric value does the charger accept?",
+            "evse_current_step_a": "Charge current increment (A)",
+            "evse_power_step_w": "Power command increment (W)",
+            "evse_pause_power_value": "Verified safe pause value for W/kW"
           },
           "data_description": {
             "load_name": "Unique name used by the controller.",
@@ -1665,7 +1741,11 @@
             "demand_mode": "Always available requests up to maximum (PMAX/PV still applies); use sensor for real demand, or disable requests.",
             "wizard_expert": "Normally unnecessary; advanced device timings on an optional page.",
             "wizard_ack": "The setup wizard sends no commands. Check safe OFF/pause and dry-run before enabling Live.",
-            "wizard_stage_count": "Enter how many physical power stages are documented, then enter each kW and code."
+            "wizard_stage_count": "Enter how many physical power stages are documented, then enter each kW and code.",
+            "evse_output_format": "Choose the actual device command unit independently of transport. Auto reads the HA entity unit. The regulator always calculates in kW.",
+            "evse_current_step_a": "Whole amps: 1 A. Intermediate values always round down for PMAX safety.",
+            "evse_power_step_w": "Often 1000 W for MQTT power outputs (5000, 6000, 7000). Values always round down.",
+            "evse_pause_power_value": "Usually 0 W/0 kW, only if device documentation proves safe pause. 0 A is a different command."
           }
         },
         "load_expert": {
@@ -1751,7 +1831,11 @@
             "stage_11_kw": "Stage 11: power (kW)",
             "stage_11_code": "Stage 11: device code",
             "stage_12_kw": "Stage 12: power (kW)",
-            "stage_12_code": "Stage 12: device code"
+            "stage_12_code": "Stage 12: device code",
+            "evse_output_format": "What numeric value does the charger accept?",
+            "evse_current_step_a": "Charge current increment (A)",
+            "evse_power_step_w": "Power command increment (W)",
+            "evse_pause_power_value": "Verified safe pause value for W/kW"
           },
           "data_description": {
             "load_name": "Unique name used by the controller.",
@@ -1809,7 +1893,11 @@
             "demand_mode": "Always available requests up to maximum (PMAX/PV still applies); use sensor for real demand, or disable requests.",
             "wizard_expert": "Normally unnecessary; advanced device timings on an optional page.",
             "wizard_ack": "The setup wizard sends no commands. Check safe OFF/pause and dry-run before enabling Live.",
-            "wizard_stage_count": "Enter how many physical power stages are documented, then enter each kW and code."
+            "wizard_stage_count": "Enter how many physical power stages are documented, then enter each kW and code.",
+            "evse_output_format": "Choose the actual device command unit independently of transport. Auto reads the HA entity unit. The regulator always calculates in kW.",
+            "evse_current_step_a": "Whole amps: 1 A. Intermediate values always round down for PMAX safety.",
+            "evse_power_step_w": "Often 1000 W for MQTT power outputs (5000, 6000, 7000). Values always round down.",
+            "evse_pause_power_value": "Usually 0 W/0 kW, only if device documentation proves safe pause. 0 A is a different command."
           }
         },
         "load_review": {
@@ -1895,7 +1983,11 @@
             "stage_11_kw": "Stage 11: power (kW)",
             "stage_11_code": "Stage 11: device code",
             "stage_12_kw": "Stage 12: power (kW)",
-            "stage_12_code": "Stage 12: device code"
+            "stage_12_code": "Stage 12: device code",
+            "evse_output_format": "What numeric value does the charger accept?",
+            "evse_current_step_a": "Charge current increment (A)",
+            "evse_power_step_w": "Power command increment (W)",
+            "evse_pause_power_value": "Verified safe pause value for W/kW"
           },
           "data_description": {
             "load_name": "Unique name used by the controller.",
@@ -1953,7 +2045,21 @@
             "demand_mode": "Always available requests up to maximum (PMAX/PV still applies); use sensor for real demand, or disable requests.",
             "wizard_expert": "Normally unnecessary; advanced device timings on an optional page.",
             "wizard_ack": "The setup wizard sends no commands. Check safe OFF/pause and dry-run before enabling Live.",
-            "wizard_stage_count": "Enter how many physical power stages are documented, then enter each kW and code."
+            "wizard_stage_count": "Enter how many physical power stages are documented, then enter each kW and code.",
+            "evse_output_format": "Choose the actual device command unit independently of transport. Auto reads the HA entity unit. The regulator always calculates in kW.",
+            "evse_current_step_a": "Whole amps: 1 A. Intermediate values always round down for PMAX safety.",
+            "evse_power_step_w": "Often 1000 W for MQTT power outputs (5000, 6000, 7000). Values always round down.",
+            "evse_pause_power_value": "Usually 0 W/0 kW, only if device documentation proves safe pause. 0 A is a different command."
+          }
+        },
+        "load_evse_format": {
+          "title": "EVSE: command format",
+          "description": "Choose the numeric unit the connected device actually expects. Modbus often uses A and MQTT W, but the device specification determines it.",
+          "data": {
+            "evse_output_format": "What numeric value does the charger accept?"
+          },
+          "data_description": {
+            "evse_output_format": "Choose the actual device command unit independently of transport. Auto reads the HA entity unit. The regulator always calculates in kW."
           }
         }
       },
@@ -2002,7 +2108,10 @@
         "request_sensor_required": "Select a request sensor.",
         "ack_required": "Confirm the safe configuration.",
         "stages_must_increase": "Stage kW values must increase.",
-        "device_configuration_invalid": "A device value is invalid; check expert settings."
+        "device_configuration_invalid": "A device value is invalid; check expert settings.",
+        "invalid_evse_output_format": "Choose valid A/W/kW command format.",
+        "evse_auto_requires_entity": "Auto unit requires HA number entity; set explicit Modbus/MQTT unit.",
+        "invalid_evse_step": "Device command step must be positive."
       },
       "entry_type": "Controllable load",
       "initiate_flow": {
@@ -2174,6 +2283,14 @@
         "always": "Always available (Power Manager allocates)",
         "sensor": "Only on request from an entity",
         "disabled": "Disabled for now"
+      }
+    },
+    "evse_output_format": {
+      "options": {
+        "auto": "Read unit from HA entity (A/W/kW)",
+        "A": "Ampere (e.g. 6–16 A)",
+        "W": "Watts (e.g. 0–11000 W)",
+        "kW": "Kilowatts (e.g. 0–11 kW)"
       }
     }
   }
