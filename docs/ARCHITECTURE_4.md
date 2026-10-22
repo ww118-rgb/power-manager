@@ -2,11 +2,11 @@
 
 ## Eine Regelung statt paralleler Strategien
 
-1. **Inputs:** Netzmessung als Pflicht, PV-Erzeugung für Überschuss, optionaler individueller Verbraucher-Istwert.
+1. **Inputs:** Netzmessung als Pflicht, PV-Erzeugung für Überschuss, optionaler separater **Hausgrundverbrauch** und optionaler individueller Verbraucher-Istwert. Keine Speicher-Entities.
 2. **Bilanz:** `base = grid - controlled`. Wenn kein Istwert existiert, steht `controlled` für die Schätzung aus dem letzten tatsächlich gesendeten Stellbefehl, nicht für eine Garantie.
-3. **Budget:** NORMAL `limit - base`; PV `max(0, controlled - grid)` nur bei aktiver PV, auf PMAX begrenzt. Für zusätzliche Last im PV-Modus muss echter Netzexport vorhanden sein.
+3. **Budget:** NORMAL `limit - base`; PV mit frischem Hausgrundverbrauchssensor `max(0, pv_kw - house_kw)`; ohne ihn konservativ `max(0, controlled_kw - grid_kw)` nur bei aktiver PV. Bei tatsächlichem Netzimport wird in beiden Varianten die Zuteilung um den Import korrigiert. Keine Energiebilanz aus Speicherleistungen.
 4. **Allocator:** seit 3.1.1 unveränderte technische Min/Max-Zuteilung und Priorisierung, gleiche Priorität teilt Leistung fair. Im PV-Modus wird Priorität für die Zuteilung vereinheitlicht.
-5. **Admission:** einmalige Sicherheitsprüfung gegen aktuellen freien Netzspielraum bzw. Netzexport. Noch nicht gemessene Reduktionen eines Gerätes werden nicht an ein anderes vergeben. Gleiche aktive Verbraucher teilen die genehmigte Zusatzleistung möglichst gleichmäßig.
+5. **Admission:** einmalige Sicherheitsprüfung gegen aktuellen freien Netzspielraum bzw. nachgewiesenes PV-nach-Haus-Budget oder Netzexport. Noch nicht gemessene Reduktionen eines Gerätes werden nicht an ein anderes vergeben. Gleiche aktive Verbraucher teilen die genehmigte Zusatzleistung möglichst gleichmäßig.
 6. **Output:** separates HA-Geräteprofil, sichere AUS-Codes, W/kW/A-Mapping und abwärts gerichtete Schrittweiten. Diagnose unterscheidet Sollwert, physikalisch gesendeten Befehl und optionalen Istwert.
 
 ## Was ausdrücklich NICHT zum Controller gehört
