@@ -60,8 +60,6 @@ def test_normal_mode_matches_reference_core():
         grid_limit_kw=90.0,
         grid_reserve_kw=2.0,
         pv_kw=5.0,
-        battery_soc=65.0,
-        battery_kw=0.0,
         mode=root_models.OperatingMode.NORMAL,
         now_s=100.0,
     )
@@ -71,8 +69,6 @@ def test_normal_mode_matches_reference_core():
         grid_limit_kw=90.0,
         grid_reserve_kw=2.0,
         pv_kw=5.0,
-        battery_soc=65.0,
-        battery_kw=0.0,
         mode=ha_models.OperatingMode.NORMAL,
         now_s=100.0,
     )
@@ -151,8 +147,6 @@ def test_surplus_mode_matches_reference_core():
         grid_kw=-4.0,
         grid_limit_kw=100.0,
         pv_kw=25.0,
-        battery_soc=70.0,
-        battery_kw=2.0,
         mode=root_models.OperatingMode.SURPLUS,
         now_s=200.0,
     )
@@ -161,8 +155,6 @@ def test_surplus_mode_matches_reference_core():
         grid_kw=-4.0,
         grid_limit_kw=100.0,
         pv_kw=25.0,
-        battery_soc=70.0,
-        battery_kw=2.0,
         mode=ha_models.OperatingMode.SURPLUS,
         now_s=200.0,
     )
@@ -281,14 +273,12 @@ def test_dynamic_hysteresis_matches_reference_core():
     root_inputs = root_models.ControllerInputs(
         grid_kw=88.0,
         grid_limit_kw=90.0,
-        battery_soc=None,
         now_s=97.0,
     )
 
     ha_inputs = ha_models.ControllerInputs(
         grid_kw=88.0,
         grid_limit_kw=90.0,
-        battery_soc=None,
         now_s=97.0,
     )
 
