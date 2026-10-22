@@ -2,7 +2,7 @@
 
 Power Manager ist eine generische Home-Assistant-Integration für ein zentrales Energiemanagement. Sie verbindet vorhandene Home-Assistant-Entities mit einem getesteten Reglerkern und kann damit Peakshaving, PV-Überschussbetrieb und priorisierte Verbrauchersteuerung abbilden.
 
-**Aktueller offizieller Stand: V3.1.1 (main) – V3.3.0 ist ein nicht freigegebener Testkandidat im Feature-Branch.**
+**Versionskanäle:** V3.1.1 bleibt auf `main`; V3.3.0 liegt als GitHub-/HACS-Pre-Release vor; **V3.3.1 ist der neu entwickelte einfache Einrichtungsassistent im Branch `feature/v3.3.1-simple-wizard` (Draft-PR #3).** Keine automatische Live-Aktivierung.
 
 ## Offene Anforderungen und Abnahme
 
