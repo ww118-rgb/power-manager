@@ -2,7 +2,7 @@ name: HA Core compatibility smoke test
 
 on:
   push:
-    branches: ["feature/v3.3.0-rc", "feature/v3.3.1-simple-wizard"]
+    branches: ["feature/v3.3.0-rc", "feature/v3.3.1-simple-wizard", "feature/v3.3.2-evse-output-fix"]
   workflow_dispatch:
 
 jobs:
@@ -107,14 +107,19 @@ jobs:
               page = await flow.async_step_load_connection_details({
                   "output_entity":"number.car_current",
               })
+              assert page["step_id"] == "load_evse_format", page
+              page = await flow.async_step_load_evse_format({
+                  "evse_output_format":"kW",
+              })
               assert page["step_id"] == "load_commands", page
               page = await flow.async_step_load_commands({
                   "evse_phases":3,"evse_min_current_a":6,
-                  "evse_max_current_a":16,"evse_pause_current_a":0.01,
-                  "evse_zero_unlimited":True,
+                  "evse_max_current_a":16,"evse_power_step_w":1000,
+                  "evse_pause_power_value":0,
               })
               assert page["step_id"] == "load_review", page
               assert abs(flow._draft["min_kw"] - 4.14) < 1e-6
+              assert flow._draft["evse_output_format"] == "kW"
               page = await flow.async_step_load_review({"wizard_ack":False})
               assert page["step_id"] == "load_review"
               print("End-to-end EVSE installation wizard steps work with HA Core")
