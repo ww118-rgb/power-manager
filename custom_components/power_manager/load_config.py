@@ -54,6 +54,9 @@ from .const import (
     CONF_ACTUAL_SENSOR_TIMEOUT_S,
     CONF_FEEDBACK_TOLERANCE_KW,
     CONF_DEFAULT_REQUEST_KW,
+    CONF_REQUEST_ENTITY,
+    CONF_DEMAND_MODE, DEMAND_MODE_ALWAYS, DEMAND_MODE_SENSOR,
+    DEMAND_MODE_DISABLED, DEMAND_MODES,
     CONF_ENABLE_ENTITY,
     CONF_EVSE_MAX_CURRENT_A,
     CONF_EVSE_MIN_CURRENT_A,
@@ -133,6 +136,11 @@ def normalize_load_data(data: dict[str, Any]) -> dict[str, Any]:
     normalized[CONF_PRIORITY] = int(normalized.get(CONF_PRIORITY, DEFAULT_PRIORITY))
     normalized[CONF_MIN_KW] = _float_value(normalized, CONF_MIN_KW, DEFAULT_MIN_KW)
     normalized[CONF_MAX_KW] = _float_value(normalized, CONF_MAX_KW, DEFAULT_MAX_KW)
+    normalized[CONF_DEMAND_MODE] = str(normalized.get(
+        CONF_DEMAND_MODE,
+        DEMAND_MODE_SENSOR if normalized.get("request_entity")
+        else DEMAND_MODE_ALWAYS,
+    ))
     normalized[CONF_DEFAULT_REQUEST_KW] = _float_value(
         normalized,
         CONF_DEFAULT_REQUEST_KW,
@@ -278,6 +286,13 @@ def validate_load_data(data: dict[str, Any]) -> dict[str, str]:
     min_kw = values[CONF_MIN_KW]
     max_kw = values[CONF_MAX_KW]
     default_request_kw = values[CONF_DEFAULT_REQUEST_KW]
+    if values[CONF_DEMAND_MODE] not in DEMAND_MODES:
+        errors[CONF_DEMAND_MODE] = "invalid_demand_mode"
+    elif (
+        values[CONF_DEMAND_MODE] == DEMAND_MODE_SENSOR
+        and not values.get("request_entity")
+    ):
+        errors[CONF_REQUEST_ENTITY] = "request_sensor_required"
     start_margin_kw = values[CONF_START_MARGIN_KW]
     stop_margin_kw = values[CONF_STOP_MARGIN_KW]
 
