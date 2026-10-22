@@ -296,25 +296,13 @@ def test_controller_uses_actual_power_measurements():
         == pytest.approx(33.0)
     )
 
-    assert (
-        result.targets_kw["Wärmepumpe"]
-        == pytest.approx(20.0)
-    )
-
-    assert (
-        result.targets_kw["Wallbox 1"]
-        == pytest.approx(11.0)
-    )
-
-    assert (
-        result.targets_kw["Heizstab"]
-        == pytest.approx(2.0)
-    )
-
-    assert (
-        result.projected_grid_kw
-        == pytest.approx(140.0)
-    )
+    # Physical grid headroom is currently only 5 kW. The 3-kW heater
+    # reduction is not instantly spendable for an increase elsewhere.
+    # This intentionally differs from the old single-tick ideal allocation.
+    assert result.targets_kw["Wärmepumpe"] == pytest.approx(20.0)
+    assert result.targets_kw["Wallbox 1"] == pytest.approx(8.0)
+    assert result.targets_kw["Heizstab"] == pytest.approx(2.0)
+    assert result.projected_grid_kw == pytest.approx(137.0)
 
 
 def test_controller_without_actual_power_is_conservative_first_cycle():
