@@ -99,6 +99,8 @@ from .const import (
     CONF_GRID_LIMIT_KW,
     CONF_GRID_POWER_ENTITY,
     CONF_GRID_RESERVE_KW,
+    CONF_GRID_GROWTH_MARGIN_KW,
+    CONF_GRID_RECOVERY_HOLD_S,
     CONF_GRID_SENSOR_TIMEOUT_S,
     CONF_INVERT_ACTUAL_POWER,
     CONF_INVERT_BATTERY_POWER,
@@ -147,6 +149,8 @@ from .const import (
     DEFAULT_EVSE_VOLTAGE_V,
     DEFAULT_GRID_RESERVE_KW,
     DEFAULT_GRID_SENSOR_TIMEOUT_S,
+    DEFAULT_GRID_GROWTH_MARGIN_KW,
+    DEFAULT_GRID_RECOVERY_HOLD_S,
     DEFAULT_BATTERY_RESUME_HYSTERESIS_SOC,
     DEFAULT_PV_SENSOR_TIMEOUT_S,
     DEFAULT_BATTERY_SENSOR_TIMEOUT_S,
@@ -273,6 +277,12 @@ def _build_global_schema(values: dict[str, Any] | None = None) -> probatio.Schem
                 DEFAULT_GRID_RESERVE_KW,
             ): _power_number_selector(),
             _required_marker(
+                CONF_GRID_GROWTH_MARGIN_KW, values, DEFAULT_GRID_GROWTH_MARGIN_KW,
+            ): _power_number_selector(),
+            _required_marker(
+                CONF_GRID_RECOVERY_HOLD_S, values, DEFAULT_GRID_RECOVERY_HOLD_S,
+            ): _seconds_selector(),
+            _required_marker(
                 CONF_GRID_SENSOR_TIMEOUT_S,
                 values,
                 DEFAULT_GRID_SENSOR_TIMEOUT_S,
@@ -369,6 +379,7 @@ _GLOBAL_BASIC_KEYS = (
 )
 _GLOBAL_ADVANCED_KEYS = (
     CONF_GRID_RESERVE_KW, CONF_GRID_SENSOR_TIMEOUT_S,
+    CONF_GRID_GROWTH_MARGIN_KW, CONF_GRID_RECOVERY_HOLD_S,
     CONF_INVERT_PV_POWER, CONF_INVERT_BATTERY_POWER,
     CONF_PV_SENSOR_TIMEOUT_S, CONF_BATTERY_SENSOR_TIMEOUT_S,
     CONF_BATTERY_SOC_SENSOR_TIMEOUT_S,
@@ -378,6 +389,8 @@ _GLOBAL_ADVANCED_KEYS = (
 )
 _GLOBAL_DEFAULTS = {
     CONF_GRID_RESERVE_KW: DEFAULT_GRID_RESERVE_KW,
+    CONF_GRID_GROWTH_MARGIN_KW: DEFAULT_GRID_GROWTH_MARGIN_KW,
+    CONF_GRID_RECOVERY_HOLD_S: DEFAULT_GRID_RECOVERY_HOLD_S,
     CONF_GRID_SENSOR_TIMEOUT_S: DEFAULT_GRID_SENSOR_TIMEOUT_S,
     CONF_INVERT_PV_POWER: DEFAULT_INVERT_PV_POWER,
     CONF_INVERT_BATTERY_POWER: DEFAULT_INVERT_BATTERY_POWER,
@@ -606,6 +619,18 @@ def _validate_global_configuration(user_input: dict[str, Any]) -> dict[str, str]
 
     if grid_sensor_timeout_s <= 0.0:
         errors[CONF_GRID_SENSOR_TIMEOUT_S] = "grid_timeout_must_be_positive"
+
+    grid_stability_parameters = (
+        (CONF_GRID_GROWTH_MARGIN_KW, DEFAULT_GRID_GROWTH_MARGIN_KW),
+        (CONF_GRID_RECOVERY_HOLD_S, DEFAULT_GRID_RECOVERY_HOLD_S),
+    )
+    for key, default in grid_stability_parameters:
+        try:
+            value = float(user_input.get(key, default))
+            if not isfinite(value) or value < 0:
+                errors[key] = "invalid_number"
+        except (ValueError, TypeError):
+            errors[key] = "invalid_number"
 
     hybrid_parameters = (
         (CONF_PV_SENSOR_TIMEOUT_S, DEFAULT_PV_SENSOR_TIMEOUT_S, True),
