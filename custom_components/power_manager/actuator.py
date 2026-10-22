@@ -57,6 +57,11 @@ from .const import (
     CONF_EVSE_MAX_CURRENT_A,
     CONF_EVSE_MIN_CURRENT_A,
     CONF_EVSE_PAUSE_CURRENT_A,
+    CONF_EVSE_OUTPUT_FORMAT, CONF_EVSE_CURRENT_STEP_A,
+    CONF_EVSE_POWER_STEP_W, CONF_EVSE_PAUSE_POWER_VALUE,
+    DEFAULT_EVSE_OUTPUT_FORMAT, DEFAULT_EVSE_CURRENT_STEP_A,
+    DEFAULT_EVSE_POWER_STEP_W, DEFAULT_EVSE_PAUSE_POWER_VALUE,
+    EVSE_OUTPUT_AUTO, EVSE_OUTPUT_AMPERE, EVSE_OUTPUT_WATT, EVSE_OUTPUT_KW,
     CONF_EVSE_PHASES,
     CONF_EVSE_VOLTAGE_V,
     CONF_LOAD_TYPE,
@@ -217,6 +222,27 @@ def _build_plan(
             if power_unit not in SUPPORTED_OUTPUT_POWER_UNITS:
                 raise ActuatorError("Direkter Geräteausgang erfordert explizit W, kW oder MW")
 
+    evse_format = str(load_data.get(
+        CONF_EVSE_OUTPUT_FORMAT, DEFAULT_EVSE_OUTPUT_FORMAT,
+    ))
+    if load_type == LOAD_TYPE_EVSE and evse_format == EVSE_OUTPUT_AUTO:
+        if (
+            load_data.get(CONF_OUTPUT_TRANSPORT, DEFAULT_OUTPUT_TRANSPORT)
+            != OUTPUT_TRANSPORT_ENTITY
+        ):
+            raise ActuatorError(
+                "Automatische Wallbox-Einheit nur für Home-Assistant-Entity verfügbar."
+            )
+        output = _state_or_error(
+            hass, str(load_data.get(CONF_OUTPUT_ENTITY, "")), "Wallbox-Ausgang",
+        )
+        candidate = output.attributes.get(ATTR_UNIT_OF_MEASUREMENT)
+        if candidate not in (EVSE_OUTPUT_AMPERE, EVSE_OUTPUT_WATT, EVSE_OUTPUT_KW):
+            raise ActuatorError(
+                "Wallbox-Ausgang hat keine erkennbare Einheit A, W oder kW. "
+                "Bitte die Sollwert-Einheit ausdrücklich wählen."
+            )
+        evse_format = str(candidate)
     try:
         return build_output_plan(
             load_type=load_type,
@@ -238,6 +264,16 @@ def _build_plan(
             evse_pause_current_a=float(
                 load_data.get(CONF_EVSE_PAUSE_CURRENT_A, DEFAULT_EVSE_PAUSE_CURRENT_A)
             ),
+            evse_output_format=evse_format,
+            evse_current_step_a=float(load_data.get(
+                CONF_EVSE_CURRENT_STEP_A, DEFAULT_EVSE_CURRENT_STEP_A,
+            )),
+            evse_power_step_w=float(load_data.get(
+                CONF_EVSE_POWER_STEP_W, DEFAULT_EVSE_POWER_STEP_W,
+            )),
+            evse_pause_power_value=float(load_data.get(
+                CONF_EVSE_PAUSE_POWER_VALUE, DEFAULT_EVSE_PAUSE_POWER_VALUE,
+            )),
             output_value_mode=str(
                 load_data.get(CONF_OUTPUT_VALUE_MODE, DEFAULT_OUTPUT_VALUE_MODE)
             ),
@@ -317,14 +353,18 @@ def _validate_positive_plan_range(
         raise ActuatorError(f"{label}: kein numerischer Ausgangswert berechnet.")
     if plan.enabled is not True:
         raise ActuatorError(
-            f"{label}: technische Mindestleistung wird vom Ausgangsadapter "
-            "als Pause/Aus abgebildet. min_kw und Gerätegrenzen passen nicht zusammen."
+            f"{label}: die gewünschte Leistung liegt unter der nächsten "
+            "erreichbaren Gerätestufe und wird deshalb sicher pausiert. "
+            "Eine höhere Lastfreigabe darf PMAX nicht überschreiten."
         )
     if not _numeric_in_range(plan.numeric_value, state):
         minimum, maximum = _numeric_limits(state)
+        step = state.attributes.get("step")
         raise ActuatorError(
-            f"{label}: berechneter Wert {plan.numeric_value:g} liegt außerhalb "
-            f"des Entity-Bereichs [{minimum}, {maximum}]."
+            f"{label}: berechneter Sollwert {plan.numeric_value:g} {plan.numeric_unit or ''} "
+            f"passt nicht zu erlaubtem Bereich [{minimum}, {maximum}] "
+            f"und Schrittweite {step}. Prüfe Ausgangseinheit A/W/kW "
+            "und die zulässigen Gerätestufen."
         )
 
 
@@ -441,11 +481,18 @@ def validate_actuator(hass: HomeAssistant, load_data: dict[str, Any]) -> None:
     # Verify that every positive technical boundary is representable without
     # modifying the controller's target behind its back.
     if min_kw > 0.0:
-        _validate_positive_plan_range(
-            _build_plan(hass, load_data, min_kw),
-            output_state,
-            label="Mindestleistung",
-        )
+        first_plan = _build_plan(hass, load_data, min_kw)
+        if first_plan.enabled is True:
+            _validate_positive_plan_range(
+                first_plan, output_state, label="Mindestleistung",
+            )
+        elif load_type != LOAD_TYPE_EVSE:
+            _validate_positive_plan_range(
+                first_plan, output_state, label="Mindestleistung",
+            )
+        # A whole-kW wallbox output cannot represent 4.14 kW: the
+        # controller must pause until it can safely command 5 kW.
+        # Do not round UP to start charging below the physical minimum.
     else:
         # With min_kw == 0 the controller may legitimately produce arbitrarily
         # small positive targets. The numeric output must therefore accept zero
