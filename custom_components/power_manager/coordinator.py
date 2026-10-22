@@ -47,6 +47,8 @@ from .const import (
     CONF_GRID_LIMIT_KW,
     CONF_GRID_POWER_ENTITY,
     CONF_GRID_RESERVE_KW,
+    CONF_GRID_GROWTH_MARGIN_KW,
+    CONF_GRID_RECOVERY_HOLD_S,
     CONF_GRID_SENSOR_TIMEOUT_S,
     CONF_INVERT_ACTUAL_POWER,
     CONF_INVERT_BATTERY_POWER,
@@ -90,6 +92,8 @@ from .const import (
     DEFAULT_BATTERY_SOC_SCALE,
     DEFAULT_DEFAULT_REQUEST_KW,
     DEFAULT_GRID_SENSOR_TIMEOUT_S,
+    DEFAULT_GRID_GROWTH_MARGIN_KW,
+    DEFAULT_GRID_RECOVERY_HOLD_S,
     DEFAULT_BATTERY_RESUME_HYSTERESIS_SOC,
     DEFAULT_PV_SENSOR_TIMEOUT_S,
     DEFAULT_BATTERY_SENSOR_TIMEOUT_S,
@@ -756,7 +760,7 @@ class PowerManagerCoordinator(DataUpdateCoordinator[PowerManagerCoordinatorData]
                     )
                 if (
                     diagnostic.calculated_target_kw + EPSILON < previous_kw
-                    and load_data.get(CONF_ACTUAL_POWER_ENTITY)
+                    and diagnostic.actual_kw is not None
                 ):
                     settling_s = float(load_data.get(
                         CONF_SETTLING_TIME_S, DEFAULT_SETTLING_TIME_S,
@@ -867,20 +871,35 @@ class PowerManagerCoordinator(DataUpdateCoordinator[PowerManagerCoordinatorData]
                     actual_kw=(diagnostic.actual_kw if diagnostic is not None else None),
                     tolerance_kw=tolerance_kw,
                 )
-                if status == "confirmed":
+                if diagnostic is None or diagnostic.actual_kw is None:
+                    # An optional load sensor may be missing or stale;
+                    # the mandatory grid sensor remains the control basis.
+                    self._pending_reductions.pop(subentry_id, None)
+                elif status == "confirmed":
                     self._pending_reductions.pop(subentry_id, None)
                 elif status == "failed":
-                    name = diagnostic.name if diagnostic else subentry_id
-                    return await self._async_fail_safe_data(
-                        reason=(
-                            f"{name}: Leistungsreduzierung auf {pending.target_kw:g} kW "
-                            "nicht durch frischen Istwert bestätigt."
-                        ),
-                        grid_kw=grid_kw,
-                        age_s=grid_age_s,
-                        diagnostics=diagnostics,
-                        grid_measurement_healthy=True,
+                    name = diagnostic.name
+                    effective_limit = (
+                        float(self.settings[CONF_GRID_LIMIT_KW])
+                        - float(self.settings.get(CONF_GRID_RESERVE_KW, 0.0))
                     )
+                    if grid_kw > effective_limit + EPSILON:
+                        return await self._async_fail_safe_data(
+                            reason=(
+                                f"{name}: Leistungsreduzierung auf {pending.target_kw:g} kW "
+                                "nicht bestätigt und Netzgrenze überschritten."
+                            ),
+                            grid_kw=grid_kw,
+                            age_s=grid_age_s,
+                            diagnostics=diagnostics,
+                            grid_measurement_healthy=True,
+                        )
+                    _LOGGER.warning(
+                        "%s: optionaler Istwert bestätigt die Reduzierung nicht; "
+                        "Netzbezug %.3f kW unter PMAX, weitere Regelung netzbasiert.",
+                        name, grid_kw,
+                    )
+                    self._pending_reductions.pop(subentry_id, None)
 
         try:
             pv_kw = self._read_optional_power_kw(
@@ -942,6 +961,12 @@ class PowerManagerCoordinator(DataUpdateCoordinator[PowerManagerCoordinatorData]
                 grid_kw=grid_kw,
                 grid_limit_kw=float(values[CONF_GRID_LIMIT_KW]),
                 grid_reserve_kw=float(values.get(CONF_GRID_RESERVE_KW, 0.0)),
+                grid_growth_margin_kw=float(values.get(
+                    CONF_GRID_GROWTH_MARGIN_KW, DEFAULT_GRID_GROWTH_MARGIN_KW,
+                )),
+                grid_recovery_hold_s=float(values.get(
+                    CONF_GRID_RECOVERY_HOLD_S, DEFAULT_GRID_RECOVERY_HOLD_S,
+                )),
                 pv_kw=pv_kw,
                 battery_soc=battery_soc,
                 battery_kw=battery_kw,
@@ -1085,19 +1110,8 @@ class PowerManagerCoordinator(DataUpdateCoordinator[PowerManagerCoordinatorData]
 
         errors: list[str] = []
         for subentry_id, load_data in load_subentries:
-            name = load_data.get(CONF_LOAD_NAME, "Verbraucher")
-            if not load_data.get(CONF_ACTUAL_POWER_ENTITY):
-                errors.append(
-                    f"{name}: Live-Regelung benötigt eine echte Istleistungs-Entity "
-                    "zur Bestätigung von Leistungsreduzierungen."
-                )
-            else:
-                current = data.loads.get(subentry_id)
-                if current is None or current.actual_kw is None:
-                    errors.append(
-                        f"{name}: Istleistung fehlt oder ist veraltet; "
-                        "Live-Regelung nicht sicher freigebbar."
-                    )
+            # Actual-power sensors are optional. Grid measurement is mandatory.
+            # Actuator validation still protects all configured outputs.
             try:
                 validate_actuator(self.hass, load_data)
             except ActuatorError as err:
