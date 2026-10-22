@@ -349,10 +349,10 @@ def test_missing_soc_never_creates_battery_bonus_and_pv_still_works():
     assert result.targets_kw["Last"] == pytest.approx(20)
 
 
-def test_normal_peak_budget_ignores_autonomous_battery_discharge():
-    # grid 2 + battery 8 = 10 controlled, 0 house. At PMAX=10,
-    # loss of the battery cannot be assumed to be survivable with
-    # more than 10 kW controlled load.
+def test_normal_peak_budget_uses_measured_net_import_not_battery_offset():
+    # NORMAL follows the grid meter: 2 kW import with 10 kW controlled
+    # power leaves a -8 kW net baseline and 18 kW at PMAX 10.
+    # Battery loss remains a documented instantaneous disturbance risk.
     result = run_controller(
         ControllerInputs(
             grid_kw=2, grid_limit_kw=10, grid_reserve_kw=0,
@@ -360,8 +360,8 @@ def test_normal_peak_budget_ignores_autonomous_battery_discharge():
         ),
         [load(actual=10)],
     )
-    assert result.peak_budget_kw == pytest.approx(10)
-    assert result.targets_kw["Last"] == pytest.approx(10)
+    assert result.peak_budget_kw == pytest.approx(18)
+    assert result.targets_kw["Last"] == pytest.approx(18)
 
 
 def test_battery_bonus_recovery_hysteresis_is_configurable():
