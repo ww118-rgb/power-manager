@@ -280,9 +280,6 @@ def _build_global_schema(values: dict[str, Any] | None = None) -> probatio.Schem
                 CONF_GRID_GROWTH_MARGIN_KW, values, DEFAULT_GRID_GROWTH_MARGIN_KW,
             ): _power_number_selector(),
             _required_marker(
-                CONF_GRID_RECOVERY_HOLD_S, values, DEFAULT_GRID_RECOVERY_HOLD_S,
-            ): _seconds_selector(),
-            _required_marker(
                 CONF_GRID_SENSOR_TIMEOUT_S,
                 values,
                 DEFAULT_GRID_SENSOR_TIMEOUT_S,
@@ -334,35 +331,6 @@ def _build_global_schema(values: dict[str, Any] | None = None) -> probatio.Schem
             _required_marker(
                 CONF_BATTERY_SOC_SENSOR_TIMEOUT_S, values, DEFAULT_BATTERY_SOC_SENSOR_TIMEOUT_S,
             ): _seconds_selector(),
-            _required_marker(
-                CONF_BATTERY_RESUME_HYSTERESIS_SOC, values,
-                DEFAULT_BATTERY_RESUME_HYSTERESIS_SOC,
-            ): NumberSelector(NumberSelectorConfig(
-                min=0.0, max=100.0, step=0.5,
-                unit_of_measurement="%", mode=NumberSelectorMode.BOX,
-            )),
-            _optional_marker(CONF_SURPLUS_MIN_BATTERY_SOC, values): NumberSelector(
-                NumberSelectorConfig(
-                    min=0.0,
-                    max=100.0,
-                    step=1.0,
-                    unit_of_measurement="%",
-                    mode=NumberSelectorMode.BOX,
-                )
-            ),
-            _required_marker(
-                CONF_HYBRID_PROBE_STEP_KW, values, DEFAULT_HYBRID_PROBE_STEP_KW,
-            ): _power_number_selector(),
-            _required_marker(
-                CONF_HYBRID_PROBE_SETTLE_S, values, DEFAULT_HYBRID_PROBE_SETTLE_S,
-            ): _seconds_selector(),
-            _required_marker(
-                CONF_HYBRID_PROBE_RETRY_S, values, DEFAULT_HYBRID_PROBE_RETRY_S,
-            ): _seconds_selector(),
-            _required_marker(
-                CONF_HYBRID_GRID_TOLERANCE_KW, values,
-                DEFAULT_HYBRID_GRID_TOLERANCE_KW,
-            ): _power_number_selector(),
         }
     )
 
@@ -388,18 +356,12 @@ _GLOBAL_ADVANCED_KEYS = (
 _GLOBAL_DEFAULTS = {
     CONF_GRID_RESERVE_KW: DEFAULT_GRID_RESERVE_KW,
     CONF_GRID_GROWTH_MARGIN_KW: DEFAULT_GRID_GROWTH_MARGIN_KW,
-    CONF_GRID_RECOVERY_HOLD_S: DEFAULT_GRID_RECOVERY_HOLD_S,
     CONF_GRID_SENSOR_TIMEOUT_S: DEFAULT_GRID_SENSOR_TIMEOUT_S,
     CONF_INVERT_PV_POWER: DEFAULT_INVERT_PV_POWER,
     CONF_INVERT_BATTERY_POWER: DEFAULT_INVERT_BATTERY_POWER,
     CONF_PV_SENSOR_TIMEOUT_S: DEFAULT_PV_SENSOR_TIMEOUT_S,
     CONF_BATTERY_SENSOR_TIMEOUT_S: DEFAULT_BATTERY_SENSOR_TIMEOUT_S,
     CONF_BATTERY_SOC_SENSOR_TIMEOUT_S: DEFAULT_BATTERY_SOC_SENSOR_TIMEOUT_S,
-    CONF_BATTERY_RESUME_HYSTERESIS_SOC: DEFAULT_BATTERY_RESUME_HYSTERESIS_SOC,
-    CONF_HYBRID_PROBE_STEP_KW: DEFAULT_HYBRID_PROBE_STEP_KW,
-    CONF_HYBRID_PROBE_SETTLE_S: DEFAULT_HYBRID_PROBE_SETTLE_S,
-    CONF_HYBRID_PROBE_RETRY_S: DEFAULT_HYBRID_PROBE_RETRY_S,
-    CONF_HYBRID_GRID_TOLERANCE_KW: DEFAULT_HYBRID_GRID_TOLERANCE_KW,
 }
 
 def _subset_schema(
@@ -588,7 +550,6 @@ def _normalize_global_configuration(user_input: dict[str, Any]) -> dict[str, Any
         CONF_PV_POWER_ENTITY,
         CONF_BATTERY_POWER_ENTITY,
         CONF_BATTERY_SOC_ENTITY,
-        CONF_SURPLUS_MIN_BATTERY_SOC,
     ):
         normalized.setdefault(key, None)
     return normalized
@@ -687,9 +648,6 @@ def _build_load_schema(values: dict[str, Any] | None = None) -> probatio.Schema:
                 values,
                 DEFAULT_INVERT_ACTUAL_POWER,
             ): BooleanSelector(),
-            _required_marker(
-                CONF_FEEDBACK_TOLERANCE_KW, values, DEFAULT_FEEDBACK_TOLERANCE_KW,
-            ): _power_number_selector(),
             _optional_marker(CONF_REQUEST_ENTITY, values): _entity_selector(),
             _optional_marker(CONF_AVAILABILITY_ENTITY, values): _entity_selector(),
             _optional_marker(CONF_OUTPUT_ENTITY, values): _entity_selector(),
@@ -1407,7 +1365,7 @@ class PowerManagerLoadSubentryFlow(ConfigSubentryFlow):
             return await self.async_step_load_review()
         fields = [
             CONF_AVAILABILITY_ENTITY, CONF_INVERT_ACTUAL_POWER,
-            CONF_ACTUAL_SENSOR_TIMEOUT_S, CONF_FEEDBACK_TOLERANCE_KW,
+            CONF_ACTUAL_SENSOR_TIMEOUT_S,
             CONF_START_MARGIN_KW, CONF_STOP_MARGIN_KW,
             CONF_MIN_ON_TIME_S, CONF_MIN_OFF_TIME_S, CONF_SETTLING_TIME_S,
         ]
