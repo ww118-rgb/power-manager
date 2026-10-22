@@ -486,6 +486,46 @@ def _build_next_state(
     )
 
 
+def _equalize_equivalent_loads(
+    loads: list[ControllableLoad],
+    ideal: dict[str, float],
+    targets: dict[str, float],
+    mode: OperatingMode,
+) -> None:
+    """Keep interchangeable active loads equally loaded without borrowing power.
+
+    When the grid allows no further increase, the per-device admission check
+    can retain a historical imbalance even though the fair allocator requested
+    identical targets. Reduce the higher targets to the lower safe target now;
+    subsequently observed grid export/headroom permits both to rise together.
+    Never override different requirements, limits, priorities in NORMAL,
+    shutdowns or technical minimums. This function never increases power.
+    """
+    groups: dict[tuple[float, float, float, int], list[ControllableLoad]] = {}
+    for load in loads:
+        if not load.available or not load.can_modulate:
+            continue
+        priority = load.priority if mode == OperatingMode.NORMAL else 0
+        key = (load.min_kw, load.max_kw, load.requested_kw, priority)
+        groups.setdefault(key, []).append(load)
+
+    for peers in groups.values():
+        if len(peers) < 2:
+            continue
+        # Only equalize loads that the fair allocator wanted to run equally.
+        desired = [ideal.get(load.name, 0.0) for load in peers]
+        if min(desired) <= EPSILON or max(desired) - min(desired) > EPSILON:
+            continue
+        current = [targets.get(load.name, 0.0) for load in peers]
+        if min(current) <= EPSILON:
+            continue  # Do not curtail running devices to an off/blocked peer.
+        common = min(current)
+        if common + EPSILON < peers[0].min_kw:
+            continue
+        for load in peers:
+            targets[load.name] = min(targets[load.name], common)
+
+
 def run_controller(
     inputs: ControllerInputs,
     loads: list[ControllableLoad],
@@ -555,6 +595,8 @@ def run_controller(
         allocation_loads, available_kw, state=state, now_s=inputs.now_s,
     )
 
+    fair_targets = targets.copy()
+
     # Do not reuse power merely ORDERED to be shed from another device:
     # the next grid reading must show the freed capacity first.
     # No global 15-second lockout or inverter probing.
@@ -576,6 +618,10 @@ def run_controller(
             allowed = min(previous, proposed) if previous > EPSILON else 0.0
         targets[load.name] = allowed
         growth_kw = max(0.0, growth_kw - max(0.0, allowed - previous))
+
+    # Bring identical peers together promptly without assuming that a
+    # commanded reduction has already created measurable network headroom.
+    _equalize_equivalent_loads(selected, fair_targets, targets, inputs.mode)
 
     total_kw = sum(targets.values())
     projected_grid_kw = base_kw + total_kw
