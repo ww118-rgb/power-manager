@@ -13,7 +13,7 @@ def _json(relative: str):
 
 def test_manifest_and_runtime_version_match_v4():
     manifest = _json("manifest.json")
-    assert manifest["version"] == "4.0.0"
+    assert manifest["version"] == "4.0.0-rc.3"
     assert VERSION == manifest["version"]
 
 
