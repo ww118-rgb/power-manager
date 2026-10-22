@@ -116,7 +116,6 @@ from .const import (
     SUBENTRY_TYPE_LOAD,
 )
 from .controller import run_controller
-from .feedback import PendingReduction
 from .load_adapter import (
     actual_kw_from_source,
     availability_from_source,
@@ -209,7 +208,6 @@ class PowerManagerCoordinator(DataUpdateCoordinator[PowerManagerCoordinatorData]
         self.live_control_enabled = False
         self._tracking_started = False
         self._last_output_error: str | None = None
-        self._pending_reductions: dict[str, PendingReduction] = {}
         self._direct_last_command: dict[str, tuple[float, float, float]] = {}
 
     @property
@@ -765,19 +763,6 @@ class PowerManagerCoordinator(DataUpdateCoordinator[PowerManagerCoordinatorData]
                         if command.effective_target_kw is not None
                         else diagnostic.calculated_target_kw,
                     )
-                if (
-                    diagnostic.calculated_target_kw + EPSILON < previous_kw
-                    and diagnostic.actual_kw is not None
-                ):
-                    settling_s = float(load_data.get(
-                        CONF_SETTLING_TIME_S, DEFAULT_SETTLING_TIME_S,
-                    ))
-                    self._pending_reductions[subentry_id] = PendingReduction(
-                        target_kw=diagnostic.calculated_target_kw,
-                        deadline_s=monotonic() + max(
-                            settling_s, HEARTBEAT_INTERVAL_SECONDS,
-                        ),
-                    )
                 self._apply_command_diagnostic(
                     diagnostic,
                     command,
@@ -815,7 +800,6 @@ class PowerManagerCoordinator(DataUpdateCoordinator[PowerManagerCoordinatorData]
             # state so recovery can never reuse a stale pre-fail-safe target.
             self.live_control_enabled = False
             self.controller_state = ControllerState()
-            self._pending_reductions.clear()
             self._direct_last_command.clear()
 
         combined_reason = reason
@@ -864,50 +848,6 @@ class PowerManagerCoordinator(DataUpdateCoordinator[PowerManagerCoordinatorData]
         assert grid_kw is not None
         values = self.settings
 
-        if self.live_control_enabled and self._pending_reductions:
-            by_id = dict(self._load_subentries())
-            now_feedback_s = monotonic()
-            for subentry_id, pending in list(self._pending_reductions.items()):
-                diagnostic = diagnostics.get(subentry_id)
-                cfg = by_id.get(subentry_id, {})
-                tolerance_kw = float(cfg.get(
-                    CONF_FEEDBACK_TOLERANCE_KW, DEFAULT_FEEDBACK_TOLERANCE_KW,
-                ))
-                status = pending.assess(
-                    now_s=now_feedback_s,
-                    actual_kw=(diagnostic.actual_kw if diagnostic is not None else None),
-                    tolerance_kw=tolerance_kw,
-                )
-                if diagnostic is None or diagnostic.actual_kw is None:
-                    # An optional load sensor may be missing or stale;
-                    # the mandatory grid sensor remains the control basis.
-                    self._pending_reductions.pop(subentry_id, None)
-                elif status == "confirmed":
-                    self._pending_reductions.pop(subentry_id, None)
-                elif status == "failed":
-                    name = diagnostic.name
-                    effective_limit = (
-                        float(self.settings[CONF_GRID_LIMIT_KW])
-                        - float(self.settings.get(CONF_GRID_RESERVE_KW, 0.0))
-                    )
-                    if grid_kw > effective_limit + EPSILON:
-                        return await self._async_fail_safe_data(
-                            reason=(
-                                f"{name}: Leistungsreduzierung auf {pending.target_kw:g} kW "
-                                "nicht bestätigt und Netzgrenze überschritten."
-                            ),
-                            grid_kw=grid_kw,
-                            age_s=grid_age_s,
-                            diagnostics=diagnostics,
-                            grid_measurement_healthy=True,
-                        )
-                    _LOGGER.warning(
-                        "%s: optionaler Istwert bestätigt die Reduzierung nicht; "
-                        "Netzbezug %.3f kW unter PMAX, weitere Regelung netzbasiert.",
-                        name, grid_kw,
-                    )
-                    self._pending_reductions.pop(subentry_id, None)
-
         try:
             pv_kw = self._read_optional_power_kw(
                 entity_key=CONF_PV_POWER_ENTITY,
@@ -921,47 +861,21 @@ class PowerManagerCoordinator(DataUpdateCoordinator[PowerManagerCoordinatorData]
             _LOGGER.warning("PV-Messwert ungültig; verwende 0 kW: %s", err)
             pv_kw = 0.0
 
+        # Battery is autonomous. Readings are retained for informational
+        # HA sensors only and never influence PMAX or PV-surplus decisions.
         try:
             battery_kw = self._read_optional_power_kw(
                 entity_key=CONF_BATTERY_POWER_ENTITY,
                 invert_key=CONF_INVERT_BATTERY_POWER,
                 label="Batterieleistung",
-                require_fresh=(self.operating_mode == OperatingMode.SURPLUS),
-                timeout_key=CONF_BATTERY_SENSOR_TIMEOUT_S,
-                default_timeout_s=DEFAULT_BATTERY_SENSOR_TIMEOUT_S,
+                require_fresh=False,
             )
-        except MeasurementError as err:
-            if self.operating_mode == OperatingMode.SURPLUS:
-                return await self._async_fail_safe_data(
-                    reason=f"Batterieleistung im Überschussbetrieb ungültig: {err}",
-                    grid_kw=grid_kw,
-                    age_s=grid_age_s,
-                    diagnostics=diagnostics,
-                    grid_measurement_healthy=True,
-                )
-            _LOGGER.warning(
-                "Batterieleistung ungültig; verwende im Normalbetrieb 0 kW: %s",
-                err,
-            )
+        except MeasurementError:
             battery_kw = 0.0
-
         try:
             battery_soc = self._read_battery_soc()
-            surplus_min_battery_soc = self._read_surplus_min_soc()
-        except MeasurementError as err:
-            # Stale SOC disables only battery bonus, not pure PV loads.
-            # Battery power is checked separately for the energy balance.
-            _LOGGER.warning(
-                "Batterie-SOC ungültig; Batteriebonus deaktiviert, "
-                "PV-only und PMAX bleiben aktiv: %s",
-                err,
-            )
+        except MeasurementError:
             battery_soc = None
-            surplus_min_battery_soc = None
-
-        # Hybrid A1: reaching the SOC reserve revokes *battery assistance*,
-        # not the pure PV-surplus mode. The controller still allocates PV
-        # generation above the non-controllable house load.
 
         try:
             inputs = ControllerInputs(
@@ -971,39 +885,11 @@ class PowerManagerCoordinator(DataUpdateCoordinator[PowerManagerCoordinatorData]
                 grid_growth_margin_kw=float(values.get(
                     CONF_GRID_GROWTH_MARGIN_KW, DEFAULT_GRID_GROWTH_MARGIN_KW,
                 )),
-                grid_recovery_hold_s=float(values.get(
-                    CONF_GRID_RECOVERY_HOLD_S, DEFAULT_GRID_RECOVERY_HOLD_S,
-                )),
                 pv_kw=pv_kw,
-                battery_soc=battery_soc,
-                battery_kw=battery_kw,
+                battery_soc=battery_soc,  # diagnostics; ignored by controller
+                battery_kw=battery_kw,  # diagnostics; ignored by controller
                 mode=self.operating_mode,
                 now_s=monotonic(),
-                surplus_min_battery_soc=surplus_min_battery_soc,
-                battery_resume_hysteresis_soc=float(values.get(
-                    CONF_BATTERY_RESUME_HYSTERESIS_SOC,
-                    DEFAULT_BATTERY_RESUME_HYSTERESIS_SOC,
-                )),
-                hybrid_battery_assist_enabled=bool(
-                    values.get(CONF_BATTERY_POWER_ENTITY)
-                    and values.get(CONF_BATTERY_SOC_ENTITY)
-                    and surplus_min_battery_soc is not None
-                ),
-                # Never run load exploration in dry-run. It requires
-                # actual applied commands and observed plant response.
-                hybrid_probe_enabled=self.live_control_enabled,
-                hybrid_probe_step_kw=float(values.get(
-                    CONF_HYBRID_PROBE_STEP_KW, DEFAULT_HYBRID_PROBE_STEP_KW,
-                )),
-                hybrid_probe_settle_s=float(values.get(
-                    CONF_HYBRID_PROBE_SETTLE_S, DEFAULT_HYBRID_PROBE_SETTLE_S,
-                )),
-                hybrid_probe_retry_s=float(values.get(
-                    CONF_HYBRID_PROBE_RETRY_S, DEFAULT_HYBRID_PROBE_RETRY_S,
-                )),
-                hybrid_grid_tolerance_kw=float(values.get(
-                    CONF_HYBRID_GRID_TOLERANCE_KW, DEFAULT_HYBRID_GRID_TOLERANCE_KW,
-                )),
             )
 
             result = run_controller(
@@ -1018,23 +904,6 @@ class PowerManagerCoordinator(DataUpdateCoordinator[PowerManagerCoordinatorData]
                 age_s=grid_age_s,
                 diagnostics=diagnostics,
                 grid_measurement_healthy=True,
-            )
-
-        # No load increases until preceding reductions have been
-        # confirmed at the physical device. Keep controller state
-        # consistent with the held target to avoid artificial feedback.
-        if self.live_control_enabled and self._pending_reductions:
-            for name, new_target in list(result.targets_kw.items()):
-                previous = self.controller_state.last_targets_kw.get(name, 0.0)
-                if new_target > previous + EPSILON:
-                    result.targets_kw[name] = previous
-                    result.state.last_targets_kw[name] = previous
-                    runtime = result.state.load_states.get(name)
-                    if runtime is not None:
-                        runtime.last_target_kw = previous
-            result.total_target_kw = sum(result.targets_kw.values())
-            result.projected_grid_kw = (
-                result.base_load_kw + result.total_target_kw
             )
 
         self._set_calculated_targets(diagnostics, result)
@@ -1059,7 +928,6 @@ class PowerManagerCoordinator(DataUpdateCoordinator[PowerManagerCoordinatorData]
                 # without actual-power feedback.
                 self.live_control_enabled = False
                 self.controller_state = ControllerState()
-                self._pending_reductions.clear()
                 self._direct_last_command.clear()
                 return PowerManagerCoordinatorData(
                     inputs=inputs,
@@ -1150,7 +1018,6 @@ class PowerManagerCoordinator(DataUpdateCoordinator[PowerManagerCoordinatorData]
         # physical commands were sent. Never use those values as estimates on
         # the first live cycle; start from a clean controller state.
         self.controller_state = ControllerState()
-        self._pending_reductions.clear()
         self._direct_last_command.clear()
         self.live_control_enabled = True
         await self.async_refresh()
@@ -1175,7 +1042,6 @@ class PowerManagerCoordinator(DataUpdateCoordinator[PowerManagerCoordinatorData]
         # Clear state before entering dry-run so unknown actual-power values are
         # never inferred from commands that were deliberately withdrawn.
         self.controller_state = ControllerState()
-        self._pending_reductions.clear()
         self._direct_last_command.clear()
         await self.async_refresh()
 
@@ -1200,4 +1066,3 @@ class PowerManagerCoordinator(DataUpdateCoordinator[PowerManagerCoordinatorData]
             _LOGGER.exception("Unerwarteter Fehler beim sicheren Integration-Unload")
         finally:
             self.live_control_enabled = False
-            self._pending_reductions.clear()
