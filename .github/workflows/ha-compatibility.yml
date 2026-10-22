@@ -78,4 +78,45 @@ jobs:
           ))
           assert CONF_MQTT_TOPIC not in names(modbus)
           print("Guided installation schemas render with real HA selectors")
+
+          import asyncio
+          from custom_components.power_manager.const import (
+              LOAD_TYPE_EVSE, CONF_ACTUAL_POWER_ENTITY,
+              CONF_PEAK_SHAVING_ENABLED, CONF_SURPLUS_ENABLED,
+              CONF_OUTPUT_TRANSPORT, OUTPUT_TRANSPORT_ENTITY,
+          )
+          async def exercise_wizard():
+              flow = PowerManagerLoadSubentryFlow()
+              page = await flow.async_step_user()
+              assert page["step_id"] == "load_basics", page
+              page = await flow.async_step_load_basics({
+                  CONF_LOAD_NAME:"Car",CONF_LOAD_TYPE:LOAD_TYPE_EVSE,
+                  CONF_PRIORITY:1,CONF_MAX_KW:11.0,
+                  "wizard_expert":False,
+              })
+              assert page["step_id"] == "load_usage", page
+              page = await flow.async_step_load_usage({
+                  "demand_mode":"always",CONF_PEAK_SHAVING_ENABLED:True,
+                  CONF_SURPLUS_ENABLED:True,CONF_ACTUAL_POWER_ENTITY:"sensor.car_kw",
+              })
+              assert page["step_id"] == "load_connection", page
+              page = await flow.async_step_load_connection({
+                  CONF_OUTPUT_TRANSPORT:OUTPUT_TRANSPORT_ENTITY,
+              })
+              assert page["step_id"] == "load_connection_details", page
+              page = await flow.async_step_load_connection_details({
+                  "output_entity":"number.car_current",
+              })
+              assert page["step_id"] == "load_commands", page
+              page = await flow.async_step_load_commands({
+                  "evse_phases":3,"evse_min_current_a":6,
+                  "evse_max_current_a":16,"evse_pause_current_a":0.01,
+                  "evse_zero_unlimited":True,
+              })
+              assert page["step_id"] == "load_review", page
+              assert abs(flow._draft["min_kw"] - 4.14) < 1e-6
+              page = await flow.async_step_load_review({"wizard_ack":False})
+              assert page["step_id"] == "load_review"
+              print("End-to-end EVSE installation wizard steps work with HA Core")
+          asyncio.run(exercise_wizard())
           PY
