@@ -13,7 +13,7 @@ def _json(relative: str):
 
 def test_manifest_and_runtime_version_match_v3():
     manifest = _json("manifest.json")
-    assert manifest["version"] == "3.3.0"
+    assert manifest["version"] == "3.3.1"
     assert VERSION == manifest["version"]
 
 
@@ -81,8 +81,10 @@ def test_coordinator_load_diagnostic_age_is_wired_to_diagnostic_not_core_model()
 
 def test_load_reconfigure_uses_parent_entry_accessor():
     source = (COMPONENT / "config_flow.py").read_text(encoding="utf-8")
-    reconfigure_block = source[source.index("async def async_step_reconfigure"):source.index("return self.async_show_form", source.index("async def async_step_reconfigure"))]
-    assert "self._get_entry()" in reconfigure_block
+    reconfigure_block = source[source.index("async def async_step_reconfigure"):source.index("async def async_step_load_basics", source.index("async def async_step_reconfigure"))]
+    review_block = source[source.index("async def async_step_load_review"):source.index("def _review_form", source.index("async def async_step_load_review"))]
+    assert "self._get_reconfigure_subentry()" in reconfigure_block
+    assert "self._get_entry()" in review_block
     assert "self._get_reconfigure_entry()" not in reconfigure_block
 
 
