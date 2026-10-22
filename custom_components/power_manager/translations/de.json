@@ -2284,14 +2284,6 @@
         "sensor": "Nur bei Bedarf über eine Entität",
         "disabled": "Vorerst deaktiviert"
       }
-    },
-    "evse_output_format": {
-      "options": {
-        "auto": "Automatisch aus der HA-Entity (A/W/kW)",
-        "A": "Ampere (z. B. 6 bis 16 A)",
-        "W": "Watt (z. B. 0 bis 11000 W)",
-        "kW": "Kilowatt (z. B. 0 bis 11 kW)"
-      }
     }
   }
 }
