@@ -441,7 +441,29 @@ def _device_preview(draft: dict[str, Any], hass: Any = None) -> dict[str, str]:
         "device": name, "transport": transport,
         "off": "nicht überprüft", "min": "nicht überprüft",
         "max": "nicht überprüft",
+        "compatibility": "Live-Ausgabe noch nicht geprüft",
     }
+    # Purely read-only pre-arm check: never send device commands here.
+    if transport == OUTPUT_TRANSPORT_ENTITY:
+        entity = draft.get(CONF_OUTPUT_ENTITY)
+        if not entity:
+            output["compatibility"] = "Kein Ausgang gewählt: nur Dry-Run"
+        elif hass is not None:
+            try:
+                from .actuator import validate_actuator, ActuatorError
+                validate_actuator(hass, normalize_load_data(draft))
+            except (ActuatorError, TypeError, ValueError) as err:
+                output["compatibility"] = (
+                    "Nicht live-kompatibel: " + str(err)
+                )
+            else:
+                output["compatibility"] = (
+                    "Wertebereich und Schrittweite laut HA-Entity geprüft"
+                )
+    else:
+        output["compatibility"] = (
+            "Direkte Gerätebefehle benötigen die Bestätigung am Gerät"
+        )
     if load_type == LOAD_TYPE_SWITCH:
         if transport == OUTPUT_TRANSPORT_ENTITY:
             output.update({"off": "Schalter AUS", "min": "Schalter EIN",
