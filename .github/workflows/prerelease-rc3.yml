@@ -1,0 +1,54 @@
+name: Publish simulator release candidate
+
+on:
+  push:
+    branches: ["fix/v4-pv-house-load-no-battery"]
+    paths:
+      - ".github/workflows/prerelease-rc3.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  simulator-prerelease:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Validate V4 source and tests before publication
+        run: |
+          python -m pip install pytest
+          python -m compileall -q custom_components/power_manager
+          node --check custom_components/power_manager/frontend/power-manager-card.js
+          python -m pytest -q
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p=Path("custom_components/power_manager")
+          assert json.loads((p/"manifest.json").read_text())["version"] == "4.0.0-rc.3"
+          assert 'VERSION = "4.0.0-rc.3"' in (p/"const.py").read_text()
+          assert Path("SIMULATOR_TEST.md").is_file()
+          assert Path("docs/RELEASE_4_RC3.md").is_file()
+          assert Path("test_sequential_switching.py").is_file()
+          assert Path("test_pv_house_priority.py").is_file()
+          assert "battery_kw" not in (p/"coordinator.py").read_text()
+          from custom_components.power_manager.const import SEQUENTIAL_SWITCH_INTERVAL_SECONDS
+          assert SEQUENTIAL_SWITCH_INTERVAL_SECONDS == 5.0
+          PY
+      - name: Publish immutable V4 RC only
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view v4.0.0-rc.3 --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "RC tag already exists; never move immutable history."
+            exit 0
+          fi
+          gh release create v4.0.0-rc.3 \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
+            --title "Power Manager V4.0.0 RC3 – PV-Hausgrundverbrauch ohne Batterie (Simulator)" \
+            --notes-file docs/RELEASE_4_RC3.md \
+            --prerelease
