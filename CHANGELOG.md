@@ -1,5 +1,16 @@
 # Changelog
 
+## 3.3.3 – Interne kW-Normalform und korrekte HA-Ausgabeeinheiten (HACS-Vorabversion)
+
+- Einheitenkorrektur für **alle** modulierenden Verbraucher und EVSE: interne kW, Geräteprofil, HA-Entity-eigene W/kW/MW-Einheit, native Grenz- und Schrittweitenprüfung.
+- Beispiel Wärmepumpe 5.000 W auf HA-Entity kW → 5; Heizstab 1.000 W → 1; Wallbox 11.000 W → 11.
+- Zwischenwert 9,6685 kW auf HA-Entity mit 0,1-Schritten → konservative 9,6 kW, keine unzulässigen Nachkommastellen und keine Aufrundung über PMAX.
+- Nach Geräte-Rundung physikalische Mindestleistung (insbesondere EVSE-Minimalstrom) prüfen; sonst sicher pausieren.
+- Hersteller-Sondercodes und nicht-nullige sichere Pausenwerte **niemals** eigenmächtig konvertieren oder runden; unsichere Fälle ablehnen.
+- Unbekannte Ausgangseinheiten werden nicht aus dem Zahlenbereich geraten. Direkter MQTT-/Modbus-Ausgang folgt weiterhin dem bestätigten Herstellerprofil.
+- Regressionen für W/kW/MW und Steps als reine Python-Tests sowie HA-Core-Tests 2026.8 und 2026.10. Physische Simulator-Abnahme bleibt offen.
+
+
 ## 3.3.2 – Eindeutige EVSE-Ausgabe und sichere Rundung (HACS-Testkandidat)
 
 - Wallbox-Energiezuteilung bleibt in kW, Ausgabeformat pro Gerät als A, W, kW oder (bei HA-Zahlen-Entities) automatische Metadaten-Erkennung wählbar.
