@@ -98,7 +98,7 @@ def test_autonomous_battery_does_not_block_pv_mode():
 def test_surplus_core_uses_grid_export_and_existing_load_not_total_pv():
     source = (COMPONENT / "controller.py").read_text(encoding="utf-8")
     assert "export = max(0.0, -inputs.grid_kw)" in source
-    assert "controlled_kw - inputs.grid_kw" in source
+    assert "controlled - inputs.grid_kw" in source
     assert "battery_kw" not in source
 
 
