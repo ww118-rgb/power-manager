@@ -2,7 +2,7 @@
 
 DOMAIN = "power_manager"
 NAME = "Power Manager"
-VERSION = "3.3.1"
+VERSION = "3.3.2"
 
 SUBENTRY_TYPE_LOAD = "load"
 
@@ -92,10 +92,23 @@ CONF_EVSE_VOLTAGE_V = "evse_voltage_v"
 CONF_EVSE_MIN_CURRENT_A = "evse_min_current_a"
 CONF_EVSE_MAX_CURRENT_A = "evse_max_current_a"
 CONF_EVSE_PAUSE_CURRENT_A = "evse_pause_current_a"
+# EVSE command format is independent of the transport and of the kW budget.
+CONF_EVSE_OUTPUT_FORMAT = "evse_output_format"
+CONF_EVSE_CURRENT_STEP_A = "evse_current_step_a"
+CONF_EVSE_POWER_STEP_W = "evse_power_step_w"
+CONF_EVSE_PAUSE_POWER_VALUE = "evse_pause_power_value"
 
 LOAD_TYPE_MODULATING = "modulating"
 LOAD_TYPE_SWITCH = "switch"
 LOAD_TYPE_EVSE = "evse"
+EVSE_OUTPUT_AUTO = "auto"
+EVSE_OUTPUT_AMPERE = "A"
+EVSE_OUTPUT_WATT = "W"
+EVSE_OUTPUT_KW = "kW"
+EVSE_OUTPUT_FORMATS = (
+    EVSE_OUTPUT_AUTO, EVSE_OUTPUT_AMPERE,
+    EVSE_OUTPUT_WATT, EVSE_OUTPUT_KW,
+)
 LOAD_TYPES = (
     LOAD_TYPE_MODULATING,
     LOAD_TYPE_SWITCH,
@@ -192,6 +205,11 @@ DEFAULT_EVSE_VOLTAGE_V = 230.0
 DEFAULT_EVSE_MIN_CURRENT_A = 6.0
 DEFAULT_EVSE_MAX_CURRENT_A = 16.0
 DEFAULT_EVSE_PAUSE_CURRENT_A = 0.01
+# Old EVSE configurations keep their explicit Ampere interpretation.
+DEFAULT_EVSE_OUTPUT_FORMAT = EVSE_OUTPUT_AMPERE
+DEFAULT_EVSE_CURRENT_STEP_A = 1.0
+DEFAULT_EVSE_POWER_STEP_W = 1000.0
+DEFAULT_EVSE_PAUSE_POWER_VALUE = 0.0
 
 # Technical adapter timings, not installation-specific power values.
 HEARTBEAT_INTERVAL_SECONDS = 5.0
