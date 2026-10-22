@@ -23,11 +23,10 @@ def load(name="Heat", *, requested=20, minimum=1, maximum=20,
     )
 
 
-def values(now, *, grid=129.56, pmax=140, battery=10.42,
-           margin=0.3, hold=15):
+def values(now, *, grid=129.56, pmax=140, margin=0.3):
     return ControllerInputs(
-        grid_kw=grid, grid_limit_kw=pmax, battery_kw=battery,
-        grid_growth_margin_kw=margin, grid_recovery_hold_s=hold,
+        grid_kw=grid, grid_limit_kw=pmax,
+        grid_growth_margin_kw=margin,
         mode=OperatingMode.NORMAL, now_s=now,
     )
 
@@ -52,7 +51,7 @@ def test_140_kw_site_uses_measured_grid_not_current_battery_discharge():
     assert result.targets_kw["Heat"] == pytest.approx(19.74)
     assert result.projected_grid_kw == pytest.approx(139.70)
     # No global 15-second hold: next fresh grid reading can be used immediately.
-    assert result.state.grid_growth_block_until_s == 0
+    assert not hasattr(result.state, 'grid_growth_block_until_s')
     assert result.targets_kw["Heat"] > 9.6
 
 
@@ -110,7 +109,7 @@ def test_no_same_tick_reallocation_from_unconfirmed_shed_without_ist():
 @pytest.mark.parametrize("pmax,grid", [(10, 4), (25, 19), (140, 134), (250, 244)])
 def test_limit_is_configurable_not_hardcoded_140(pmax, grid):
     result = run_controller(
-        values(0, grid=grid, pmax=pmax, battery=0),
+        values(0, grid=grid, pmax=pmax),
         [load(requested=15, minimum=4, maximum=15)],
     )
     assert 0 <= result.total_target_kw <= pmax - grid + 1e-6
@@ -125,7 +124,7 @@ def test_unrepresentable_evse_minimum_must_not_be_started():
 
 def test_missing_ist_and_battery_sensor_is_normal():
     result = run_controller(
-        values(0, battery=0),
+        values(0),
         [load(actual=None)],
     )
     assert result.targets_kw["Heat"] > 0
@@ -135,6 +134,3 @@ def test_missing_ist_and_battery_sensor_is_normal():
 def test_anti_oscillation_settings_are_validated():
     with pytest.raises(ValueError):
         run_controller(replace(values(0), grid_growth_margin_kw=-0.1), [load()])
-    # Legacy recovery_hold setting no longer enters the simplified regulator.
-    result = run_controller(replace(values(0), grid_recovery_hold_s=-1), [load()])
-    assert result.total_target_kw >= 0
