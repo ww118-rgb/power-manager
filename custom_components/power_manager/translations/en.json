@@ -4,7 +4,7 @@
     "step": {
       "user": {
         "title": "Basic setup: energy system",
-        "description": "Only grid power, PMAX and optional PV/battery sensors. Technical timings remain on safe existing defaults.",
+        "description": "Simple control: grid meter and PMAX required, PV meter optional for genuine exported surplus. The battery runs autonomously.",
         "data": {
           "grid_power_entity": "Grid power sensor",
           "grid_limit_kw": "PMAX",
@@ -40,9 +40,9 @@
           "invert_grid_power": "Enable if the source reports import as negative and export as positive.",
           "pv_power_entity": "Optional PV generation power sensor.",
           "invert_pv_power": "Enable if PV generation is reported as a negative value.",
-          "battery_power_entity": "Optional battery power sensor. Internally positive means discharge and negative means charge.",
+          "battery_power_entity": "Optional battery power sensor for display only; never controls allocation.",
           "invert_battery_power": "Enable if the source uses the opposite battery sign convention.",
-          "battery_soc_entity": "Optional battery state-of-charge sensor.",
+          "battery_soc_entity": "Optional battery SOC display only; never controls allocation.",
           "battery_soc_scale": "Use percent for 0..100 % sources, or fraction for unitless 0..1 sources.",
           "surplus_min_battery_soc": "Battery assistance is disabled at or below this reserve. Pure PV surplus operation continues.",
           "hybrid_probe_step_kw": "Maximum extra load per trial. 0 disables active trials; not a presumed battery rating.",
@@ -58,7 +58,7 @@
       },
       "global_expert": {
         "title": "Expert settings (optional)",
-        "description": "Sensor freshness, signs and hybrid trial safety settings. Defaults can stay unchanged.",
+        "description": "Optional grid measurement settings and read-only battery diagnostics. No battery/SOC control or hybrid probing.",
         "data": {
           "grid_power_entity": "Grid power sensor",
           "grid_limit_kw": "PMAX",
@@ -94,9 +94,9 @@
           "invert_grid_power": "Enable if the source reports import as negative and export as positive.",
           "pv_power_entity": "Optional PV generation power sensor.",
           "invert_pv_power": "Enable if PV generation is reported as a negative value.",
-          "battery_power_entity": "Optional battery power sensor. Internally positive means discharge and negative means charge.",
+          "battery_power_entity": "Optional battery power sensor for display only; never controls allocation.",
           "invert_battery_power": "Enable if the source uses the opposite battery sign convention.",
-          "battery_soc_entity": "Optional battery state-of-charge sensor.",
+          "battery_soc_entity": "Optional battery SOC display only; never controls allocation.",
           "battery_soc_scale": "Use percent for 0..100 % sources, or fraction for unitless 0..1 sources.",
           "surplus_min_battery_soc": "Battery assistance is disabled at or below this reserve. Pure PV surplus operation continues.",
           "hybrid_probe_step_kw": "Maximum extra load per trial. 0 disables active trials; not a presumed battery rating.",
@@ -124,7 +124,7 @@
     "step": {
       "init": {
         "title": "Basic setup: energy system",
-        "description": "Only grid power, PMAX and optional PV/battery sensors. Technical timings remain on safe existing defaults.",
+        "description": "Simple control: grid meter and PMAX required, PV meter optional for genuine exported surplus. The battery runs autonomously.",
         "data": {
           "grid_power_entity": "Grid power sensor",
           "grid_limit_kw": "PMAX",
@@ -160,9 +160,9 @@
           "invert_grid_power": "Enable if the source reports import as negative and export as positive.",
           "pv_power_entity": "Optional PV generation power sensor.",
           "invert_pv_power": "Enable if PV generation is reported as a negative value.",
-          "battery_power_entity": "Optional battery power sensor.",
+          "battery_power_entity": "Optional battery power sensor for display only; never controls allocation.",
           "invert_battery_power": "Enable if the battery sign convention is reversed.",
-          "battery_soc_entity": "Optional battery state-of-charge sensor.",
+          "battery_soc_entity": "Optional battery SOC display only; never controls allocation.",
           "battery_soc_scale": "Percent = 0..100 %, fraction = unitless 0..1.",
           "surplus_min_battery_soc": "Battery assistance is disabled at or below this reserve. Pure PV surplus operation continues.",
           "hybrid_probe_step_kw": "Maximum extra load per trial. 0 disables active trials; not a presumed battery rating.",
@@ -178,7 +178,7 @@
       },
       "global_expert": {
         "title": "Advanced settings",
-        "description": "Sensor freshness, signs and hybrid trial safety settings. Defaults can stay unchanged.",
+        "description": "Optional grid measurement settings and read-only battery diagnostics. No battery/SOC control or hybrid probing.",
         "data": {
           "grid_power_entity": "Grid power sensor",
           "grid_limit_kw": "PMAX",
@@ -214,9 +214,9 @@
           "invert_grid_power": "Enable if the source reports import as negative and export as positive.",
           "pv_power_entity": "Optional PV generation power sensor.",
           "invert_pv_power": "Enable if PV generation is reported as a negative value.",
-          "battery_power_entity": "Optional battery power sensor.",
+          "battery_power_entity": "Optional battery power sensor for display only; never controls allocation.",
           "invert_battery_power": "Enable if the battery sign convention is reversed.",
-          "battery_soc_entity": "Optional battery state-of-charge sensor.",
+          "battery_soc_entity": "Optional battery SOC display only; never controls allocation.",
           "battery_soc_scale": "Percent = 0..100 %, fraction = unitless 0..1.",
           "surplus_min_battery_soc": "Battery assistance is disabled at or below this reserve. Pure PV surplus operation continues.",
           "hybrid_probe_step_kw": "Maximum extra load per trial. 0 disables active trials; not a presumed battery rating.",
