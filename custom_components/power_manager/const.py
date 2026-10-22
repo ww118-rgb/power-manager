@@ -2,7 +2,7 @@
 
 DOMAIN = "power_manager"
 NAME = "Power Manager"
-VERSION = "4.0.0"
+VERSION = "4.0.0-rc.3"
 
 SUBENTRY_TYPE_LOAD = "load"
 
@@ -13,15 +13,10 @@ CONF_GRID_RESERVE_KW = "grid_reserve_kw"
 CONF_GRID_GROWTH_MARGIN_KW = "grid_growth_margin_kw"
 CONF_GRID_SENSOR_TIMEOUT_S = "grid_sensor_timeout_s"
 CONF_PV_POWER_ENTITY = "pv_power_entity"
-CONF_BATTERY_POWER_ENTITY = "battery_power_entity"
-CONF_BATTERY_SOC_ENTITY = "battery_soc_entity"
-CONF_BATTERY_SOC_SCALE = "battery_soc_scale"
+CONF_HOUSE_POWER_ENTITY = "house_power_entity"  # non-controllable household consumption
 CONF_PV_SENSOR_TIMEOUT_S = "pv_sensor_timeout_s"
-CONF_BATTERY_SENSOR_TIMEOUT_S = "battery_sensor_timeout_s"
-CONF_BATTERY_SOC_SENSOR_TIMEOUT_S = "battery_soc_sensor_timeout_s"
 CONF_INVERT_GRID_POWER = "invert_grid_power"
 CONF_INVERT_PV_POWER = "invert_pv_power"
-CONF_INVERT_BATTERY_POWER = "invert_battery_power"
 
 # Load subentry configuration.
 CONF_LOAD_NAME = "load_name"
@@ -133,25 +128,14 @@ OUTPUT_UNITS = (
     OUTPUT_UNIT_MW,
 )
 
-BATTERY_SOC_SCALE_PERCENT = "percent"
-BATTERY_SOC_SCALE_FRACTION = "fraction"
-BATTERY_SOC_SCALES = (
-    BATTERY_SOC_SCALE_PERCENT,
-    BATTERY_SOC_SCALE_FRACTION,
-)
-
 DEFAULT_GRID_RESERVE_KW = 0.0
 # Measurement margin is installation-dependent and configurable.
 # It applies to additional network load only.
 DEFAULT_GRID_GROWTH_MARGIN_KW = 0.3
 DEFAULT_GRID_SENSOR_TIMEOUT_S = 10.0
 DEFAULT_PV_SENSOR_TIMEOUT_S = 10.0
-DEFAULT_BATTERY_SENSOR_TIMEOUT_S = 10.0
-DEFAULT_BATTERY_SOC_SENSOR_TIMEOUT_S = 60.0
 DEFAULT_INVERT_GRID_POWER = False
 DEFAULT_INVERT_PV_POWER = False
-DEFAULT_INVERT_BATTERY_POWER = False
-DEFAULT_BATTERY_SOC_SCALE = BATTERY_SOC_SCALE_PERCENT
 
 DEFAULT_LOAD_TYPE = LOAD_TYPE_MODULATING
 DEFAULT_PRIORITY = 1

@@ -122,19 +122,15 @@ async def async_migrate_entry(
 ) -> bool:
     """Upgrade to the single V4.0 policy without discarding device settings.
 
-    Old battery/SOC controls, hybrid probing and global cooldown are no
-    longer meaningful. Only those abandoned keys are dropped. Battery
-    measurement entities remain as optional read-only telemetry.
+    Old device-storage fields are removed; consumer and device settings survive.
     """
-    from .const import CONF_BATTERY_SOC_SCALE, DEFAULT_BATTERY_SOC_SCALE
-
-    if entry.version > 5:
+    if entry.version > 6:
         _LOGGER.error(
             "Cannot migrate Power Manager configuration from version %s",
             entry.version,
         )
         return False
-    if entry.version == 5:
+    if entry.version == 6:
         return True
 
     retired = {
@@ -146,16 +142,21 @@ async def async_migrate_entry(
         "hybrid_grid_tolerance_kw",
         "grid_recovery_hold_s",
         "feedback_tolerance_kw",
+        "battery_power_entity",
+        "battery_soc_entity",
+        "battery_soc_scale",
+        "battery_sensor_timeout_s",
+        "battery_soc_sensor_timeout_s",
+        "invert_battery_power",
     }
     new_data = {key: val for key, val in entry.data.items() if key not in retired}
     new_options = {key: val for key, val in entry.options.items() if key not in retired}
-    new_data.setdefault(CONF_BATTERY_SOC_SCALE, DEFAULT_BATTERY_SOC_SCALE)
     hass.config_entries.async_update_entry(
         entry,
         data=new_data,
         options=new_options,
-        version=5,
+        version=6,
         minor_version=0,
     )
-    _LOGGER.info("Migrated Power Manager to clean V4.0 configuration")
+    _LOGGER.info("Migrated Power Manager to storage-free configuration schema v6")
     return True

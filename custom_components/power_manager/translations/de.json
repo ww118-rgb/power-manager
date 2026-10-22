@@ -4,7 +4,7 @@
     "step": {
       "user": {
         "title": "Grundeinrichtung: Energieanlage",
-        "description": "Einfache Regelung: Netzleistung und PMAX sind Pflicht, PV-Leistung optional für echten Überschuss. Die Batterie arbeitet ausschließlich autonom.",
+        "description": "Netzmessung und PMAX sind Pflicht. PV-Erzeugung plus optionaler Hausgrundverbrauch ermöglichen PV-Vorrang auch ohne Netzeinspeisung.",
         "data": {
           "grid_power_entity": "Netzleistungssensor",
           "grid_limit_kw": "PMAX",
@@ -14,14 +14,9 @@
           "invert_grid_power": "Vorzeichen der Netzleistung invertieren",
           "pv_power_entity": "PV-Leistungssensor",
           "invert_pv_power": "Vorzeichen der PV-Leistung invertieren",
-          "battery_power_entity": "Batterie-Leistungssensor",
-          "invert_battery_power": "Vorzeichen der Batterieleistung invertieren",
-          "battery_soc_entity": "Batterie-SOC-Sensor",
-          "battery_soc_scale": "Skalierung der SOC-Quelle",
           "pv_sensor_timeout_s": "PV-Sensor Timeout (s)",
-          "battery_sensor_timeout_s": "Batterieleistung Timeout (s)",
-          "battery_soc_sensor_timeout_s": "Batterie-SOC Timeout (s)",
-          "wizard_expert": "Erweiterte technische Einstellungen öffnen"
+          "wizard_expert": "Erweiterte technische Einstellungen öffnen",
+          "house_power_entity": "Hausgrundverbrauch (Sensor, optional)"
         },
         "data_description": {
           "grid_power_entity": "Pflichtfeld. Nettoleistung am Netzanschlusspunkt.",
@@ -32,19 +27,14 @@
           "invert_grid_power": "Aktivieren, wenn die Quelle Netzbezug negativ und Einspeisung positiv meldet.",
           "pv_power_entity": "Optionaler Sensor für die PV-Erzeugungsleistung.",
           "invert_pv_power": "Aktivieren, wenn PV-Erzeugung negativ gemeldet wird.",
-          "battery_power_entity": "Optionaler Batterie-Leistungssensor nur für Diagnose; nicht Teil der Regelung.",
-          "invert_battery_power": "Aktivieren, wenn die Quelle die entgegengesetzte Batterie-Vorzeichenkonvention nutzt.",
-          "battery_soc_entity": "Optionaler Batterie-SOC nur für Diagnose; keine Steuerungsbedingung.",
-          "battery_soc_scale": "Prozent für Quellen 0..100 %, Anteil für einheitenlose Quellen 0..1.",
           "pv_sensor_timeout_s": "Maximales Alter der PV-Messwerte im Überschussmodus, unabhängig vom Netzsensor.",
-          "battery_sensor_timeout_s": "Maximales Alter der Batterieleistung, falls ein Sensor konfiguriert ist.",
-          "battery_soc_sensor_timeout_s": "Maximales SOC-Messwertalter. Bei fehlendem SOC wird nur die Batterieunterstützung gesperrt.",
-          "wizard_expert": "Nur nötig, wenn Sensoren oder Wechselrichter besondere Zeit- oder Vorzeicheneinstellungen erfordern."
+          "wizard_expert": "Nur nötig, wenn Sensoren oder Wechselrichter besondere Zeit- oder Vorzeicheneinstellungen erfordern.",
+          "house_power_entity": "Leistung aller nicht steuerbaren Hausverbraucher, ohne Wallboxen, Wärmepumpe oder Heizstab des Managers. Damit wird PV-Erzeugung auch bei 0 kW Netzeinspeisung an Verbraucher vergeben. Ohne Sensor wird nur bestätigte Netzeinspeisung verwendet."
         }
       },
       "global_expert": {
         "title": "Expertenwerte – optional",
-        "description": "Optionale Netzmesswert-Details und Batterie-Sensoren nur zur Anzeige. Keine Batterie-/SOC-Regelung oder Hybridprüfungen.",
+        "description": "Optionale Sicherheitsreserven, Messzeitgrenzen und Vorzeichen der Netz-/PV-Sensoren.",
         "data": {
           "grid_power_entity": "Netzleistungssensor",
           "grid_limit_kw": "PMAX",
@@ -54,14 +44,9 @@
           "invert_grid_power": "Vorzeichen der Netzleistung invertieren",
           "pv_power_entity": "PV-Leistungssensor",
           "invert_pv_power": "Vorzeichen der PV-Leistung invertieren",
-          "battery_power_entity": "Batterie-Leistungssensor",
-          "invert_battery_power": "Vorzeichen der Batterieleistung invertieren",
-          "battery_soc_entity": "Batterie-SOC-Sensor",
-          "battery_soc_scale": "Skalierung der SOC-Quelle",
           "pv_sensor_timeout_s": "PV-Sensor Timeout (s)",
-          "battery_sensor_timeout_s": "Batterieleistung Timeout (s)",
-          "battery_soc_sensor_timeout_s": "Batterie-SOC Timeout (s)",
-          "wizard_expert": "Erweiterte technische Einstellungen öffnen"
+          "wizard_expert": "Erweiterte technische Einstellungen öffnen",
+          "house_power_entity": "Hausgrundverbrauch (Sensor, optional)"
         },
         "data_description": {
           "grid_power_entity": "Pflichtfeld. Nettoleistung am Netzanschlusspunkt.",
@@ -72,14 +57,9 @@
           "invert_grid_power": "Aktivieren, wenn die Quelle Netzbezug negativ und Einspeisung positiv meldet.",
           "pv_power_entity": "Optionaler Sensor für die PV-Erzeugungsleistung.",
           "invert_pv_power": "Aktivieren, wenn PV-Erzeugung negativ gemeldet wird.",
-          "battery_power_entity": "Optionaler Batterie-Leistungssensor nur für Diagnose; nicht Teil der Regelung.",
-          "invert_battery_power": "Aktivieren, wenn die Quelle die entgegengesetzte Batterie-Vorzeichenkonvention nutzt.",
-          "battery_soc_entity": "Optionaler Batterie-SOC nur für Diagnose; keine Steuerungsbedingung.",
-          "battery_soc_scale": "Prozent für Quellen 0..100 %, Anteil für einheitenlose Quellen 0..1.",
           "pv_sensor_timeout_s": "Maximales Alter der PV-Messwerte im Überschussmodus, unabhängig vom Netzsensor.",
-          "battery_sensor_timeout_s": "Maximales Alter der Batterieleistung, falls ein Sensor konfiguriert ist.",
-          "battery_soc_sensor_timeout_s": "Maximales SOC-Messwertalter. Bei fehlendem SOC wird nur die Batterieunterstützung gesperrt.",
-          "wizard_expert": "Nur nötig, wenn Sensoren oder Wechselrichter besondere Zeit- oder Vorzeicheneinstellungen erfordern."
+          "wizard_expert": "Nur nötig, wenn Sensoren oder Wechselrichter besondere Zeit- oder Vorzeicheneinstellungen erfordern.",
+          "house_power_entity": "Leistung aller nicht steuerbaren Hausverbraucher, ohne Wallboxen, Wärmepumpe oder Heizstab des Managers. Damit wird PV-Erzeugung auch bei 0 kW Netzeinspeisung an Verbraucher vergeben. Ohne Sensor wird nur bestätigte Netzeinspeisung verwendet."
         }
       }
     },
@@ -88,7 +68,6 @@
       "grid_limit_must_be_positive": "PMAX muss größer als 0 kW sein.",
       "reserve_must_be_below_grid_limit": "Die Sicherheitsreserve muss nichtnegativ und kleiner als PMAX sein.",
       "grid_timeout_must_be_positive": "Der Netzsensor-Timeout muss größer als 0 Sekunden sein.",
-      "soc_limit_requires_soc_entity": "Für einen Mindest-SOC muss ein Batterie-SOC-Sensor ausgewählt werden.",
       "duplicate_entities": "Dieselbe Entity darf nicht für mehrere unterschiedliche globale Messwerte verwendet werden."
     }
   },
@@ -96,7 +75,7 @@
     "step": {
       "init": {
         "title": "Grundeinrichtung: Energieanlage",
-        "description": "Einfache Regelung: Netzleistung und PMAX sind Pflicht, PV-Leistung optional für echten Überschuss. Die Batterie arbeitet ausschließlich autonom.",
+        "description": "Netzmessung und PMAX sind Pflicht. PV-Erzeugung plus optionaler Hausgrundverbrauch ermöglichen PV-Vorrang auch ohne Netzeinspeisung.",
         "data": {
           "grid_power_entity": "Netzleistungssensor",
           "grid_limit_kw": "PMAX",
@@ -106,14 +85,9 @@
           "invert_grid_power": "Vorzeichen der Netzleistung invertieren",
           "pv_power_entity": "PV-Leistungssensor",
           "invert_pv_power": "Vorzeichen der PV-Leistung invertieren",
-          "battery_power_entity": "Batterie-Leistungssensor",
-          "invert_battery_power": "Vorzeichen der Batterieleistung invertieren",
-          "battery_soc_entity": "Batterie-SOC-Sensor",
-          "battery_soc_scale": "Skalierung der SOC-Quelle",
           "pv_sensor_timeout_s": "PV-Sensor Timeout (s)",
-          "battery_sensor_timeout_s": "Batterieleistung Timeout (s)",
-          "battery_soc_sensor_timeout_s": "Batterie-SOC Timeout (s)",
-          "wizard_expert": "Erweiterte technische Einstellungen öffnen"
+          "wizard_expert": "Erweiterte technische Einstellungen öffnen",
+          "house_power_entity": "Hausgrundverbrauch (Sensor, optional)"
         },
         "data_description": {
           "grid_power_entity": "Pflichtfeld. Nettoleistung am Netzanschlusspunkt.",
@@ -124,19 +98,14 @@
           "invert_grid_power": "Aktivieren, wenn die Quelle Netzbezug negativ und Einspeisung positiv meldet.",
           "pv_power_entity": "Optionaler Sensor für die PV-Erzeugungsleistung.",
           "invert_pv_power": "Aktivieren, wenn PV-Erzeugung negativ gemeldet wird.",
-          "battery_power_entity": "Optionaler Batterie-Leistungssensor nur für Diagnose; nicht Teil der Regelung.",
-          "invert_battery_power": "Aktivieren, wenn die Quelle die entgegengesetzte Batterie-Vorzeichenkonvention nutzt.",
-          "battery_soc_entity": "Optionaler Batterie-SOC nur für Diagnose; keine Steuerungsbedingung.",
-          "battery_soc_scale": "Prozent für Quellen 0..100 %, Anteil für einheitenlose Quellen 0..1.",
           "pv_sensor_timeout_s": "Maximales Alter der PV-Messwerte im Überschussmodus, unabhängig vom Netzsensor.",
-          "battery_sensor_timeout_s": "Maximales Alter der Batterieleistung, falls ein Sensor konfiguriert ist.",
-          "battery_soc_sensor_timeout_s": "Maximales SOC-Messwertalter. Bei fehlendem SOC wird nur die Batterieunterstützung gesperrt.",
-          "wizard_expert": "Nur nötig, wenn Sensoren oder Wechselrichter besondere Zeit- oder Vorzeicheneinstellungen erfordern."
+          "wizard_expert": "Nur nötig, wenn Sensoren oder Wechselrichter besondere Zeit- oder Vorzeicheneinstellungen erfordern.",
+          "house_power_entity": "Leistung aller nicht steuerbaren Hausverbraucher, ohne Wallboxen, Wärmepumpe oder Heizstab des Managers. Damit wird PV-Erzeugung auch bei 0 kW Netzeinspeisung an Verbraucher vergeben. Ohne Sensor wird nur bestätigte Netzeinspeisung verwendet."
         }
       },
       "global_expert": {
         "title": "Erweiterte Einstellungen",
-        "description": "Optionale Netzmesswert-Details und Batterie-Sensoren nur zur Anzeige. Keine Batterie-/SOC-Regelung oder Hybridprüfungen.",
+        "description": "Optionale Sicherheitsreserven, Messzeitgrenzen und Vorzeichen der Netz-/PV-Sensoren.",
         "data": {
           "grid_power_entity": "Netzleistungssensor",
           "grid_limit_kw": "PMAX",
@@ -146,14 +115,9 @@
           "invert_grid_power": "Vorzeichen der Netzleistung invertieren",
           "pv_power_entity": "PV-Leistungssensor",
           "invert_pv_power": "Vorzeichen der PV-Leistung invertieren",
-          "battery_power_entity": "Batterie-Leistungssensor",
-          "invert_battery_power": "Vorzeichen der Batterieleistung invertieren",
-          "battery_soc_entity": "Batterie-SOC-Sensor",
-          "battery_soc_scale": "Skalierung der SOC-Quelle",
           "pv_sensor_timeout_s": "PV-Sensor Timeout (s)",
-          "battery_sensor_timeout_s": "Batterieleistung Timeout (s)",
-          "battery_soc_sensor_timeout_s": "Batterie-SOC Timeout (s)",
-          "wizard_expert": "Erweiterte technische Einstellungen öffnen"
+          "wizard_expert": "Erweiterte technische Einstellungen öffnen",
+          "house_power_entity": "Hausgrundverbrauch (Sensor, optional)"
         },
         "data_description": {
           "grid_power_entity": "Pflichtfeld. Nettoleistung am Netzanschlusspunkt.",
@@ -164,14 +128,9 @@
           "invert_grid_power": "Aktivieren, wenn die Quelle Netzbezug negativ und Einspeisung positiv meldet.",
           "pv_power_entity": "Optionaler Sensor für die PV-Erzeugungsleistung.",
           "invert_pv_power": "Aktivieren, wenn PV-Erzeugung negativ gemeldet wird.",
-          "battery_power_entity": "Optionaler Batterie-Leistungssensor nur für Diagnose; nicht Teil der Regelung.",
-          "invert_battery_power": "Aktivieren, wenn die Quelle die entgegengesetzte Batterie-Vorzeichenkonvention nutzt.",
-          "battery_soc_entity": "Optionaler Batterie-SOC nur für Diagnose; keine Steuerungsbedingung.",
-          "battery_soc_scale": "Prozent für Quellen 0..100 %, Anteil für einheitenlose Quellen 0..1.",
           "pv_sensor_timeout_s": "Maximales Alter der PV-Messwerte im Überschussmodus, unabhängig vom Netzsensor.",
-          "battery_sensor_timeout_s": "Maximales Alter der Batterieleistung, falls ein Sensor konfiguriert ist.",
-          "battery_soc_sensor_timeout_s": "Maximales SOC-Messwertalter. Bei fehlendem SOC wird nur die Batterieunterstützung gesperrt.",
-          "wizard_expert": "Nur nötig, wenn Sensoren oder Wechselrichter besondere Zeit- oder Vorzeicheneinstellungen erfordern."
+          "wizard_expert": "Nur nötig, wenn Sensoren oder Wechselrichter besondere Zeit- oder Vorzeicheneinstellungen erfordern.",
+          "house_power_entity": "Leistung aller nicht steuerbaren Hausverbraucher, ohne Wallboxen, Wärmepumpe oder Heizstab des Managers. Damit wird PV-Erzeugung auch bei 0 kW Netzeinspeisung an Verbraucher vergeben. Ohne Sensor wird nur bestätigte Netzeinspeisung verwendet."
         }
       }
     },
@@ -180,7 +139,6 @@
       "grid_limit_must_be_positive": "PMAX muss größer als 0 kW sein.",
       "reserve_must_be_below_grid_limit": "Die Sicherheitsreserve muss nichtnegativ und kleiner als PMAX sein.",
       "grid_timeout_must_be_positive": "Der Netzsensor-Timeout muss größer als 0 Sekunden sein.",
-      "soc_limit_requires_soc_entity": "Für einen Mindest-SOC muss ein Batterie-SOC-Sensor ausgewählt werden.",
       "duplicate_entities": "Dieselbe Entity darf nicht für mehrere unterschiedliche globale Messwerte verwendet werden."
     }
   },
@@ -2075,12 +2033,6 @@
       "pv_power": {
         "name": "PV-Leistung"
       },
-      "battery_power": {
-        "name": "Batterieleistung"
-      },
-      "battery_soc": {
-        "name": "Batterie-SOC"
-      },
       "effective_grid_limit": {
         "name": "Effektives PMAX"
       },
@@ -2094,7 +2046,7 @@
         "name": "Echter PV-Überschuss nach Grundlast"
       },
       "surplus_budget": {
-        "name": "Beobachtetes Hybridbudget"
+        "name": "Berechnetes PV-Budget"
       },
       "available_budget": {
         "name": "Verfügbares Lastbudget"
@@ -2131,6 +2083,9 @@
       },
       "load_target_power": {
         "name": "Sollleistung"
+      },
+      "house_power": {
+        "name": "Hausgrundverbrauch"
       }
     },
     "binary_sensor": {
@@ -2172,12 +2127,6 @@
     }
   },
   "selector": {
-    "battery_soc_scale": {
-      "options": {
-        "percent": "Prozent (0..100 %)",
-        "fraction": "Anteil (0..1)"
-      }
-    },
     "load_type": {
       "options": {
         "modulating": "Modulierbare Leistung",

@@ -208,58 +208,14 @@ def test_zero_timeout_is_rejected():
             timeout_s=0.0,
         )
 
-def test_fraction_soc_is_converted_to_percent():
-    from custom_components.power_manager.measurements import percentage_from_scale
 
-    result = percentage_from_scale(
-        0.675,
-        None,
-        scale="fraction",
-    )
-
-    assert result == pytest.approx(67.5)
+def test_household_watts_convert_to_kw_without_storage_inputs():
+    assert power_to_kw(50.0, "W", label="Hausgrundverbrauch") == pytest.approx(0.05)
+    assert power_to_kw(38550.0, "W", label="PV-Erzeugung") == pytest.approx(38.55)
 
 
-def test_fraction_soc_accepts_dimensionless_unit_one():
-    from custom_components.power_manager.measurements import percentage_from_scale
-
-    result = percentage_from_scale(
-        0.42,
-        "1",
-        scale="fraction",
-    )
-
-    assert result == pytest.approx(42.0)
-
-
-def test_fraction_soc_rejects_percent_unit():
-    from custom_components.power_manager.measurements import percentage_from_scale
-
+def test_household_sensor_invalid_measurement_raises():
     with pytest.raises(MeasurementError):
-        percentage_from_scale(
-            0.5,
-            "%",
-            scale="fraction",
-        )
-
-
-def test_fraction_soc_rejects_value_above_one():
-    from custom_components.power_manager.measurements import percentage_from_scale
-
+        power_to_kw(float("nan"), "kW", label="Hausgrundverbrauch")
     with pytest.raises(MeasurementError):
-        percentage_from_scale(
-            1.01,
-            None,
-            scale="fraction",
-        )
-
-
-def test_percent_scale_still_requires_percent_unit():
-    from custom_components.power_manager.measurements import percentage_from_scale
-
-    with pytest.raises(MeasurementError):
-        percentage_from_scale(
-            50.0,
-            None,
-            scale="percent",
-        )
+        power_to_kw(0.05, None, label="Hausgrundverbrauch")

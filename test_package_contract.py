@@ -13,7 +13,7 @@ def _json(relative: str):
 
 def test_manifest_and_runtime_version_match_v4():
     manifest = _json("manifest.json")
-    assert manifest["version"] == "4.0.0"
+    assert manifest["version"] == "4.0.0-rc.3"
     assert VERSION == manifest["version"]
 
 
@@ -43,7 +43,8 @@ def test_german_reconfigure_load_form_has_all_add_form_fields():
 def test_selector_translations_cover_runtime_options():
     selectors = _json("strings.json")["selector"]
     assert set(selectors["load_type"]["options"]) == {"modulating", "switch", "evse"}
-    assert set(selectors["battery_soc_scale"]["options"]) == {"percent", "fraction"}
+    assert "battery_soc_scale" not in selectors
+    assert "house_power_entity" in _json("strings.json")["config"]["step"]["user"]["data"]
     assert "output_unit" not in selectors
 
 

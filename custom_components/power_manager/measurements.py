@@ -6,11 +6,6 @@ from datetime import datetime
 from math import isfinite
 from typing import Any
 
-from .const import (
-    BATTERY_SOC_SCALE_FRACTION,
-    BATTERY_SOC_SCALE_PERCENT,
-)
-
 
 class MeasurementError(ValueError):
     """Raised when a measurement cannot be used safely."""
@@ -105,33 +100,6 @@ def percentage_value(
         )
 
     return number
-
-
-def percentage_from_scale(
-    value: Any,
-    unit: str | None,
-    *,
-    scale: str,
-    label: str = "Prozentwert",
-) -> float:
-    """Convert percent or fractional 0..1 state to 0..100 percent."""
-
-    if scale == BATTERY_SOC_SCALE_PERCENT:
-        return percentage_value(value, unit, label=label)
-
-    if scale == BATTERY_SOC_SCALE_FRACTION:
-        number = _finite_float(value, label=label)
-        if unit not in (None, "", "1"):
-            raise MeasurementError(
-                f"{label}: Für 0..1-Skalierung wird keine Prozent-Einheit erwartet."
-            )
-        if not 0.0 <= number <= 1.0:
-            raise MeasurementError(
-                f"{label}: Wert muss bei 0..1-Skalierung zwischen 0 und 1 liegen."
-            )
-        return number * 100.0
-
-    raise MeasurementError(f"{label}: Unbekannte Skalierung '{scale}'.")
 
 
 def measurement_age_seconds(

@@ -36,9 +36,6 @@ from .const import (
     CONF_ACTUAL_POWER_ENTITY,
     CONF_ACTUAL_SENSOR_TIMEOUT_S,
     CONF_AVAILABILITY_ENTITY,
-    CONF_BATTERY_POWER_ENTITY,
-    CONF_BATTERY_SOC_ENTITY,
-    CONF_BATTERY_SOC_SCALE,
     CONF_DEFAULT_REQUEST_KW,
     CONF_DEMAND_MODE, DEMAND_MODE_ALWAYS, DEMAND_MODE_SENSOR,
     DEMAND_MODE_DISABLED,
@@ -49,7 +46,6 @@ from .const import (
     CONF_GRID_GROWTH_MARGIN_KW,
     CONF_GRID_SENSOR_TIMEOUT_S,
     CONF_INVERT_ACTUAL_POWER,
-    CONF_INVERT_BATTERY_POWER,
     CONF_INVERT_GRID_POWER,
     CONF_INVERT_PV_POWER,
     CONF_LOAD_NAME,
@@ -67,22 +63,18 @@ from .const import (
     CONF_PEAK_SHAVING_ENABLED,
     CONF_PRIORITY,
     CONF_PV_POWER_ENTITY,
+    CONF_HOUSE_POWER_ENTITY,
     CONF_REQUEST_ENTITY,
     CONF_SETTLING_TIME_S,
     CONF_START_MARGIN_KW,
     CONF_STOP_MARGIN_KW,
     CONF_SURPLUS_ENABLED,
     CONF_PV_SENSOR_TIMEOUT_S,
-    CONF_BATTERY_SENSOR_TIMEOUT_S,
-    CONF_BATTERY_SOC_SENSOR_TIMEOUT_S,
     DEFAULT_ACTUAL_SENSOR_TIMEOUT_S,
-    DEFAULT_BATTERY_SOC_SCALE,
     DEFAULT_DEFAULT_REQUEST_KW,
     DEFAULT_GRID_SENSOR_TIMEOUT_S,
     DEFAULT_GRID_GROWTH_MARGIN_KW,
     DEFAULT_PV_SENSOR_TIMEOUT_S,
-    DEFAULT_BATTERY_SENSOR_TIMEOUT_S,
-    DEFAULT_BATTERY_SOC_SENSOR_TIMEOUT_S,
     DEFAULT_INVERT_ACTUAL_POWER,
     DEFAULT_MAX_KW,
     DEFAULT_MIN_KW,
@@ -112,7 +104,6 @@ from .measurements import (
     MeasurementError,
     measurement_age_seconds,
     measurement_is_fresh,
-    percentage_from_scale,
     power_to_kw,
 )
 from .models import (
@@ -164,9 +155,6 @@ class PowerManagerCoordinatorData:
     output_healthy: bool
     last_output_error: str | None
     loads: dict[str, LoadDiagnostic]
-    # Optional read-only telemetry. Never fed back into the controller.
-    battery_power_kw: float | None = None
-    battery_soc_pct: float | None = None
 
 
 class PowerManagerCoordinator(DataUpdateCoordinator[PowerManagerCoordinatorData]):
@@ -224,8 +212,7 @@ class PowerManagerCoordinator(DataUpdateCoordinator[PowerManagerCoordinatorData]
         entity_ids: list[str | None] = [
             values.get(CONF_GRID_POWER_ENTITY),
             values.get(CONF_PV_POWER_ENTITY),
-            values.get(CONF_BATTERY_POWER_ENTITY),
-            values.get(CONF_BATTERY_SOC_ENTITY),
+            values.get(CONF_HOUSE_POWER_ENTITY),
         ]
 
         for _subentry_id, load_data in self._load_subentries():
@@ -318,7 +305,7 @@ class PowerManagerCoordinator(DataUpdateCoordinator[PowerManagerCoordinatorData]
         return timeout_s
 
     def _aux_sensor_timeout_s(self, config_key: str, default_s: float) -> float:
-        """Use individual configured freshness for PV, battery and SOC."""
+        """Validate configured freshness for optional production and house meters."""
         try:
             value = float(self.settings.get(config_key, default_s))
         except (TypeError, ValueError) as err:
@@ -367,7 +354,7 @@ class PowerManagerCoordinator(DataUpdateCoordinator[PowerManagerCoordinatorData]
         self,
         *,
         entity_key: str,
-        invert_key: str,
+        invert_key: str | None,
         label: str,
         require_fresh: bool = False,
         timeout_key: str = CONF_GRID_SENSOR_TIMEOUT_S,
@@ -395,38 +382,8 @@ class PowerManagerCoordinator(DataUpdateCoordinator[PowerManagerCoordinatorData]
         return power_to_kw(
             raw_value,
             unit,
-            invert=bool(values.get(invert_key, False)),
+            invert=bool(values.get(invert_key, False)) if invert_key else False,
             label=label,
-        )
-
-    def _read_battery_soc(self) -> float | None:
-        """Read optional battery SOC using configured percent/fraction scale."""
-
-        values = self.settings
-        entity_id = values.get(CONF_BATTERY_SOC_ENTITY)
-        if not entity_id:
-            return None
-
-        state = self._get_state(entity_id, label="Batterie-SOC")
-        if self.operating_mode == OperatingMode.SURPLUS:
-            age_s = measurement_age_seconds(
-                state.last_reported, datetime.now(timezone.utc)
-            )
-            timeout_s = self._aux_sensor_timeout_s(
-                CONF_BATTERY_SOC_SENSOR_TIMEOUT_S,
-                DEFAULT_BATTERY_SOC_SENSOR_TIMEOUT_S,
-            )
-            if not measurement_is_fresh(age_s, timeout_s):
-                raise MeasurementError(
-                    f"Batterie-SOC: Messwert ist {age_s:.1f} s alt "
-                    f"(Timeout {timeout_s:g} s)."
-                )
-        raw_value, unit = self._state_value_and_unit(state, label="Batterie-SOC")
-        return percentage_from_scale(
-            raw_value,
-            unit,
-            scale=str(values.get(CONF_BATTERY_SOC_SCALE, DEFAULT_BATTERY_SOC_SCALE)),
-            label="Batterie-SOC",
         )
 
     def _read_optional_source_state(
@@ -834,21 +791,25 @@ class PowerManagerCoordinator(DataUpdateCoordinator[PowerManagerCoordinatorData]
             _LOGGER.warning("PV-Messwert ungültig; verwende 0 kW: %s", err)
             pv_kw = 0.0
 
-        # Battery is autonomous. Readings are retained for informational
-        # HA sensors only and never influence PMAX or PV-surplus decisions.
-        try:
-            battery_kw = self._read_optional_power_kw(
-                entity_key=CONF_BATTERY_POWER_ENTITY,
-                invert_key=CONF_INVERT_BATTERY_POWER,
-                label="Batterieleistung",
-                require_fresh=False,
-            )
-        except MeasurementError:
-            battery_kw = 0.0
-        try:
-            battery_soc = self._read_battery_soc()
-        except MeasurementError:
-            battery_soc = None
+        # A separate meter of NON-controllable house consumption allows
+        # PV priority even when zero power is exported. Missing/unavailable
+        # house measurements fall back to confirmed grid-export allocation.
+        house_kw: float | None = None
+        if values.get(CONF_HOUSE_POWER_ENTITY):
+            try:
+                measured_house = self._read_optional_power_kw(
+                    entity_key=CONF_HOUSE_POWER_ENTITY,
+                    invert_key=None,
+                    label="Hausgrundverbrauch",
+                    require_fresh=(self.operating_mode == OperatingMode.SURPLUS),
+                    timeout_key=CONF_PV_SENSOR_TIMEOUT_S,
+                    default_timeout_s=DEFAULT_PV_SENSOR_TIMEOUT_S,
+                )
+                if measured_house < 0:
+                    raise MeasurementError("Hausgrundverbrauch darf nicht negativ sein.")
+                house_kw = measured_house
+            except MeasurementError as err:
+                _LOGGER.warning("Hausgrundverbrauch ungültig; PV-Regelung nur über Netzeinspeisung: %s", err)
 
         # Monotonic timestamp corresponding to the last actual grid report.
         # A 5 s timer alone must never authorize a second load based on a
@@ -867,6 +828,7 @@ class PowerManagerCoordinator(DataUpdateCoordinator[PowerManagerCoordinatorData]
                     CONF_GRID_GROWTH_MARGIN_KW, DEFAULT_GRID_GROWTH_MARGIN_KW,
                 )),
                 pv_kw=pv_kw,
+                house_kw=house_kw,
                 mode=self.operating_mode,
                 now_s=cycle_now_s,
                 switch_interval_s=SEQUENTIAL_SWITCH_INTERVAL_SECONDS,
@@ -962,8 +924,6 @@ class PowerManagerCoordinator(DataUpdateCoordinator[PowerManagerCoordinatorData]
             output_healthy=True,
             last_output_error=None,
             loads=diagnostics,
-            battery_power_kw=battery_kw,
-            battery_soc_pct=battery_soc,
         )
 
     async def async_enable_live_control(self) -> None:

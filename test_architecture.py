@@ -75,14 +75,14 @@ def test_no_battery_or_hybrid_leak_into_the_control_contract():
 def test_old_hybrid_configuration_is_migrated_without_losing_devices():
     source = (INTEGRATION / "__init__.py").read_text(encoding="utf-8")
     flow = (INTEGRATION / "config_flow.py").read_text(encoding="utf-8")
-    assert "VERSION = 5" in flow
+    assert "VERSION = 6" in flow
     for key in (
         "surplus_min_battery_soc", "grid_recovery_hold_s",
         "hybrid_probe_step_kw", "feedback_tolerance_kw",
     ):
         assert f'"{key}"' in source
     assert "new_options = {key: val for key, val in entry.options.items()" in source
-    assert "battery_power_entity" not in source[source.index("retired = {"):source.index("new_data =", source.index("retired = {"))]
+    assert '"battery_power_entity"' in source[source.index("retired = {"):source.index("new_data =", source.index("retired = {"))]
 
 
 def test_all_invalid_grid_measurements_are_rejected_before_allocation():

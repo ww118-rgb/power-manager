@@ -6,13 +6,13 @@
 
 | | NORMAL (Peakshaving) | PV-ÜBERSCHUSS |
 |---|---|---|
-| Maßgebliches Signal | Aktueller Netzbezug | Aktuelle Netzeinspeisung |
+| Maßgebliches Signal | Aktueller Netzbezug | PV-Erzeugung minus unabhängig gemessener Hausgrundverbrauch; ohne Hausmessung echte Netzeinspeisung |
 | Ziel | PMAX möglichst gut ausnutzen, nicht überschreiten | Tatsächlichen Überschuss nutzen, Netzbezug vermeiden |
 | Zuteilung | Nach konfigurierter Priorität | Gleichmäßig unter geeigneten PV-Verbrauchern |
 | Grenzen | Verbraucher-Min/Max, Anforderung, sichere Ausgangswerte | Dieselben Grenzen; kein Start unter Mindestleistung |
 | Batterie | Nicht beteiligt | Nicht beteiligt |
 
-Die Batterie läuft **immer eigenständig in der vom Hersteller gewählten Automatik**. Batterie-Leistung und SOC können optional angezeigt werden; sie sind **keine Regler-Eingangsgrößen**.
+Eine Speichersteuerung, SOC-Abfrage oder Batterie-Konfiguration ist nicht Teil dieser Integration. Nur Netzleistung, PV-Produktion, optionaler **Hausgrundverbrauch** und Verbrauchergrenzen beeinflussen die Regelung.
 
 **Pflicht:** frische, gültige Netzleistungsmessung. Eine Istleistungsmessung für einzelne Verbraucher ist **optional**. Ohne Istwert verwendet der Regler den zuletzt tatsächlich gesendeten/quantisierten Leistungsbefehl als *Schätzung*, nicht als bestätigten Istwert. Die Netzleistung kontrolliert den Gesamteffekt.
 
@@ -20,9 +20,9 @@ Die Batterie läuft **immer eigenständig in der vom Hersteller gewählten Autom
 
 **Normal:** `Basislast = Netzbezug − derzeit bekannte geregelte Last`; `PMAX-Budget = PMAX − Netzreserve − Basislast`. Bestehende Verbraucher werden nach Priorität und nach ihren technischen Grenzen berücksichtigt. Eine positive Zuteilungsänderung darf den **bereits gemessenen Netzspielraum** (abzüglich einstellbarem Messrausch-Puffer) nicht überschreiten. Reduktionen sind unmittelbar erlaubt.
 
-**PV:** `PV-Budget = max(0, bereits laufende PV-Verbraucherleistung − Netzbezug)`, **aber nur bei vorhandenem PV-Messwert > 0**. Für **neue** zusätzliche Verbraucherleistung ist echte, gemessene Netzeinspeisung erforderlich. Laufende Verbraucher werden mitgerechnet, damit Netzeinspeisung 0 kW nicht unweigerlich ein AUS/EIN-Pendeln auslöst. Gleich konfigurierte Verbraucher teilen ihre freigegebene Mehrleistung fair; Reduzierungen anderer Verbraucher werden **nicht vor der nächsten Netzmessung** als verfügbare Leistung ausgegeben.
+**PV bei separat gemessenem Hausgrundverbrauch:** `PV-Budget = max(0, PV-Erzeugung − nicht regelbarer Hausgrundverbrauch)`. Das funktioniert **auch bei 0 kW Netzeinspeisung**, weil eine externe automatische Verbrauchsquelle die Einspeisung bereits auf null halten kann. Sobald realer Netzbezug entsteht, gilt die strengere Messkorrektur `Budget ≤ max(0, bisherige geregelte Leistung − Netzbezug)` und es wird ohne Timer verzögertes Abregeln sofort reduziert. Bei fehlendem, ungültigem oder veraltetem Hausverbrauchssensor bleibt die bisherige konservative Regelung aus bestätigter Netzeinspeisung und bereits laufenden PV-Verbrauchern aktiv. Nie frei geschätzten Hausverbrauch annehmen. **Der Hausgrundverbrauchssensor darf keine vom Power Manager gesteuerten Verbraucher enthalten.**
 
-**Wichtig:** Ohne Kontrolle des Batteriespeichers lässt sich nicht garantieren, dass bereits laufende Lasten ausschließlich aus PV stammen. Ein plötzliches Ende autonomer Batterieentladung oder schnelle Hauslastsprünge können vor der nächsten Reaktion kurzzeitig PMAX überschreiten. Wer eine physikalisch harte Grenze benötigt, muss eine unabhängige Netz-/Wechselrichterabsicherung nutzen.
+**Wichtig:** Die Netzmessung überwacht die reale Reaktion. Eine eigenständige Anlage kann Energieflüsse ändern, ehe die nächste Messung vorliegt. Eine physikalisch harte PMAX-Garantie benötigt unabhängigen Netz-/Anlagenschutz.
 
 ## Was aus früheren Versionen erhalten bleibt
 

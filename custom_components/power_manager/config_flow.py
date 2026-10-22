@@ -70,13 +70,9 @@ from .const import (
     OUTPUT_TRANSPORTS,
     MODBUS_DATA_TYPES,
     MODBUS_BYTE_ORDERS,
-    BATTERY_SOC_SCALES,
     CONF_ACTUAL_POWER_ENTITY,
     CONF_ACTUAL_SENSOR_TIMEOUT_S,
     CONF_AVAILABILITY_ENTITY,
-    CONF_BATTERY_POWER_ENTITY,
-    CONF_BATTERY_SOC_ENTITY,
-    CONF_BATTERY_SOC_SCALE,
     CONF_DEFAULT_REQUEST_KW,
     CONF_DEMAND_MODE, DEMAND_MODE_ALWAYS, DEMAND_MODE_SENSOR,
     DEMAND_MODE_DISABLED, DEMAND_MODES,
@@ -101,7 +97,6 @@ from .const import (
     CONF_GRID_GROWTH_MARGIN_KW,
     CONF_GRID_SENSOR_TIMEOUT_S,
     CONF_INVERT_ACTUAL_POWER,
-    CONF_INVERT_BATTERY_POWER,
     CONF_INVERT_GRID_POWER,
     CONF_INVERT_PV_POWER,
     CONF_LOAD_NAME,
@@ -115,6 +110,7 @@ from .const import (
     CONF_PEAK_SHAVING_ENABLED,
     CONF_PRIORITY,
     CONF_PV_POWER_ENTITY,
+    CONF_HOUSE_POWER_ENTITY,
     CONF_REQUEST_ENTITY,
     CONF_SAFE_OUTPUT_VALUE,
     CONF_OUTPUT_VALUE_MODE, CONF_OUTPUT_SCALE, CONF_OUTPUT_OFFSET,
@@ -124,10 +120,7 @@ from .const import (
     CONF_STOP_MARGIN_KW,
     CONF_SURPLUS_ENABLED,
     CONF_PV_SENSOR_TIMEOUT_S,
-    CONF_BATTERY_SENSOR_TIMEOUT_S,
-    CONF_BATTERY_SOC_SENSOR_TIMEOUT_S,
     DEFAULT_ACTUAL_SENSOR_TIMEOUT_S,
-    DEFAULT_BATTERY_SOC_SCALE,
     DEFAULT_DEFAULT_REQUEST_KW,
     DEFAULT_EVSE_MAX_CURRENT_A,
     DEFAULT_EVSE_MIN_CURRENT_A,
@@ -138,10 +131,7 @@ from .const import (
     DEFAULT_GRID_SENSOR_TIMEOUT_S,
     DEFAULT_GRID_GROWTH_MARGIN_KW,
     DEFAULT_PV_SENSOR_TIMEOUT_S,
-    DEFAULT_BATTERY_SENSOR_TIMEOUT_S,
-    DEFAULT_BATTERY_SOC_SENSOR_TIMEOUT_S,
     DEFAULT_INVERT_ACTUAL_POWER,
-    DEFAULT_INVERT_BATTERY_POWER,
     DEFAULT_INVERT_GRID_POWER,
     DEFAULT_INVERT_PV_POWER,
     DEFAULT_LOAD_TYPE,
@@ -289,32 +279,11 @@ def _build_global_schema(values: dict[str, Any] | None = None) -> probatio.Schem
                 values,
                 DEFAULT_INVERT_PV_POWER,
             ): BooleanSelector(),
-            _optional_marker(CONF_BATTERY_POWER_ENTITY, values): _entity_selector(
+            _optional_marker(CONF_HOUSE_POWER_ENTITY, values): _entity_selector(
                 domain=Platform.SENSOR
-            ),
-            _required_marker(
-                CONF_INVERT_BATTERY_POWER,
-                values,
-                DEFAULT_INVERT_BATTERY_POWER,
-            ): BooleanSelector(),
-            _optional_marker(CONF_BATTERY_SOC_ENTITY, values): _entity_selector(
-                domain=Platform.SENSOR
-            ),
-            _required_marker(
-                CONF_BATTERY_SOC_SCALE,
-                values,
-                DEFAULT_BATTERY_SOC_SCALE,
-            ): SelectSelector(
-                SelectSelectorConfig(options=list(BATTERY_SOC_SCALES), translation_key=CONF_BATTERY_SOC_SCALE)
             ),
             _required_marker(
                 CONF_PV_SENSOR_TIMEOUT_S, values, DEFAULT_PV_SENSOR_TIMEOUT_S,
-            ): _seconds_selector(),
-            _required_marker(
-                CONF_BATTERY_SENSOR_TIMEOUT_S, values, DEFAULT_BATTERY_SENSOR_TIMEOUT_S,
-            ): _seconds_selector(),
-            _required_marker(
-                CONF_BATTERY_SOC_SENSOR_TIMEOUT_S, values, DEFAULT_BATTERY_SOC_SENSOR_TIMEOUT_S,
             ): _seconds_selector(),
         }
     )
@@ -327,26 +296,20 @@ _WIZARD_STAGE_COUNT = "wizard_stage_count"
 _GLOBAL_BASIC_KEYS = (
     # Only the two control inputs required for a simple system.
     CONF_GRID_POWER_ENTITY, CONF_GRID_LIMIT_KW, CONF_PV_POWER_ENTITY,
+    CONF_HOUSE_POWER_ENTITY,
     CONF_INVERT_GRID_POWER,
 )
 _GLOBAL_ADVANCED_KEYS = (
     CONF_GRID_RESERVE_KW, CONF_GRID_SENSOR_TIMEOUT_S,
     CONF_GRID_GROWTH_MARGIN_KW, CONF_INVERT_PV_POWER,
     CONF_PV_SENSOR_TIMEOUT_S,
-    # Optional READ-ONLY battery diagnostics, not a controller input.
-    CONF_BATTERY_POWER_ENTITY, CONF_BATTERY_SOC_ENTITY,
-    CONF_BATTERY_SOC_SCALE, CONF_INVERT_BATTERY_POWER,
-    CONF_BATTERY_SENSOR_TIMEOUT_S, CONF_BATTERY_SOC_SENSOR_TIMEOUT_S,
 )
 _GLOBAL_DEFAULTS = {
     CONF_GRID_RESERVE_KW: DEFAULT_GRID_RESERVE_KW,
     CONF_GRID_GROWTH_MARGIN_KW: DEFAULT_GRID_GROWTH_MARGIN_KW,
     CONF_GRID_SENSOR_TIMEOUT_S: DEFAULT_GRID_SENSOR_TIMEOUT_S,
     CONF_INVERT_PV_POWER: DEFAULT_INVERT_PV_POWER,
-    CONF_INVERT_BATTERY_POWER: DEFAULT_INVERT_BATTERY_POWER,
     CONF_PV_SENSOR_TIMEOUT_S: DEFAULT_PV_SENSOR_TIMEOUT_S,
-    CONF_BATTERY_SENSOR_TIMEOUT_S: DEFAULT_BATTERY_SENSOR_TIMEOUT_S,
-    CONF_BATTERY_SOC_SENSOR_TIMEOUT_S: DEFAULT_BATTERY_SOC_SENSOR_TIMEOUT_S,
 }
 
 def _subset_schema(
@@ -380,7 +343,7 @@ def _global_expert_schema(values: dict[str, Any]) -> probatio.Schema:
 def _merge_global_basic(old: dict[str, Any], submitted: dict[str, Any]) -> dict[str, Any]:
     """Preserve hidden expert choices, allow clearing optional sensors."""
     result = {**_GLOBAL_DEFAULTS, **old, **submitted}
-    for key in (CONF_PV_POWER_ENTITY,):
+    for key in (CONF_PV_POWER_ENTITY, CONF_HOUSE_POWER_ENTITY):
         if key not in submitted:
             result[key] = None
     result.pop(_WIZARD_EXPERT, None)
@@ -531,11 +494,7 @@ def _normalize_global_configuration(user_input: dict[str, Any]) -> dict[str, Any
     """Return a complete global mapping so options can also clear old values."""
 
     normalized = dict(user_input)
-    for key in (
-        CONF_PV_POWER_ENTITY,
-        CONF_BATTERY_POWER_ENTITY,
-        CONF_BATTERY_SOC_ENTITY,
-    ):
+    for key in (CONF_PV_POWER_ENTITY, CONF_HOUSE_POWER_ENTITY):
         normalized.setdefault(key, None)
     return normalized
 
@@ -575,8 +534,7 @@ def _validate_global_configuration(user_input: dict[str, Any]) -> dict[str, str]
     selected_entities = [
         user_input.get(CONF_GRID_POWER_ENTITY),
         user_input.get(CONF_PV_POWER_ENTITY),
-        user_input.get(CONF_BATTERY_POWER_ENTITY),
-        user_input.get(CONF_BATTERY_SOC_ENTITY),
+        user_input.get(CONF_HOUSE_POWER_ENTITY),
     ]
     selected_entities = [entity for entity in selected_entities if entity]
     if len(selected_entities) != len(set(selected_entities)):
@@ -904,7 +862,7 @@ def _duplicate_load_name(
 class PowerManagerConfigFlow(ConfigFlow, domain=DOMAIN):
     """Configure essential plant values, optionally show expert tuning."""
 
-    VERSION = 5
+    VERSION = 6
     MINOR_VERSION = 0
 
     async def async_step_user(
