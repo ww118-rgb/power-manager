@@ -1902,7 +1902,7 @@
         },
         "load_review": {
           "title": "Fertigstellen – sicher prüfen",
-          "description": "Bitte vor dem Speichern anhand des Gerätehandbuchs kontrollieren. Gerät: {device}; Anbindung: {transport}. AUS/0 kW → {off}. Kleinster zulässiger Wert → {min}. Maximale Freigabe → {max}. Dies ist nur eine berechnete Vorschau, keine Gerätebestätigung. Das Speichern aktiviert Live NICHT.",
+          "description": "Bitte vor dem Speichern anhand des Gerätehandbuchs kontrollieren. Gerät: {device}; Anbindung: {transport}. AUS/0 kW → {off}. Kleinster zulässiger Wert → {min}. Maximale Freigabe → {max}. Dies ist nur eine berechnete Vorschau, keine Gerätebestätigung. Das Speichern aktiviert Live NICHT. Ausgangsprüfung: {compatibility}.",
           "data": {
             "load_name": "Name",
             "load_type": "Verbrauchertyp",
