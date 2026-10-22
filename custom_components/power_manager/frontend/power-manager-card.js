@@ -60,8 +60,6 @@ class PowerManagerCard extends HTMLElement {
         "last_output_error",
         "configured_load_count",
         "pv_power",
-        "battery_power",
-        "battery_soc",
         "effective_grid_limit",
         "base_load",
         "peak_budget",
@@ -75,7 +73,6 @@ class PowerManagerCard extends HTMLElement {
         "total_target_power",
         "measured_controlled_power",
         "estimated_controlled_power",
-        "battery_discharge",
         "active_load_count",
         "limited_load_count",
         "settling_load_count",
@@ -86,7 +83,6 @@ class PowerManagerCard extends HTMLElement {
         "surplus_active",
         "hard_grid_limit_exceeded",
         "grid_limit_unachievable",
-        "battery_soc_blocking_surplus"
       ];
 
       for (const entry of powerManagerEntries) {
@@ -414,8 +410,8 @@ class PowerManagerCard extends HTMLElement {
       ".panel-title{font-size:13px;font-weight:700;margin:0 0 10px;display:flex;align-items:center;gap:7px}.panel-title ha-icon{--mdc-icon-size:19px}",
       ".source-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}",
       ".flow-node{display:flex;gap:8px;align-items:center;border:1px solid var(--divider-color);border-radius:11px;padding:9px;min-width:0;background:var(--secondary-background-color)}",
-      ".flow-node.pv{border-color:#e9ad2d}.flow-node.battery{border-color:#4db368}.flow-node.grid{border-color:#9aa5b1}.flow-node.base{border-color:var(--primary-color)}",
-      ".node-icon{color:var(--primary-color);flex:0 0 auto}.node-icon ha-icon{--mdc-icon-size:20px}.pv .node-icon{color:#e89a00}.battery .node-icon{color:#279447}",
+      ".flow-node.pv{border-color:#e9ad2d}.flow-node.grid{border-color:#9aa5b1}.flow-node.base{border-color:var(--primary-color)}",
+      ".node-icon{color:var(--primary-color);flex:0 0 auto}.node-icon ha-icon{--mdc-icon-size:20px}.pv .node-icon{color:#e89a00}",
       ".node-content{display:flex;flex-direction:column;min-width:0}.node-content span{font-size:10px;color:var(--secondary-text-color);line-height:1.1}.node-content strong{font-size:15px;line-height:1.2;overflow-wrap:anywhere}.node-content small{font-size:9px;color:var(--secondary-text-color);line-height:1.15;margin-top:2px}",
       ".flow-arrow{text-align:center;color:var(--primary-color);font-size:20px;line-height:1;margin:3px 0}",
       ".manager{box-sizing:border-box;width:100%;margin:0;border:1.5px solid var(--primary-color);border-radius:12px;padding:10px 12px;text-align:center;background:color-mix(in srgb,var(--card-background-color,#fff) 93%,var(--primary-color) 7%)}",
@@ -455,8 +451,7 @@ class PowerManagerCard extends HTMLElement {
 
     const grid = this._num("grid_power");
     const pv = this._num("pv_power");
-    const battery = this._num("battery_power");
-    const soc = this._num("battery_soc");
+    const house = this._num("house_power");
     const base = this._num("base_load");
     const effectiveLimit = this._num("effective_grid_limit");
     const available = this._num("available_budget");
@@ -490,15 +485,6 @@ class PowerManagerCard extends HTMLElement {
       failReasonState && !["none", "unknown", "unavailable"].includes(failReasonState.state)
         ? failReasonState.state
         : "—";
-
-    const batterySubtitle =
-      battery === null
-        ? ""
-        : battery > 0.05
-          ? "entlädt"
-          : battery < -0.05
-            ? "lädt"
-            : "Ruhe";
 
     const gridSubtitle =
       grid === null
@@ -556,11 +542,6 @@ class PowerManagerCard extends HTMLElement {
       '</strong><div class="control-label">Headroom: ' +
       this._fmt(headroom, "kW", 1) +
       "</div></div>" +
-      '<div class="control"><span class="control-label">Batterie-SOC</span><strong>' +
-      this._fmt(soc, "%", 1) +
-      '</strong><div class="control-label">' +
-      (this._bool("battery_soc_blocking_surplus") ? "Batteriehilfe gesperrt" : "Reserve frei") +
-      "</div></div>" +
       "</div>" +
 
       '<div class="main-grid">' +
@@ -571,13 +552,12 @@ class PowerManagerCard extends HTMLElement {
       '<div class="source-row">' +
       this._flowNode("PV", this._fmt(pv, "kW", 2), "Erzeugung", "mdi:solar-power", "pv") +
       this._flowNode("Netz", this._fmtSigned(grid, "kW", 2), gridSubtitle, "mdi:transmission-tower", "grid") +
-      this._flowNode("Batterie", this._fmtSigned(battery, "kW", 2), batterySubtitle, "mdi:battery", "battery") +
-      this._flowNode("Basislast", this._fmt(base, "kW", 2), "nicht regelbar", "mdi:home-lightning-bolt", "base") +
+      this._flowNode("Hausgrundverbrauch", this._fmt(house, "kW", 2), house === null ? "Sensor fehlt: nur Netzeinspeisung zählt" : "nicht regelbar", "mdi:home-lightning-bolt", "base") +
       "</div>" +
       '<div class="flow-arrow">↓</div>' +
       '<div class="manager"><strong>Power Manager</strong><small>' +
       (mode === "surplus"
-        ? "Hybrid-Budget " + this._fmt(surplus, "kW", 2)
+        ? "PV-Budget " + this._fmt(surplus, "kW", 2)
         : "Peak-Budget " + this._fmt(this._num("peak_budget"), "kW", 2)) +
       " · verfügbar " +
       this._fmt(available, "kW", 2) +
