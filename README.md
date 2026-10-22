@@ -2,7 +2,18 @@
 
 Power Manager ist eine generische Home-Assistant-Integration für ein zentrales Energiemanagement. Sie verbindet vorhandene Home-Assistant-Entities mit einem getesteten Reglerkern und kann damit Peakshaving, PV-Überschussbetrieb und priorisierte Verbrauchersteuerung abbilden.
 
-**Versionskanäle:** V3.1.1 bleibt auf `main`; V3.3.0 liegt als GitHub-/HACS-Pre-Release vor; **V3.3.1 ist der neu entwickelte einfache Einrichtungsassistent im Branch `feature/v3.3.1-simple-wizard` (Draft-PR #3).** Keine automatische Live-Aktivierung.
+**Versionskanäle:** V3.1.1 bleibt auf `main`; V3.3.0 und V3.3.1 sind als HACS-Vorabversionen verfügbar. **V3.3.2 erweitert den Einrichtungsassistenten um getrennte EVSE-Kommandos A/W/kW mit konfigurierbarer sicherer Stufung** (Entwicklungs-PR #4 bis zur Freigabe). Keine automatische Live-Aktivierung.
+
+### Neue EVSE-Kommandoprofile in V3.3.2
+
+Beim Hinzufügen einer Wallbox legt der Assistent getrennt von Modbus/MQTT fest, ob der Ausgang **Ampere, Watt oder Kilowatt** erwartet. Vorhandene V3.3.1-Geräteprofile bleiben zunächst beim bisherigen A-Format. HA-Zahlen-Entities können `A`, `W` oder `kW` aus ihren Attributen melden; ohne passende Einheit wird nicht blind geraten.
+
+- Ampere-Format: Default-Schritt **1 A**, bei drei Phasen 230 V ergibt 6,9 kW → 10 A. **11,00 kW → 15 A**, weil 16 A physikalisch 11,04 kW benötigen.
+- Watt-Format: Default-Schritt **1.000 W**, z. B. 6,9 kW → 6.000 W. Bei 4,14 kW werden keine 5.000 W freigegeben, sondern wegen der 6-A-Minimalleistung pausiert.
+- **0 A** ist bei Mennekes-ähnlichen Stromlimit-Geräten oft **unbegrenzt**, daher sicherer bestätigter Pausenwert (z. B. 0,01 A) statt 0 A. **0 W** darf nur bei einem nachweislich so arbeitenden Leistungsausgang als Pause verwendet werden.
+- Diese Profile sind **keine Protokollkonstanten**: Modbus kann auch W/kW und MQTT kann A erwarten. Die Herstellerbeschreibung entscheidet.
+- Auf der Abschlussseite wird das Sollwertformat mit Beispielkommandos und bei HA-Entity optional dem **read-only Bereichs-/Schrittweitencheck** angezeigt. Live bleibt bis zur separaten Freigabe deaktiviert.
+
 
 ## Offene Anforderungen und Abnahme
 
