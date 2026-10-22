@@ -1,5 +1,15 @@
 # Changelog
 
+## 4.0.0-rc.2 – priorisierte, rückgemeldete 5-Sekunden-Schrittregelung
+
+- Pro fünf Sekunden eine nicht sicherheitsbedingte Verbraucheränderung: Start/Erhöhung nach aufsteigender Priorität, freiwilliges Absenken/Abschalten nach absteigender Priorität.
+- Die nächste Leistungsfreigabe setzt eine neue **Netzsensor-Rückmeldung nach der vorherigen Änderung** voraus. Verbraucher-Istleistung bleibt optional; letzter tatsächlich gesendeter Befehl wird weiterhin als Schätzung genutzt.
+- Bei drohendem/aktuellem PMAX-Überzug und PV-Netzbezug erfolgen notwendige Reduktionen ohne Verzögerung.
+- Keine Batterieansteuerung, keine Hybrid-Probe und keine Rückkehr der alten globalen 15-Sekunden-Wartezeit.
+- Regressionen für 30-kW-Beispiel mit WP vor WB, zwei PV-Wallboxen, stalen Netzsensor, 5-Sekunden-Pausen und sofortige Sicherheitsabschaltungen.
+- **Nur für Simulation**; reale Anlagenschutzfunktionen weiterhin nicht abgenommen.
+
+
 ## 4.0.0 – in Entwicklung / Simulatorabnahme offen
 
 - Einheitlicher Regler auf Basis des priorisierten 3.1.1-Allocators.

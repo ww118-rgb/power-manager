@@ -32,8 +32,11 @@ def _validate(inputs: ControllerInputs, loads: list[ControllableLoad]) -> None:
         raise ValueError("PMAX muss positiv sein.")
     if not 0 <= inputs.grid_reserve_kw < inputs.grid_limit_kw:
         raise ValueError("Netzreserve muss zwischen 0 und PMAX liegen.")
-    if inputs.grid_growth_margin_kw < 0 or inputs.now_s < 0:
-        raise ValueError("Freigabepuffer und Zeit dürfen nicht negativ sein.")
+    _finite("switch_interval_s", inputs.switch_interval_s)
+    if inputs.grid_sample_s is not None:
+        _finite("grid_sample_s", inputs.grid_sample_s)
+    if inputs.grid_growth_margin_kw < 0 or inputs.now_s < 0 or inputs.switch_interval_s < 0:
+        raise ValueError("Freigabepuffer, Schrittintervall und Zeit dürfen nicht negativ sein.")
     names = set()
     for load in loads:
         if not load.name or load.name in names:
@@ -163,9 +166,128 @@ def _admit_increases(
     return targets
 
 
+def _sequence_load_changes(
+    selected: list[ControllableLoad],
+    targets: dict[str, float],
+    state: ControllerState,
+    inputs: ControllerInputs,
+    base_kw: float,
+    grid_limit_kw: float,
+    available_budget_kw: float,
+) -> tuple[dict[str, float], float | None, float | None]:
+    """One non-emergency device action per interval, with fresh grid feedback.
+
+    This is a *single* pacing stage after the original 3.1.1 allocator and
+    net-meter admission. It does not add a second allocation strategy.
+    Emergency PMAX shedding / PV-import correction always bypasses the timer.
+    """
+    last_action = state.last_switch_action_s
+    last_sample = state.last_switch_grid_sample_s
+    if inputs.switch_interval_s <= EPSILON:
+        return targets, last_action, last_sample
+
+    current = {
+        load.name: max(0.0, min(
+            load.max_kw, state.last_targets_kw.get(load.name, 0.0),
+        )) if load.available else 0.0
+        for load in selected
+    }
+    changes = [
+        load for load in selected
+        if abs(targets.get(load.name, 0.0) - current[load.name]) > EPSILON
+    ]
+    if not changes:
+        return targets, last_action, last_sample
+
+    def safe(staged: dict[str, float]) -> bool:
+        total = sum(staged.values())
+        if base_kw + total > grid_limit_kw + EPSILON:
+            return False
+        if inputs.mode == OperatingMode.SURPLUS:
+            # No intentional grid purchase in surplus mode.
+            return total <= available_budget_kw + EPSILON
+        return True
+
+    # Never wait for an emergency reduction. In this path no new positive
+    # change is introduced while safety reductions are being applied.
+    urgent = (
+        inputs.grid_kw > grid_limit_kw + EPSILON
+        or (inputs.mode == OperatingMode.SURPLUS
+            and inputs.grid_kw > EPSILON)
+    )
+    if urgent:
+        immediate = {
+            name: min(value, current[name])
+            for name, value in targets.items()
+        }
+        return immediate, inputs.now_s, inputs.grid_sample_s
+
+    # A recently sent command must be observed at the net meter before
+    # another device can be started or increased. Timer expiry ALONE is not
+    # proof that the first device physically responded.
+    timer_ready = (
+        last_action is None
+        or inputs.now_s + EPSILON >= last_action + inputs.switch_interval_s
+    )
+    meter_ready = (
+        last_action is None
+        or inputs.grid_sample_s is None
+        or last_sample is None
+        or inputs.grid_sample_s > last_sample + 0.05
+    )
+
+    # An off/reduction command never needs fresh sensor confirmation to
+    # be issued, once its 5-second pacing interval has elapsed.
+    has_reduction = any(
+        targets.get(load.name, 0.0) < current[load.name] - EPSILON
+        for load in selected
+    )
+    if not timer_ready or (not meter_ready and not has_reduction):
+        if safe(current):
+            return current, last_action, last_sample
+        # Sudden unmetered base change, PV loss or PMAX reduction is not
+        # postponed. Apply the safe allocator's reductions immediately.
+        emergency = {
+            name: min(value, current[name]) for name, value in targets.items()
+        }
+        return emergency, inputs.now_s, inputs.grid_sample_s
+
+    # For planned (non-emergency) shutdowns, lowest priority yields first.
+    # Within the same priority, stable reverse configuration order applies.
+    reductions = [
+        (index, load) for index, load in enumerate(selected)
+        if targets.get(load.name, 0.0) < current[load.name] - EPSILON
+    ]
+    if reductions:
+        chosen = max(reductions, key=lambda item: (item[1].priority, item[0]))[1]
+    else:
+        # On startup, priority 1 is allowed to consume its calculated
+        # available target before priority 2 is even commanded on.
+        chosen = min(
+            ((index, load) for index, load in enumerate(selected)
+             if targets.get(load.name, 0.0) > current[load.name] + EPSILON),
+            key=lambda item: (item[1].priority, item[0]),
+        )[1]
+
+    staged = dict(current)
+    staged[chosen.name] = targets[chosen.name]
+
+    if not safe(staged):
+        # Holding the other devices would violate PMAX or PV-only
+        # constraints. Safety beats staged shutdowns.
+        emergency = {
+            name: min(value, current[name]) for name, value in targets.items()
+        }
+        return emergency, inputs.now_s, inputs.grid_sample_s
+
+    return staged, inputs.now_s, inputs.grid_sample_s
+
+
 def _next_state(
     selected: list[ControllableLoad], targets: dict[str, float],
     state: ControllerState, now: float,
+    *, last_switch_action_s: float | None,
+    last_switch_grid_sample_s: float | None,
 ) -> ControllerState:
     commands = dict(state.last_targets_kw)
     runtime = dict(state.load_states)
@@ -188,7 +310,12 @@ def _next_state(
                               else previous.settling_until_s),
         )
         commands[load.name] = value
-    return ControllerState(last_targets_kw=commands, load_states=runtime)
+    return ControllerState(
+        last_targets_kw=commands,
+        load_states=runtime,
+        last_switch_action_s=last_switch_action_s,
+        last_switch_grid_sample_s=last_switch_grid_sample_s,
+    )
 
 
 def run_controller(
@@ -241,15 +368,22 @@ def run_controller(
         loads=candidates, available_budget_kw=budget,
         state=state, now_s=inputs.now_s,
     )
-    final_targets = _admit_increases(
+    admitted_targets = _admit_increases(
         selected, requested_targets, state, growth_room, inputs.mode,
+    )
+    final_targets, sequence_action, sequence_sample = _sequence_load_changes(
+        selected, admitted_targets, state, inputs, base, limit, budget,
     )
     total = sum(final_targets.values())
     projected = base + total
     if not cannot_reach and projected > limit + EPSILON:
         raise RuntimeError("Reglerfehler: prognostizierter Netzbezug über PMAX.")
 
-    next_state = _next_state(selected, final_targets, state, inputs.now_s)
+    next_state = _next_state(
+        selected, final_targets, state, inputs.now_s,
+        last_switch_action_s=sequence_action,
+        last_switch_grid_sample_s=sequence_sample,
+    )
     wanted = sum(
         min(load.max_kw, max(0.0, load.requested_kw))
         for load in selected if load.available

@@ -32,6 +32,18 @@ Die Batterie läuft **immer eigenständig in der vom Hersteller gewählten Autom
 - Geräteausgaben in A/W/kW/MW, Abwärts-Rundung auf tatsächlich zulässige Geräteschritte, elektrische EVSE-Mindestströme und verbotene Sondercodes.
 - Live bleibt nach einem Neustart **aus** und muss nach Prüfung aktiv eingeschaltet werden. Ein ungültiger Netzsensor oder fehlerhafte Ausgänge lösen den sicheren Zustand aus.
 
+## 5-Sekunden-Schrittregelung (V4.0 RC2)
+
+In der Home-Assistant-Integration wird **maximal eine nicht sicherheitsbedingte Verbraucheränderung pro 5-Sekunden-Schritt** freigegeben:
+
+1. Zuerst wird nach der bewährten Prioritäts-/Min-Max-Verteilung ein vollständiger Zielplan berechnet.
+2. Es wird nur der höchstpriorisierte noch ausstehende Verbraucher zugeschaltet oder erhöht. Bei geplanter, nicht dringender Abschaltung gibt zuerst die niedrigste Priorität Leistung ab.
+3. Nach **5 Sekunden** und einem **neuen Netzsensorbericht nach der letzten Änderung** wird erneut gerechnet und erst dann der nächste Verbraucher geändert.
+4. Die tatsächlich ausgegebenen, auf Geräte-Schrittweiten begrenzten Werte bleiben die Schätzbasis. Geräte-Istsensoren sind optional.
+5. **PMAX-Überschreitung, unerwünschter PV-Netzbezug und notwendige Sicherheitssenkungen warten nicht auf den Timer:** Mehrere Verbraucher können in einer Sicherheitsreaktion gleichzeitig abgeregelt werden.
+
+Die 5 Sekunden sind eine feste *Mindestzeit zwischen normalen Geräteänderungen*, kein garantierter Höchstwert bei fehlender frischer Netzmessung oder längeren gerätespezifischen Mindestpausen. Ein nicht antwortender Sensor wird niemals dadurch übergangen, dass die Uhr abgelaufen ist.
+
 ## Installation und Test
 
 Die Einrichtungsanleitung steht in [INSTALLATION.md](INSTALLATION.md). Den vorgeschriebenen Simulator-Ablauf vor Freigabe beschreibt [SIMULATOR_TEST.md](SIMULATOR_TEST.md). Die technische Architektur und die Gründe für bewusst nicht eingebaute Funktionen stehen in [docs/ARCHITECTURE_4.md](docs/ARCHITECTURE_4.md).

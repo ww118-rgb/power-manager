@@ -204,6 +204,9 @@ DEFAULT_EVSE_PAUSE_POWER_VALUE = 0.0
 
 # Technical adapter timings, not installation-specific power values.
 HEARTBEAT_INTERVAL_SECONDS = 5.0
+# Exactly one non-emergency consumer change per 5 seconds.
+# No longer delay safety shedding when PMAX is exceeded.
+SEQUENTIAL_SWITCH_INTERVAL_SECONDS = 5.0
 REFRESH_DEBOUNCE_SECONDS = 0.25
 
 SUPPORTED_POWER_UNITS = ("mW", "W", "kW", "MW", "GW")
