@@ -303,6 +303,7 @@ _GLOBAL_ADVANCED_KEYS = (
     CONF_GRID_RESERVE_KW, CONF_GRID_SENSOR_TIMEOUT_S,
     CONF_GRID_GROWTH_MARGIN_KW, CONF_INVERT_PV_POWER,
     CONF_PV_SENSOR_TIMEOUT_S,
+)
 _GLOBAL_DEFAULTS = {
     CONF_GRID_RESERVE_KW: DEFAULT_GRID_RESERVE_KW,
     CONF_GRID_GROWTH_MARGIN_KW: DEFAULT_GRID_GROWTH_MARGIN_KW,
@@ -342,7 +343,7 @@ def _global_expert_schema(values: dict[str, Any]) -> probatio.Schema:
 def _merge_global_basic(old: dict[str, Any], submitted: dict[str, Any]) -> dict[str, Any]:
     """Preserve hidden expert choices, allow clearing optional sensors."""
     result = {**_GLOBAL_DEFAULTS, **old, **submitted}
-    for key in (CONF_PV_POWER_ENTITY,):
+    for key in (CONF_PV_POWER_ENTITY, CONF_HOUSE_POWER_ENTITY):
         if key not in submitted:
             result[key] = None
     result.pop(_WIZARD_EXPERT, None)
