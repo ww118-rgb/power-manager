@@ -895,83 +895,424 @@ class PowerManagerOptionsFlow(OptionsFlow):
         )
 
 
+def _load_wizard_schema(
+    values: dict[str, Any], fields: list[str] | tuple[str, ...],
+    *, extra: dict[Any, Any] | None = None,
+) -> probatio.Schema:
+    canonical = _build_load_schema(values)
+    result = dict(_subset_schema(canonical, fields).schema) if fields else {}
+    result.update(extra or {})
+    return probatio.Schema(result)
+
+
 class PowerManagerLoadSubentryFlow(ConfigSubentryFlow):
-    """Add and reconfigure arbitrary controllable loads."""
+    """Small step-by-step device setup, preserving expert capabilities.
 
-    def _validate_with_name(
-        self,
-        user_input: dict[str, Any],
-        *,
-        exclude_subentry_id: str | None = None,
-    ) -> tuple[dict[str, Any], dict[str, str]]:
-        """Normalize and validate one subentry form."""
+    No live commands are issued by any configuration step.
+    """
 
-        errors = validate_load_data(user_input)
-        try:
-            normalized = normalize_load_data(user_input)
-        except (TypeError, ValueError, OverflowError):
-            return dict(user_input), {"base": "invalid_number"}
+    def _load_draft(self) -> dict[str, Any]:
+        if not hasattr(self, "_draft"):
+            self._draft = {}
+        return self._draft
 
-        if not errors and _duplicate_load_name(
-            self._get_entry(),
-            normalized[CONF_LOAD_NAME],
-            exclude_subentry_id=exclude_subentry_id,
-        ):
-            errors[CONF_LOAD_NAME] = "duplicate_load_name"
+    def _update_draft(
+        self, user_input: dict[str, Any],
+        *, optional: tuple[str, ...] = (),
+    ) -> None:
+        draft = self._load_draft()
+        draft.update(user_input)
+        for key in optional:
+            if key not in user_input:
+                draft.pop(key, None)
 
-        return normalized, errors
+    def _form(
+        self, step: str, fields: tuple[str, ...] | list[str],
+        *, extra: dict[Any, Any] | None = None,
+        errors: dict[str, str] | None = None,
+    ) -> SubentryFlowResult:
+        return self.async_show_form(
+            step_id=step,
+            data_schema=_load_wizard_schema(self._load_draft(), fields, extra=extra),
+            errors=errors or {},
+        )
 
     async def async_step_user(
-        self,
-        user_input: dict[str, Any] | None = None,
+        self, user_input: dict[str, Any] | None = None,
     ) -> SubentryFlowResult:
-        """Add a new load."""
-
-        errors: dict[str, str] = {}
-        values = user_input or {}
-
-        if user_input is not None:
-            normalized, errors = self._validate_with_name(user_input)
-            values = normalized
-            if not errors:
-                return self.async_create_entry(
-                    title=normalized[CONF_LOAD_NAME],
-                    data=normalized,
-                )
-
-        return self.async_show_form(
-            step_id="user",
-            data_schema=_build_load_schema(values),
-            errors=errors,
-        )
+        """Start a new consumer; first step asks only four essential facts."""
+        if not hasattr(self, "_draft"):
+            self._draft = {}
+            self._editing = False
+        return await self.async_step_load_basics(user_input)
 
     async def async_step_reconfigure(
-        self,
-        user_input: dict[str, Any] | None = None,
+        self, user_input: dict[str, Any] | None = None,
     ) -> SubentryFlowResult:
-        """Reconfigure an existing load."""
+        """Edit existing consumer without dropping previously stored controls."""
+        if not hasattr(self, "_draft"):
+            subentry = self._get_reconfigure_subentry()
+            self._draft = dict(subentry.data)
+            self._editing = True
+        return await self.async_step_load_basics(user_input)
 
-        subentry = self._get_reconfigure_subentry()
-        errors: dict[str, str] = {}
-        values = dict(subentry.data)
-
+    async def async_step_load_basics(
+        self, user_input: dict[str, Any] | None = None,
+    ) -> SubentryFlowResult:
         if user_input is not None:
-            normalized, errors = self._validate_with_name(
-                user_input,
-                exclude_subentry_id=subentry.subentry_id,
+            self._update_draft(
+                {k: v for k, v in user_input.items() if k != _WIZARD_EXPERT}
             )
-            values = normalized
+            self._expert = bool(user_input.get(_WIZARD_EXPERT))
+            if not str(self._draft.get(CONF_LOAD_NAME, "")).strip():
+                return self._form("load_basics", (
+                    CONF_LOAD_NAME, CONF_LOAD_TYPE, CONF_PRIORITY, CONF_MAX_KW,
+                ), extra={
+                    _required_marker(_WIZARD_EXPERT, user_input, False): BooleanSelector(),
+                }, errors={CONF_LOAD_NAME: "load_name_required"})
+            if float(self._draft.get(CONF_MAX_KW, 0)) <= 0:
+                return self._form("load_basics", (
+                    CONF_LOAD_NAME, CONF_LOAD_TYPE, CONF_PRIORITY, CONF_MAX_KW,
+                ), extra={
+                    _required_marker(_WIZARD_EXPERT, user_input, False): BooleanSelector(),
+                }, errors={"base": "invalid_power_range"})
+            return await self.async_step_load_usage()
+        return self._form(
+            "load_basics",
+            (CONF_LOAD_NAME, CONF_LOAD_TYPE, CONF_PRIORITY, CONF_MAX_KW),
+            extra={
+                _required_marker(
+                    _WIZARD_EXPERT,
+                    {_WIZARD_EXPERT: getattr(self, "_expert", False)},
+                    False,
+                ): BooleanSelector(),
+            },
+        )
+
+    async def async_step_load_usage(
+        self, user_input: dict[str, Any] | None = None,
+    ) -> SubentryFlowResult:
+        if user_input is not None:
+            self._update_draft(user_input, optional=(CONF_ACTUAL_POWER_ENTITY,))
+            if self._draft[CONF_DEMAND_MODE] == DEMAND_MODE_SENSOR:
+                return await self.async_step_load_request()
+            self._draft.pop(CONF_REQUEST_ENTITY, None)
+            return await self.async_step_load_connection()
+        load_type = self._load_draft().get(CONF_LOAD_TYPE, DEFAULT_LOAD_TYPE)
+        fields = [
+            CONF_PEAK_SHAVING_ENABLED, CONF_SURPLUS_ENABLED,
+            CONF_ACTUAL_POWER_ENTITY,
+        ]
+        if load_type == LOAD_TYPE_MODULATING:
+            fields.append(CONF_MIN_KW)
+        extra = {
+            _required_marker(
+                CONF_DEMAND_MODE, self._draft,
+                DEMAND_MODE_SENSOR if self._draft.get(CONF_REQUEST_ENTITY)
+                else DEMAND_MODE_ALWAYS,
+            ): SelectSelector(SelectSelectorConfig(
+                options=list(DEMAND_MODES), translation_key=CONF_DEMAND_MODE,
+            )),
+        }
+        return self._form("load_usage", fields, extra=extra)
+
+    async def async_step_load_request(
+        self, user_input: dict[str, Any] | None = None,
+    ) -> SubentryFlowResult:
+        if user_input is not None:
+            self._update_draft(user_input)
+            return await self.async_step_load_connection()
+        return self._form("load_request", (CONF_REQUEST_ENTITY,))
+
+    async def async_step_load_connection(
+        self, user_input: dict[str, Any] | None = None,
+    ) -> SubentryFlowResult:
+        if user_input is not None:
+            self._update_draft(user_input)
+            return await self.async_step_load_connection_details()
+        fields = [CONF_OUTPUT_TRANSPORT]
+        if self._load_draft().get(CONF_LOAD_TYPE) == LOAD_TYPE_MODULATING:
+            fields.append(CONF_OUTPUT_VALUE_MODE)
+        return self._form("load_connection", fields)
+
+    async def async_step_load_connection_details(
+        self, user_input: dict[str, Any] | None = None,
+    ) -> SubentryFlowResult:
+        if user_input is not None:
+            self._update_draft(
+                user_input, optional=(
+                    CONF_OUTPUT_ENTITY, CONF_MQTT_ON_PAYLOAD, CONF_MQTT_OFF_PAYLOAD,
+                ),
+            )
+            return await self.async_step_load_commands()
+        transport = self._load_draft().get(
+            CONF_OUTPUT_TRANSPORT, DEFAULT_OUTPUT_TRANSPORT,
+        )
+        load_type = self._draft.get(CONF_LOAD_TYPE, DEFAULT_LOAD_TYPE)
+        fields: list[str] = []
+        if transport == OUTPUT_TRANSPORT_ENTITY:
+            fields.append(CONF_OUTPUT_ENTITY)
+            if load_type != LOAD_TYPE_SWITCH:
+                fields.append(CONF_ENABLE_ENTITY)
+        elif transport == OUTPUT_TRANSPORT_MODBUS:
+            fields.extend((
+                CONF_MODBUS_HOST, CONF_MODBUS_PORT, CONF_MODBUS_UNIT_ID,
+                CONF_MODBUS_REGISTER, CONF_MODBUS_DATA_TYPE,
+                CONF_MODBUS_BYTE_ORDER, CONF_MODBUS_FUNCTION,
+            ))
+        elif transport == OUTPUT_TRANSPORT_MQTT:
+            fields.append(CONF_MQTT_TOPIC)
+            if load_type == LOAD_TYPE_SWITCH:
+                fields.extend((CONF_MQTT_ON_PAYLOAD, CONF_MQTT_OFF_PAYLOAD))
+            else:
+                fields.append(CONF_MQTT_PAYLOAD_TEMPLATE)
+        return self._form("load_connection_details", fields)
+
+    async def async_step_load_commands(
+        self, user_input: dict[str, Any] | None = None,
+    ) -> SubentryFlowResult:
+        if user_input is not None:
+            self._update_draft(
+                user_input, optional=(CONF_OUTPUT_FORBIDDEN_VALUE,),
+            )
+            if self._draft.get(CONF_LOAD_TYPE) == LOAD_TYPE_EVSE:
+                self._draft[CONF_MIN_KW] = (
+                    float(self._draft.get(CONF_EVSE_PHASES, DEFAULT_EVSE_PHASES))
+                    * float(self._draft.get(CONF_EVSE_VOLTAGE_V, DEFAULT_EVSE_VOLTAGE_V))
+                    * float(self._draft.get(
+                        CONF_EVSE_MIN_CURRENT_A, DEFAULT_EVSE_MIN_CURRENT_A,
+                    )) / 1000.0
+                )
+            if (
+                self._draft.get(CONF_LOAD_TYPE) == LOAD_TYPE_MODULATING
+                and self._draft.get(CONF_OUTPUT_VALUE_MODE) == OUTPUT_VALUE_MODE_STEPS
+            ):
+                return await self.async_step_load_stage_count()
+            return await self._after_commands()
+        load_type = self._load_draft().get(CONF_LOAD_TYPE, DEFAULT_LOAD_TYPE)
+        transport = self._draft.get(CONF_OUTPUT_TRANSPORT, DEFAULT_OUTPUT_TRANSPORT)
+        fields: list[str] = []
+        if load_type == LOAD_TYPE_EVSE:
+            fields.extend((
+                CONF_EVSE_PHASES, CONF_EVSE_MIN_CURRENT_A,
+                CONF_EVSE_MAX_CURRENT_A, CONF_EVSE_PAUSE_CURRENT_A,
+                CONF_EVSE_ZERO_UNLIMITED,
+            ))
+        elif load_type == LOAD_TYPE_SWITCH:
+            if transport != OUTPUT_TRANSPORT_ENTITY:
+                fields.extend((CONF_SWITCH_ON_CODE, CONF_SWITCH_OFF_CODE))
+        else:
+            mode = self._draft.get(CONF_OUTPUT_VALUE_MODE, DEFAULT_OUTPUT_VALUE_MODE)
+            if mode == OUTPUT_VALUE_MODE_LINEAR:
+                fields.extend((
+                    CONF_OUTPUT_SCALE, CONF_OUTPUT_OFFSET,
+                    CONF_SAFE_OUTPUT_VALUE, CONF_OUTPUT_FORBIDDEN_VALUE,
+                ))
+            else:
+                if mode != OUTPUT_VALUE_MODE_STEPS:
+                    fields.append(CONF_OUTPUT_UNIT)
+                fields.extend((CONF_SAFE_OUTPUT_VALUE, CONF_OUTPUT_FORBIDDEN_VALUE))
+        if (
+            transport != OUTPUT_TRANSPORT_ENTITY
+            and load_type == LOAD_TYPE_MODULATING
+            and self._draft.get(CONF_OUTPUT_VALUE_MODE, DEFAULT_OUTPUT_VALUE_MODE)
+                == DEFAULT_OUTPUT_VALUE_MODE
+            and CONF_OUTPUT_UNIT not in fields
+        ):
+            fields.append(CONF_OUTPUT_UNIT)
+        return self._form("load_commands", fields)
+
+    async def _after_commands(self) -> SubentryFlowResult:
+        if getattr(self, "_expert", False):
+            return await self.async_step_load_expert()
+        return await self.async_step_load_review()
+
+    async def async_step_load_stage_count(
+        self, user_input: dict[str, Any] | None = None,
+    ) -> SubentryFlowResult:
+        if user_input is not None:
+            self._stage_count = int(user_input[_WIZARD_STAGE_COUNT])
+            return await self.async_step_load_stages()
+        return self._form("load_stage_count", [], extra={
+            probatio.Required(_WIZARD_STAGE_COUNT, default=2):
+                NumberSelector(NumberSelectorConfig(
+                    min=1, max=12, step=1, mode=NumberSelectorMode.BOX,
+                )),
+        })
+
+    async def async_step_load_stages(
+        self, user_input: dict[str, Any] | None = None,
+    ) -> SubentryFlowResult:
+        count = getattr(self, "_stage_count", 2)
+        if user_input is not None:
+            stages = [
+                {"kw": float(user_input[f"stage_{i}_kw"]),
+                 "code": float(user_input[f"stage_{i}_code"])}
+                for i in range(1, count + 1)
+            ]
+            if any(
+                stages[i]["kw"] <= stages[i - 1]["kw"]
+                for i in range(1, len(stages))
+            ):
+                return self.async_show_form(
+                    step_id="load_stages",
+                    data_schema=self._stages_schema(count),
+                    errors={"base": "stages_must_increase"},
+                )
+            self._draft[CONF_OUTPUT_STEPS_JSON] = json.dumps(stages)
+            self._draft[CONF_MIN_KW] = stages[0]["kw"]
+            return await self._after_commands()
+        return self.async_show_form(
+            step_id="load_stages", data_schema=self._stages_schema(count),
+        )
+
+    @staticmethod
+    def _stages_schema(count: int) -> probatio.Schema:
+        schema: dict[Any, Any] = {}
+        for i in range(1, count + 1):
+            schema[probatio.Required(f"stage_{i}_kw")] = NumberSelector(
+                NumberSelectorConfig(
+                    min=0.1, step=0.01,
+                    unit_of_measurement="kW", mode=NumberSelectorMode.BOX,
+                )
+            )
+            schema[probatio.Required(f"stage_{i}_code")] = NumberSelector(
+                NumberSelectorConfig(
+                    min=-1000000, max=1000000,
+                    step=0.01, mode=NumberSelectorMode.BOX,
+                )
+            )
+        return probatio.Schema(schema)
+
+    async def async_step_load_expert(
+        self, user_input: dict[str, Any] | None = None,
+    ) -> SubentryFlowResult:
+        if user_input is not None:
+            self._update_draft(
+                user_input, optional=(CONF_AVAILABILITY_ENTITY, CONF_ENABLE_ENTITY),
+            )
+            return await self.async_step_load_review()
+        fields = [
+            CONF_AVAILABILITY_ENTITY, CONF_INVERT_ACTUAL_POWER,
+            CONF_ACTUAL_SENSOR_TIMEOUT_S, CONF_FEEDBACK_TOLERANCE_KW,
+            CONF_START_MARGIN_KW, CONF_STOP_MARGIN_KW,
+            CONF_MIN_ON_TIME_S, CONF_MIN_OFF_TIME_S, CONF_SETTLING_TIME_S,
+        ]
+        if self._load_draft().get(CONF_OUTPUT_TRANSPORT) == OUTPUT_TRANSPORT_MODBUS:
+            fields.append(CONF_MODBUS_TIMEOUT_S)
+        if self._draft.get(CONF_OUTPUT_TRANSPORT) == OUTPUT_TRANSPORT_MQTT:
+            fields.extend((CONF_MQTT_QOS, CONF_MQTT_RETAIN))
+        if self._draft.get(CONF_LOAD_TYPE) == LOAD_TYPE_EVSE:
+            fields.append(CONF_EVSE_VOLTAGE_V)
+        return self._form("load_expert", fields)
+
+    async def async_step_load_review(
+        self, user_input: dict[str, Any] | None = None,
+    ) -> SubentryFlowResult:
+        direct = self._load_draft().get(
+            CONF_OUTPUT_TRANSPORT, DEFAULT_OUTPUT_TRANSPORT,
+        ) != OUTPUT_TRANSPORT_ENTITY
+        if user_input is not None:
+            if direct:
+                self._draft[CONF_DEVICE_COMMANDS_CONFIRMED] = bool(
+                    user_input.get(CONF_DEVICE_COMMANDS_CONFIRMED, False)
+                )
+            if not user_input.get(_WIZARD_ACK):
+                return self._review_form({"base": "ack_required"})
+            try:
+                normalized = normalize_load_data(self._draft)
+                errors = validate_load_data(normalized)
+            except (KeyError, TypeError, ValueError, OverflowError):
+                return self._review_form({"base": "invalid_number"})
             if not errors:
-                # The parent config entry update listener performs the reload.
+                except_id = None
+                if getattr(self, "_editing", False):
+                    except_id = self._get_reconfigure_subentry().subentry_id
+                if _duplicate_load_name(
+                    self._get_entry(), normalized[CONF_LOAD_NAME],
+                    exclude_subentry_id=except_id,
+                ):
+                    errors[CONF_LOAD_NAME] = "duplicate_load_name"
+            if errors:
+                return self._invalid_wizard_fields(errors)
+            if getattr(self, "_editing", False):
+                subentry = self._get_reconfigure_subentry()
                 return self.async_update_and_abort(
-                    self._get_entry(),
-                    subentry,
-                    data=normalized,
+                    self._get_entry(), subentry, data=normalized,
                     title=normalized[CONF_LOAD_NAME],
                 )
+            return self.async_create_entry(
+                title=normalized[CONF_LOAD_NAME], data=normalized,
+            )
+        return self._review_form()
 
-        return self.async_show_form(
-            step_id="reconfigure",
-            data_schema=_build_load_schema(values),
-            errors=errors,
-        )
+    def _review_form(
+        self, errors: dict[str, str] | None = None,
+    ) -> SubentryFlowResult:
+        extra = {
+            probatio.Required(_WIZARD_ACK, default=False): BooleanSelector(),
+        }
+        if self._load_draft().get(CONF_OUTPUT_TRANSPORT) != OUTPUT_TRANSPORT_ENTITY:
+            return self._form(
+                "load_review", (CONF_DEVICE_COMMANDS_CONFIRMED,),
+                extra=extra, errors=errors,
+            )
+        return self._form("load_review", [], extra=extra, errors=errors)
+
+    def _invalid_wizard_fields(
+        self, errors: dict[str, str],
+    ) -> SubentryFlowResult:
+        # Redirect the user to the page with the invalid field, never hide
+        # field validation errors in a form that does not contain the field.
+        key = next(iter(errors))
+        basics = {
+            CONF_LOAD_NAME, CONF_LOAD_TYPE, CONF_PRIORITY, CONF_MAX_KW,
+        }
+        usage = {
+            CONF_MIN_KW, CONF_DEMAND_MODE, CONF_ACTUAL_POWER_ENTITY,
+            CONF_PEAK_SHAVING_ENABLED, CONF_SURPLUS_ENABLED,
+        }
+        if key in basics or key == "base":
+            return self._form("load_basics", (
+                CONF_LOAD_NAME, CONF_LOAD_TYPE, CONF_PRIORITY, CONF_MAX_KW,
+            ), extra={
+                _required_marker(_WIZARD_EXPERT, {
+                    _WIZARD_EXPERT: getattr(self, "_expert", False),
+                }, False): BooleanSelector(),
+            }, errors=errors)
+        if key in usage:
+            fields = list(usage - {CONF_DEMAND_MODE})
+            return self._form("load_usage", fields, extra={
+                _required_marker(CONF_DEMAND_MODE, self._draft, DEMAND_MODE_ALWAYS):
+                    SelectSelector(SelectSelectorConfig(
+                        options=list(DEMAND_MODES), translation_key=CONF_DEMAND_MODE,
+                    )),
+            }, errors=errors)
+        if key == CONF_REQUEST_ENTITY:
+            return self._form("load_request", (CONF_REQUEST_ENTITY,), errors=errors)
+        if key in {
+            CONF_OUTPUT_TRANSPORT, CONF_OUTPUT_VALUE_MODE,
+        }:
+            return self._form(
+                "load_connection",
+                (CONF_OUTPUT_TRANSPORT, CONF_OUTPUT_VALUE_MODE)
+                if self._draft.get(CONF_LOAD_TYPE) == LOAD_TYPE_MODULATING
+                else (CONF_OUTPUT_TRANSPORT,),
+                errors=errors,
+            )
+        # Return to the relevant specific setup step; it will render only
+        # that protocol's fields.
+        if key.startswith("modbus_") or key.startswith("mqtt_") or key == CONF_OUTPUT_ENTITY:
+            return self._form("load_connection_details", (
+                CONF_MODBUS_HOST, CONF_MODBUS_PORT, CONF_MODBUS_UNIT_ID,
+                CONF_MODBUS_REGISTER, CONF_MODBUS_DATA_TYPE,
+                CONF_MODBUS_BYTE_ORDER, CONF_MODBUS_FUNCTION,
+            ) if self._draft.get(CONF_OUTPUT_TRANSPORT) == OUTPUT_TRANSPORT_MODBUS
+            else (CONF_MQTT_TOPIC, CONF_MQTT_PAYLOAD_TEMPLATE)
+            if self._draft.get(CONF_OUTPUT_TRANSPORT) == OUTPUT_TRANSPORT_MQTT
+            else (CONF_OUTPUT_ENTITY,), errors=errors)
+        # For remaining errors show a safe summary and allow expert path
+        # to edit unusual fields.
+        return self._review_form({"base": "device_configuration_invalid"})
+
+
