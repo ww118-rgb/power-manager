@@ -88,6 +88,12 @@ from .const import (
     CONF_EVSE_MAX_CURRENT_A,
     CONF_EVSE_MIN_CURRENT_A,
     CONF_EVSE_PAUSE_CURRENT_A,
+    CONF_EVSE_OUTPUT_FORMAT, CONF_EVSE_CURRENT_STEP_A,
+    CONF_EVSE_POWER_STEP_W, CONF_EVSE_PAUSE_POWER_VALUE,
+    DEFAULT_EVSE_OUTPUT_FORMAT, DEFAULT_EVSE_CURRENT_STEP_A,
+    DEFAULT_EVSE_POWER_STEP_W, DEFAULT_EVSE_PAUSE_POWER_VALUE,
+    EVSE_OUTPUT_FORMATS, EVSE_OUTPUT_AUTO,
+    EVSE_OUTPUT_AMPERE, EVSE_OUTPUT_WATT, EVSE_OUTPUT_KW,
     CONF_EVSE_PHASES,
     CONF_EVSE_VOLTAGE_V,
     CONF_GRID_LIMIT_KW,
@@ -690,6 +696,29 @@ def _build_load_schema(values: dict[str, Any] | None = None) -> probatio.Schema:
                 CONF_EVSE_ZERO_UNLIMITED, values, DEFAULT_EVSE_ZERO_UNLIMITED,
             ): BooleanSelector(),
             _required_marker(
+                CONF_EVSE_OUTPUT_FORMAT, values, DEFAULT_EVSE_OUTPUT_FORMAT,
+            ): SelectSelector(SelectSelectorConfig(
+                options=list(EVSE_OUTPUT_FORMATS),
+                translation_key=CONF_EVSE_OUTPUT_FORMAT,
+            )),
+            _required_marker(
+                CONF_EVSE_CURRENT_STEP_A, values, DEFAULT_EVSE_CURRENT_STEP_A,
+            ): NumberSelector(NumberSelectorConfig(
+                min=0.1, max=100.0, step=0.1, unit_of_measurement="A",
+                mode=NumberSelectorMode.BOX,
+            )),
+            _required_marker(
+                CONF_EVSE_POWER_STEP_W, values, DEFAULT_EVSE_POWER_STEP_W,
+            ): NumberSelector(NumberSelectorConfig(
+                min=1.0, max=100000.0, step=1.0, unit_of_measurement="W",
+                mode=NumberSelectorMode.BOX,
+            )),
+            _required_marker(
+                CONF_EVSE_PAUSE_POWER_VALUE, values, DEFAULT_EVSE_PAUSE_POWER_VALUE,
+            ): NumberSelector(NumberSelectorConfig(
+                min=0.0, max=100000.0, step=0.01, mode=NumberSelectorMode.BOX,
+            )),
+            _required_marker(
                 CONF_OUTPUT_TRANSPORT, values, DEFAULT_OUTPUT_TRANSPORT,
             ): SelectSelector(SelectSelectorConfig(
                 options=list(OUTPUT_TRANSPORTS),
@@ -1151,6 +1180,36 @@ class PowerManagerLoadSubentryFlow(ConfigSubentryFlow):
             return [CONF_MQTT_TOPIC, CONF_MQTT_ON_PAYLOAD, CONF_MQTT_OFF_PAYLOAD]
         return [CONF_MQTT_TOPIC, CONF_MQTT_PAYLOAD_TEMPLATE]
 
+    async def async_step_load_evse_format(
+        self, user_input: dict[str, Any] | None = None,
+    ) -> SubentryFlowResult:
+        """Device command units are independent of the transport."""
+        if user_input is not None:
+            self._update_draft(user_input)
+            return await self.async_step_load_commands()
+        transport = self._draft.get(
+            CONF_OUTPUT_TRANSPORT, DEFAULT_OUTPUT_TRANSPORT,
+        )
+        suggested = (
+            EVSE_OUTPUT_AUTO if transport == OUTPUT_TRANSPORT_ENTITY
+            else EVSE_OUTPUT_AMPERE if transport == OUTPUT_TRANSPORT_MODBUS
+            else EVSE_OUTPUT_WATT
+        )
+        if CONF_EVSE_OUTPUT_FORMAT not in self._draft:
+            self._draft[CONF_EVSE_OUTPUT_FORMAT] = suggested
+        allowed = (
+            list(EVSE_OUTPUT_FORMATS)
+            if transport == OUTPUT_TRANSPORT_ENTITY
+            else [EVSE_OUTPUT_AMPERE, EVSE_OUTPUT_WATT, EVSE_OUTPUT_KW]
+        )
+        return self._form("load_evse_format", [], extra={
+            _required_marker(
+                CONF_EVSE_OUTPUT_FORMAT, self._draft, suggested,
+            ): SelectSelector(SelectSelectorConfig(
+                options=allowed, translation_key=CONF_EVSE_OUTPUT_FORMAT,
+            )),
+        })
+
     async def async_step_load_connection_details(
         self, user_input: dict[str, Any] | None = None,
     ) -> SubentryFlowResult:
@@ -1161,6 +1220,8 @@ class PowerManagerLoadSubentryFlow(ConfigSubentryFlow):
                     CONF_MQTT_ON_PAYLOAD, CONF_MQTT_OFF_PAYLOAD,
                 ),
             )
+            if self._draft.get(CONF_LOAD_TYPE) == LOAD_TYPE_EVSE:
+                return await self.async_step_load_evse_format()
             if not self._command_fields():
                 return await self._after_commands()
             return await self.async_step_load_commands()
@@ -1170,11 +1231,23 @@ class PowerManagerLoadSubentryFlow(ConfigSubentryFlow):
         load_type = self._load_draft().get(CONF_LOAD_TYPE, DEFAULT_LOAD_TYPE)
         transport = self._draft.get(CONF_OUTPUT_TRANSPORT, DEFAULT_OUTPUT_TRANSPORT)
         if load_type == LOAD_TYPE_EVSE:
-            return [
+            fields = [
                 CONF_EVSE_PHASES, CONF_EVSE_MIN_CURRENT_A,
-                CONF_EVSE_MAX_CURRENT_A, CONF_EVSE_PAUSE_CURRENT_A,
-                CONF_EVSE_ZERO_UNLIMITED,
+                CONF_EVSE_MAX_CURRENT_A,
             ]
+            fmt = self._draft.get(
+                CONF_EVSE_OUTPUT_FORMAT, DEFAULT_EVSE_OUTPUT_FORMAT,
+            )
+            if fmt in (EVSE_OUTPUT_AMPERE, EVSE_OUTPUT_AUTO):
+                fields.extend((
+                    CONF_EVSE_PAUSE_CURRENT_A, CONF_EVSE_CURRENT_STEP_A,
+                    CONF_EVSE_ZERO_UNLIMITED,
+                ))
+            else:
+                fields.extend((
+                    CONF_EVSE_POWER_STEP_W, CONF_EVSE_PAUSE_POWER_VALUE,
+                ))
+            return fields
         if load_type == LOAD_TYPE_SWITCH:
             if transport == OUTPUT_TRANSPORT_ENTITY:
                 return []
