@@ -178,6 +178,9 @@ class PowerManagerCoordinatorData:
     output_healthy: bool
     last_output_error: str | None
     loads: dict[str, LoadDiagnostic]
+    # Optional read-only telemetry. Never fed back into the controller.
+    battery_power_kw: float | None = None
+    battery_soc_pct: float | None = None
 
 
 class PowerManagerCoordinator(DataUpdateCoordinator[PowerManagerCoordinatorData]):
@@ -439,22 +442,6 @@ class PowerManagerCoordinator(DataUpdateCoordinator[PowerManagerCoordinatorData]
             scale=str(values.get(CONF_BATTERY_SOC_SCALE, DEFAULT_BATTERY_SOC_SCALE)),
             label="Batterie-SOC",
         )
-
-    def _read_surplus_min_soc(self) -> float | None:
-        """Return optional minimum battery SOC policy."""
-
-        raw_value = self.settings.get(CONF_SURPLUS_MIN_BATTERY_SOC)
-        if raw_value is None:
-            return None
-
-        try:
-            value = float(raw_value)
-        except (TypeError, ValueError) as err:
-            raise MeasurementError("Mindest-SOC ist keine Zahl.") from err
-
-        if not 0.0 <= value <= 100.0:
-            raise MeasurementError("Mindest-SOC muss zwischen 0 und 100 % liegen.")
-        return value
 
     def _read_optional_source_state(
         self,
@@ -886,8 +873,6 @@ class PowerManagerCoordinator(DataUpdateCoordinator[PowerManagerCoordinatorData]
                     CONF_GRID_GROWTH_MARGIN_KW, DEFAULT_GRID_GROWTH_MARGIN_KW,
                 )),
                 pv_kw=pv_kw,
-                battery_soc=battery_soc,  # diagnostics; ignored by controller
-                battery_kw=battery_kw,  # diagnostics; ignored by controller
                 mode=self.operating_mode,
                 now_s=monotonic(),
             )
@@ -981,6 +966,8 @@ class PowerManagerCoordinator(DataUpdateCoordinator[PowerManagerCoordinatorData]
             output_healthy=True,
             last_output_error=None,
             loads=diagnostics,
+            battery_power_kw=battery_kw,
+            battery_soc_pct=battery_soc,
         )
 
     async def async_enable_live_control(self) -> None:
