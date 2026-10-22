@@ -69,7 +69,7 @@ def _known_power(
         if load.actual_kw is not None:
             measured += load.actual_kw
         else:
-            estimated += max(0.0, state.last_targets_kw.get(load.name, 0.0))
+            estimated += max(0.0, min(load.max_kw, state.last_targets_kw.get(load.name, 0.0)))
     return measured, estimated
 
 
