@@ -1,489 +1,190 @@
-from dataclasses import replace
+"""Power Manager 4.0 – one deterministic grid/PV controller.
+
+Allocation rules inherited from stable 3.1.1: PMAX, priority, fair groups,
+technical minima, optional on/off and settling times. Modern 3.3.x adapter
+performs device-unit conversion AFTER this pure controller.
+
+Grid meter = sole authoritative control measurement. Optional individual
+power measurements improve the baseline; no device sensor is mandatory.
+Autonomous battery has NO connection to this module.
+"""
+from __future__ import annotations
+
 from math import isfinite
 
-from allocator import (
-    EPSILON,
-    allocate_power,
-)
-
 from models import (
-    ControllableLoad,
-    ControllerInputs,
-    ControllerResult,
-    ControllerState,
-    LoadRuntimeState,
-    OperatingMode,
+    ControllableLoad, ControllerInputs, ControllerResult,
+    ControllerState, LoadRuntimeState, OperatingMode,
 )
+from allocator import EPSILON, allocate_power
 
 
-def _require_finite(
-    name: str,
-    value: float,
-) -> None:
-    """
-    Verhindert NaN und unendliche Werte.
-
-    Solche Werte könnten sonst sämtliche
-    Leistungsberechnungen unbrauchbar machen.
-    """
-
+def _finite(name: str, value: float) -> None:
     if not isfinite(value):
-
-        raise ValueError(
-            f"{name} muss eine endliche Zahl sein."
-        )
+        raise ValueError(f"{name} muss endlich sein.")
 
 
-def _validate_load(
-    load: ControllableLoad,
-) -> None:
-    """
-    Plausibilitätsprüfung eines Verbrauchers.
-    """
-
-    if not load.name.strip():
-
-        raise ValueError(
-            "Verbrauchername darf nicht leer sein."
-        )
-
-    if (
-        isinstance(
-            load.priority,
-            bool,
-        )
-        or not isinstance(
-            load.priority,
-            int,
-        )
-        or load.priority < 1
-    ):
-
-        raise ValueError(
-            f"{load.name}: Priorität muss eine "
-            f"ganze Zahl >= 1 sein."
-        )
-
-    numeric_values = {
-        "requested_kw": (
-            load.requested_kw
-        ),
-        "min_kw": (
-            load.min_kw
-        ),
-        "max_kw": (
-            load.max_kw
-        ),
-        "start_margin_kw": (
-            load.start_margin_kw
-        ),
-        "stop_margin_kw": (
-            load.stop_margin_kw
-        ),
-        "min_on_time_s": (
-            load.min_on_time_s
-        ),
-        "min_off_time_s": (
-            load.min_off_time_s
-        ),
-        "settling_time_s": (
-            load.settling_time_s
-        ),
-    }
-
-    if load.actual_kw is not None:
-
-        numeric_values[
-            "actual_kw"
-        ] = load.actual_kw
-
-    for (
-        field_name,
-        value,
-    ) in numeric_values.items():
-
-        _require_finite(
-            f"{load.name}: {field_name}",
-            value,
-        )
-
-    if (
-        load.actual_kw is not None
-        and load.actual_kw < 0.0
-    ):
-
-        raise ValueError(
-            f"{load.name}: actual_kw darf "
-            f"nicht negativ sein."
-        )
-
-    if load.min_kw < 0.0:
-
-        raise ValueError(
-            f"{load.name}: min_kw darf "
-            f"nicht negativ sein."
-        )
-
-    if load.max_kw <= 0.0:
-
-        raise ValueError(
-            f"{load.name}: max_kw muss "
-            f"größer als 0 sein."
-        )
-
-    if load.min_kw > load.max_kw:
-
-        raise ValueError(
-            f"{load.name}: min_kw darf nicht "
-            f"größer als max_kw sein."
-        )
-
-    if (
-        load.start_margin_kw < 0.0
-        or load.stop_margin_kw < 0.0
-    ):
-
-        raise ValueError(
-            f"{load.name}: Hysteresemargen "
-            f"dürfen nicht negativ sein."
-        )
-
-    if (
-        load.stop_margin_kw
-        > load.start_margin_kw
-    ):
-
-        raise ValueError(
-            f"{load.name}: stop_margin_kw darf "
-            f"nicht größer als start_margin_kw sein."
-        )
-
-    if (
-        load.min_on_time_s < 0.0
-        or load.min_off_time_s < 0.0
-        or load.settling_time_s < 0.0
-    ):
-
-        raise ValueError(
-            f"{load.name}: Zeitwerte dürfen "
-            f"nicht negativ sein."
-        )
-
-    # Ein Verbraucher, den unser Regler aktiv
-    # fürs Peakshaving benutzt, muss im Notfall
-    # vollständig abschaltbar sein.
-    if (
-        load.peak_shaving_enabled
-        and not load.can_shutdown
-    ):
-
-        raise ValueError(
-            f"{load.name}: Eine Peakshaving-Last "
-            f"muss abschaltbar sein."
-        )
-
-    if (
-        load.surplus_enabled
-        and not load.can_shutdown
-    ):
-
-        raise ValueError(
-            f"{load.name}: Eine Überschusslast "
-            f"muss abschaltbar sein."
-        )
-
-
-def _validate_configuration(
-    inputs: ControllerInputs,
-    loads: list[ControllableLoad],
-) -> None:
-    """
-    Globale Plausibilitätsprüfung.
-    """
-
-    # Only readings that can affect the grid/PV controller are validated.
-    # Old battery/SOC/hybrid settings remain accepted for migration but
-    # cannot block the grid-based controller or change its decisions.
-    for name, value in (
-        ("grid_kw", inputs.grid_kw),
-        ("grid_limit_kw", inputs.grid_limit_kw),
-        ("grid_reserve_kw", inputs.grid_reserve_kw),
-        ("grid_growth_margin_kw", inputs.grid_growth_margin_kw),
-        ("pv_kw", inputs.pv_kw),
-        ("now_s", inputs.now_s),
-    ):
-        _require_finite(name, value)
+def _validate(inputs: ControllerInputs, loads: list[ControllableLoad]) -> None:
+    for name in ("grid_kw", "grid_limit_kw", "pv_kw",
+                 "grid_reserve_kw", "grid_growth_margin_kw", "now_s"):
+        _finite(name, getattr(inputs, name))
     if inputs.grid_limit_kw <= 0:
-        raise ValueError("PMAX muss groesser als 0 sein.")
-    if inputs.grid_reserve_kw < 0 or inputs.grid_reserve_kw >= inputs.grid_limit_kw:
-        raise ValueError("Netzreserve muss kleiner als PMAX und >= 0 sein.")
-    if inputs.grid_growth_margin_kw < 0:
-        raise ValueError("Netz-Freigabepuffer darf nicht negativ sein.")
-    if inputs.now_s < 0:
-        raise ValueError("now_s darf nicht negativ sein.")
-
-    names = [
-        load.name
-        for load in loads
-    ]
-
-    if len(names) != len(set(names)):
-
-        raise ValueError(
-            "Jeder Verbraucher benötigt einen "
-            "eindeutigen Namen."
-        )
-
+        raise ValueError("PMAX muss positiv sein.")
+    if not 0 <= inputs.grid_reserve_kw < inputs.grid_limit_kw:
+        raise ValueError("Netzreserve muss zwischen 0 und PMAX liegen.")
+    if inputs.grid_growth_margin_kw < 0 or inputs.now_s < 0:
+        raise ValueError("Freigabepuffer und Zeit dürfen nicht negativ sein.")
+    names = set()
     for load in loads:
-
-        _validate_load(
-            load
-        )
-
-
-def _get_previous_runtime(
-    load: ControllableLoad,
-    state: ControllerState,
-) -> LoadRuntimeState:
-    """
-    Vorherigen Laufzustand abrufen.
-
-    Alte Sollwerte werden automatisch an
-    die aktuellen Gerätegrenzen angepasst.
-    """
-
-    runtime = state.load_states.get(
-        load.name
-    )
-
-    if runtime is not None:
-
-        previous_target = max(
-            0.0,
-            min(
-                runtime.last_target_kw,
-                load.max_kw,
-            ),
-        )
-
-        return LoadRuntimeState(
-            is_on=(
-                runtime.is_on
-                and previous_target > EPSILON
-            ),
-
-            last_target_kw=(
-                previous_target
-            ),
-
-            last_switch_s=(
-                runtime.last_switch_s
-            ),
-
-            last_target_change_s=(
-                runtime.last_target_change_s
-            ),
-
-            settling_until_s=(
-                runtime.settling_until_s
-            ),
-        )
-
-    previous_target = max(
-        0.0,
-        min(
-            state.last_targets_kw.get(
-                load.name,
-                0.0,
-            ),
-            load.max_kw,
-        ),
-    )
-
-    return LoadRuntimeState(
-        is_on=(
-            previous_target > EPSILON
-        ),
-        last_target_kw=(
-            previous_target
-        ),
-    )
-
-
-def _calculate_controlled_power(
-    loads: list[ControllableLoad],
-    state: ControllerState,
-) -> tuple[float, float]:
-    """
-    Bestimmt bekannte Leistung der
-    regelbaren Verbraucher.
-
-    Istwert vorhanden:
-        Istwert verwenden.
-
-    Kein Istwert:
-        letzten Sollwert als Schätzung verwenden.
-    """
-
-    measured_kw = 0.0
-    estimated_kw = 0.0
-
-    for load in loads:
-
-        if load.actual_kw is not None:
-
-            measured_kw += (
-                load.actual_kw
-            )
-
-        else:
-
-            runtime = (
-                _get_previous_runtime(
-                    load=load,
-                    state=state,
-                )
-            )
-
-            estimated_kw += (
-                runtime.last_target_kw
-            )
-
-    return (
-        measured_kw,
-        estimated_kw,
-    )
-
-
-def _build_next_state(
-    loads: list[ControllableLoad],
-    targets_kw: dict[str, float],
-    previous_state: ControllerState,
-    now_s: float,
-) -> ControllerState:
-    """
-    Aktualisiert den Zustand nach einem Regeldurchlauf.
-    """
-
-    next_last_targets = (
-        previous_state
-        .last_targets_kw
-        .copy()
-    )
-
-    next_load_states = (
-        previous_state
-        .load_states
-        .copy()
-    )
-
-    for load in loads:
-
-        if load.name not in targets_kw:
-            continue
-
-        target_kw = max(
-            0.0,
-            min(
-                targets_kw[
-                    load.name
-                ],
-                load.max_kw,
-            ),
-        )
-
-        previous = (
-            _get_previous_runtime(
-                load=load,
-                state=previous_state,
-            )
-        )
-
-        new_is_on = (
-            target_kw > EPSILON
-        )
-
-        if (
-            new_is_on
-            != previous.is_on
+        if not load.name or load.name in names:
+            raise ValueError("Verbrauchernamen müssen eindeutig und gesetzt sein.")
+        names.add(load.name)
+        if load.priority < 1:
+            raise ValueError(f"{load.name}: Priorität muss mindestens 1 sein.")
+        for key in (
+            "requested_kw", "min_kw", "max_kw", "start_margin_kw",
+            "stop_margin_kw", "min_on_time_s", "min_off_time_s",
+            "settling_time_s",
         ):
+            value = getattr(load, key)
+            _finite(f"{load.name}.{key}", value)
+            if value < 0:
+                raise ValueError(f"{load.name}.{key} darf nicht negativ sein.")
+        if load.actual_kw is not None:
+            _finite(f"{load.name}.actual_kw", load.actual_kw)
+            if load.actual_kw < 0:
+                raise ValueError(f"{load.name}: Istleistung darf nicht negativ sein.")
+        if load.min_kw > load.max_kw:
+            raise ValueError(f"{load.name}: Mindestleistung > Höchstleistung.")
+        if load.stop_margin_kw > load.start_margin_kw:
+            raise ValueError(f"{load.name}: Stopreserve > Startreserve.")
 
-            last_switch_s = (
-                now_s
-            )
 
+def _known_power(
+    loads: list[ControllableLoad], state: ControllerState,
+) -> tuple[float, float]:
+    measured = 0.0
+    estimated = 0.0
+    for load in loads:
+        if load.actual_kw is not None:
+            measured += load.actual_kw
         else:
+            estimated += max(0.0, state.last_targets_kw.get(load.name, 0.0))
+    return measured, estimated
 
-            last_switch_s = (
-                previous.last_switch_s
-            )
 
-        target_changed = (
-            abs(
-                target_kw
-                - previous.last_target_kw
-            )
-            > EPSILON
-        )
-
-        if target_changed:
-
-            last_target_change_s = (
-                now_s
-            )
-
-            settling_until_s = (
-                now_s
-                + load.settling_time_s
-            )
-
-        else:
-
-            last_target_change_s = (
-                previous
-                .last_target_change_s
-            )
-
-            settling_until_s = (
-                previous
-                .settling_until_s
-            )
-
-        next_last_targets[
-            load.name
-        ] = target_kw
-
-        next_load_states[
-            load.name
-        ] = LoadRuntimeState(
-            is_on=new_is_on,
-
-            last_target_kw=(
-                target_kw
-            ),
-
-            last_switch_s=(
-                last_switch_s
-            ),
-
-            last_target_change_s=(
-                last_target_change_s
-            ),
-
-            settling_until_s=(
-                settling_until_s
-            ),
-        )
-
-    return ControllerState(
-        last_targets_kw=(
-            next_last_targets
-        ),
-
-        load_states=(
-            next_load_states
-        ),
+def _previous_power(load: ControllableLoad, state: ControllerState) -> float:
+    # A valid device Istwert is optional, not a requirement for the controller.
+    # The larger known value is safer before adding NEW load.
+    return max(
+        0.0,
+        state.last_targets_kw.get(load.name, 0.0),
+        load.actual_kw if load.actual_kw is not None else 0.0,
     )
+
+
+def _admit_increases(
+    selected: list[ControllableLoad],
+    desired: dict[str, float],
+    state: ControllerState,
+    room_kw: float,
+    mode: OperatingMode,
+) -> dict[str, float]:
+    """Apply one grid-meter headroom cap; reductions are always immediate.
+
+    Equivalent consumers of the SAME priority in NORMAL (all PV consumers in
+    SURPLUS) share their admitted growth equally, so a previous 6/6.5 kW
+    imbalance cannot persist forever. The algorithm NEVER spends a device
+    reduction until the next grid reading shows physical headroom.
+    """
+    targets = dict(desired)
+    groups: dict[tuple, list[ControllableLoad]] = {}
+    for load in sorted(selected, key=lambda item: item.priority if mode == OperatingMode.NORMAL else 0):
+        key = (
+            load.priority if mode == OperatingMode.NORMAL else 0,
+            load.requested_kw, load.min_kw, load.max_kw,
+            load.can_modulate, load.available,
+            # Device timing rules may differ; do not override them in a group.
+            load.start_margin_kw, load.stop_margin_kw,
+            load.min_on_time_s, load.min_off_time_s, load.settling_time_s,
+        )
+        groups.setdefault(key, []).append(load)
+
+    remaining = max(0.0, room_kw)
+    for group in groups.values():
+        ideal = [desired.get(load.name, 0.0) for load in group]
+        previous = [_previous_power(load, state) for load in group]
+        share_equally = (
+            len(group) > 1
+            and group[0].available
+            and group[0].can_modulate
+            and min(ideal) > EPSILON
+            and max(ideal) - min(ideal) < EPSILON
+        )
+        if share_equally:
+            target = min(ideal)
+            needed = sum(max(0.0, target - old) for old in previous)
+            if needed > remaining + EPSILON:
+                # Equalize by first curtailing the higher consumer, rather
+                # than borrowing still-unconfirmed reductions from the grid.
+                lo, hi = 0.0, target
+                for _ in range(35):
+                    mid = (lo + hi) / 2
+                    if sum(max(0.0, mid - p) for p in previous) <= remaining:
+                        lo = mid
+                    else:
+                        hi = mid
+                target = lo
+            if target + EPSILON >= group[0].min_kw:
+                for load in group:
+                    targets[load.name] = target
+                remaining = max(
+                    0.0,
+                    remaining - sum(max(0.0, target - p) for p in previous),
+                )
+                continue
+
+        # Different limits/needs, or not enough power to start every peer:
+        # the stable 3.1.1 allocator's admission order and minima win.
+        for load, proposed, old in zip(group, ideal, previous):
+            if proposed <= old + EPSILON:
+                continue  # PMAX reduction/holding never waits.
+            accepted = min(proposed, old + remaining)
+            if accepted + EPSILON < load.min_kw:
+                accepted = 0.0
+            elif not load.can_modulate and accepted + EPSILON < proposed:
+                accepted = min(proposed, old) if old > EPSILON else 0.0
+            targets[load.name] = accepted
+            remaining = max(0.0, remaining - max(0.0, accepted - old))
+    return targets
+
+
+def _next_state(
+    selected: list[ControllableLoad], targets: dict[str, float],
+    state: ControllerState, now: float,
+) -> ControllerState:
+    commands = dict(state.last_targets_kw)
+    runtime = dict(state.load_states)
+    for load in selected:
+        if load.name not in targets:
+            continue
+        value = max(0.0, min(targets[load.name], load.max_kw))
+        previous = runtime.get(load.name, LoadRuntimeState(
+            is_on=commands.get(load.name, 0.0) > EPSILON,
+            last_target_kw=commands.get(load.name, 0.0),
+        ))
+        changed = abs(value - previous.last_target_kw) > EPSILON
+        on = value > EPSILON
+        runtime[load.name] = LoadRuntimeState(
+            is_on=on,
+            last_target_kw=value,
+            last_switch_s=now if on != previous.is_on else previous.last_switch_s,
+            last_target_change_s=now if changed else previous.last_target_change_s,
+            settling_until_s=(now + load.settling_time_s if changed
+                              else previous.settling_until_s),
+        )
+        commands[load.name] = value
+    return ControllerState(last_targets_kw=commands, load_states=runtime)
 
 
 def run_controller(
@@ -491,143 +192,95 @@ def run_controller(
     loads: list[ControllableLoad],
     state: ControllerState | None = None,
 ) -> ControllerResult:
-    """Simple grid-based peak shaving and measured PV-surplus allocation.
-
-    NORMAL: PMAX minus uncontrolled baseline, measured at the grid meter.
-    SURPLUS: actual net export plus power already allocated to PV loads.
-    The autonomous battery (power, SOC, reserve and hybrid flags) is NEVER
-    consulted. Optional per-load actual power refines the load estimate.
-    """
-
-    if state is None:
-        state = ControllerState()
-    _validate_configuration(inputs, loads)
-
+    """Calculate one deterministic control cycle without touching hardware."""
+    state = state or ControllerState()
+    _validate(inputs, loads)
     if inputs.mode == OperatingMode.NORMAL:
-        selected = [load for load in loads if load.peak_shaving_enabled]
+        selected = [x for x in loads if x.peak_shaving_enabled]
     elif inputs.mode == OperatingMode.SURPLUS:
-        selected = [
-            load for load in loads
-            if load.peak_shaving_enabled and load.surplus_enabled
-        ]
+        selected = [x for x in loads if x.peak_shaving_enabled and x.surplus_enabled]
     else:
         raise ValueError(f"Unbekannter Betriebsmodus: {inputs.mode}")
 
-    measured_kw, estimated_kw = _calculate_controlled_power(selected, state)
-    controlled_kw = measured_kw + estimated_kw
-    # The battery runs independently; do not add or subtract its power.
-    base_kw = inputs.grid_kw - controlled_kw
-    limit_kw = inputs.grid_limit_kw - inputs.grid_reserve_kw
-    peak_budget_kw = max(0.0, limit_kw - base_kw)
-    grid_limit_unachievable = base_kw > limit_kw + EPSILON
-    hard_limit_exceeded_now = inputs.grid_kw > limit_kw + EPSILON
+    measured, estimated = _known_power(selected, state)
+    controlled = measured + estimated
+    # Same proven base-load identity as 3.1.1 NORMAL. Battery is excluded.
+    base = inputs.grid_kw - controlled
+    limit = inputs.grid_limit_kw - inputs.grid_reserve_kw
+    peak_budget = max(0.0, limit - base)
+    cannot_reach = base > limit + EPSILON
 
-    if inputs.mode == OperatingMode.SURPLUS:
-        # Only grid EXPORT proves free electrical energy after house,
-        # inverter and autonomous battery have done their own work.
-        # When PV loads already run, credit their current measured (or
-        # last commanded) consumption: otherwise 0 export would cause
-        # permanent on/off oscillation. Positive grid import subtracts
-        # from this credit. PV power must actually be present.
-        export_kw = max(0.0, -inputs.grid_kw) if inputs.pv_kw > EPSILON else 0.0
-        surplus_budget_kw = (
-            max(0.0, controlled_kw - inputs.grid_kw)
-            if inputs.pv_kw > EPSILON else 0.0
+    if inputs.mode == OperatingMode.NORMAL:
+        budget = peak_budget
+        surplus_budget = 0.0
+        export = 0.0
+        growth_room = max(
+            0.0, limit - inputs.grid_kw - inputs.grid_growth_margin_kw,
         )
-        available_kw = min(surplus_budget_kw, peak_budget_kw)
-        # PV consumers share equally at their configured limits, independent
-        # of NORMAL peak-shaving priorities.
-        allocation_loads = [replace(load, priority=1) for load in selected]
-        growth_kw = export_kw
+        candidates = selected
     else:
-        export_kw = 0.0
-        surplus_budget_kw = 0.0
-        available_kw = peak_budget_kw
-        allocation_loads = selected
-        # Tiny configurable metering/noise deadband for NEW load only;
-        # never delay a necessary load reduction.
-        growth_kw = max(
-            0.0,
-            limit_kw - inputs.grid_kw - inputs.grid_growth_margin_kw,
-        )
+        # PV generation alone is not free power. Only metered grid export
+        # PLUS the existing PV consumer power can form the PV budget.
+        # This avoids oscillating to OFF whenever existing loads reduce
+        # grid export to exactly zero. Autonomous battery stays untouched.
+        pv_present = inputs.pv_kw > EPSILON
+        export = max(0.0, -inputs.grid_kw) if pv_present else 0.0
+        surplus_budget = max(0.0, controlled - inputs.grid_kw) if pv_present else 0.0
+        budget = min(peak_budget, surplus_budget)
+        growth_room = export
+        # Fair in SURPLUS regardless of NORMAL priority; preserve all other
+        # technical bounds/timing parameters from the original load.
+        from dataclasses import replace
+        candidates = [replace(load, priority=1) for load in selected]
 
-    targets = allocate_power(
-        allocation_loads, available_kw, state=state, now_s=inputs.now_s,
+    requested_targets = allocate_power(
+        loads=candidates, available_budget_kw=budget,
+        state=state, now_s=inputs.now_s,
     )
+    final_targets = _admit_increases(
+        selected, requested_targets, state, growth_room, inputs.mode,
+    )
+    total = sum(final_targets.values())
+    projected = base + total
+    if not cannot_reach and projected > limit + EPSILON:
+        raise RuntimeError("Reglerfehler: prognostizierter Netzbezug über PMAX.")
 
-    # Do not reuse power merely ORDERED to be shed from another device:
-    # the next grid reading must show the freed capacity first.
-    # No global 15-second lockout or inverter probing.
-    ordered = (sorted(selected, key=lambda load: load.priority)
-               if inputs.mode == OperatingMode.NORMAL else selected)
-    for load in ordered:
-        proposed = targets.get(load.name, 0.0)
-        previous = max(
-            0.0, state.last_targets_kw.get(load.name, 0.0),
-            load.actual_kw if load.actual_kw is not None else 0.0,
-        )
-        if proposed <= previous + EPSILON:
-            continue  # Immediate decreases, including PMAX shedding.
-        allowed = min(proposed, previous + growth_kw)
-        if allowed + EPSILON < load.min_kw:
-            allowed = 0.0  # Not even a technical minimum can be supplied.
-        elif not load.can_modulate and allowed + EPSILON < proposed:
-            # Binary output must not be sent a fractional power command.
-            allowed = min(previous, proposed) if previous > EPSILON else 0.0
-        targets[load.name] = allowed
-        growth_kw = max(0.0, growth_kw - max(0.0, allowed - previous))
-
-    total_kw = sum(targets.values())
-    projected_grid_kw = base_kw + total_kw
-    if not grid_limit_unachievable and projected_grid_kw > limit_kw + EPSILON:
-        raise RuntimeError("Interner Sicherheitsfehler: PMAX ueberschritten.")
-
-    total_requested_kw = sum(
-        min(max(0.0, load.requested_kw), load.max_kw)
+    next_state = _next_state(selected, final_targets, state, inputs.now_s)
+    wanted = sum(
+        min(load.max_kw, max(0.0, load.requested_kw))
         for load in selected if load.available
     )
-    next_state = _build_next_state(
-        selected, targets, previous_state=state, now_s=inputs.now_s,
-    )
-    active = sum(target > EPSILON for target in targets.values())
     limited = sum(
-        load.available
-        and min(max(0.0, load.requested_kw), load.max_kw)
-        > targets.get(load.name, 0.0) + EPSILON
+        load.available and min(load.max_kw, load.requested_kw)
+        > final_targets.get(load.name, 0.0) + EPSILON
         for load in selected
     )
     settling = sum(
-        runtime.settling_until_s is not None
-        and inputs.now_s < runtime.settling_until_s
-        for runtime in next_state.load_states.values()
+        t.settling_until_s is not None and inputs.now_s < t.settling_until_s
+        for t in next_state.load_states.values()
     )
     return ControllerResult(
-        targets_kw=targets,
-        base_load_kw=base_kw,
-        measured_controlled_power_kw=measured_kw,
-        estimated_controlled_power_kw=estimated_kw,
-        controlled_power_for_calculation_kw=controlled_kw,
-        effective_grid_limit_kw=limit_kw,
-        peak_budget_kw=peak_budget_kw,
-        raw_surplus_budget_kw=export_kw,
-        surplus_budget_kw=surplus_budget_kw,
-        available_budget_kw=available_kw,
-        unused_budget_kw=max(0.0, available_kw - total_kw),
-        battery_discharge_kw=0.0,  # Battery does not enter the controller.
-        projected_grid_kw=projected_grid_kw,
-        grid_headroom_kw=limit_kw - projected_grid_kw,
-        total_requested_kw=total_requested_kw,
-        total_target_kw=total_kw,
-        active_load_count=active,
+        targets_kw=final_targets,
+        base_load_kw=base,
+        measured_controlled_power_kw=measured,
+        estimated_controlled_power_kw=estimated,
+        controlled_power_for_calculation_kw=controlled,
+        effective_grid_limit_kw=limit,
+        peak_budget_kw=peak_budget,
+        raw_surplus_budget_kw=export,
+        surplus_budget_kw=surplus_budget,
+        available_budget_kw=budget,
+        unused_budget_kw=max(0.0, budget - total),
+        projected_grid_kw=projected,
+        grid_headroom_kw=limit - projected,
+        total_requested_kw=wanted,
+        total_target_kw=total,
+        active_load_count=sum(x > EPSILON for x in final_targets.values()),
         limited_load_count=limited,
         settling_load_count=settling,
-        battery_soc_gate_enabled=False,
-        battery_soc_blocking_surplus=False,
-        peak_shaving_active=(
-            hard_limit_exceeded_now or total_requested_kw > peak_budget_kw + EPSILON
-        ),
+        peak_shaving_active=(inputs.grid_kw > limit + EPSILON or wanted > peak_budget + EPSILON),
         surplus_active=inputs.mode == OperatingMode.SURPLUS,
-        hard_limit_exceeded_now=hard_limit_exceeded_now,
-        grid_limit_unachievable=grid_limit_unachievable,
+        hard_limit_exceeded_now=inputs.grid_kw > limit + EPSILON,
+        grid_limit_unachievable=cannot_reach,
         state=next_state,
     )
