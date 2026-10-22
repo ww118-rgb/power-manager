@@ -11,9 +11,9 @@ def _json(relative: str):
     return json.loads((COMPONENT / relative).read_text(encoding="utf-8"))
 
 
-def test_manifest_and_runtime_version_match_v3():
+def test_manifest_and_runtime_version_match_v4():
     manifest = _json("manifest.json")
-    assert manifest["version"] == "3.3.6"
+    assert manifest["version"] == "4.0.0"
     assert VERSION == manifest["version"]
 
 
@@ -92,14 +92,14 @@ def test_autonomous_battery_does_not_block_pv_mode():
     source = (COMPONENT / "coordinator.py").read_text(encoding="utf-8")
     assert "hybrid_battery_assist_enabled=" not in source
     assert "hybrid_probe_enabled=" not in source
-    assert "battery_kw=battery_kw,  # diagnostics; ignored by controller" in source
+    assert "battery_kw=" not in source[source.index("inputs = ControllerInputs("):source.index("result = run_controller(")]
 
 
 def test_surplus_core_uses_grid_export_and_existing_load_not_total_pv():
     source = (COMPONENT / "controller.py").read_text(encoding="utf-8")
     assert "export_kw = max(0.0, -inputs.grid_kw)" in source
     assert "controlled_kw - inputs.grid_kw" in source
-    assert "inputs.battery_kw" not in source[source.index("def run_controller("):]
+    assert "battery_kw" not in source
 
 
 def test_manifest_classifies_power_manager_as_hub():
